@@ -1,7 +1,84 @@
 [project]
 name = "cachepawl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hybrid KV and SSM cache allocator for Mamba-Transformer-MoE models"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "codepawl" }]
+keywords = ["cache", "kv-cache", "mamba", "ssm", "triton", "llm", "inference"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    "torch>=2.4",
+    "triton>=3.0; platform_system == 'Linux'",
+    "numpy>=1.26",
+]
+
+[project.urls]
+Homepage = "https://github.com/codepawl/cachepawl"
+Repository = "https://github.com/codepawl/cachepawl"
+Issues = "https://github.com/codepawl/cachepawl/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-benchmark>=4",
+    "mypy>=1.11",
+    "ruff>=0.6",
+    "pre-commit>=3.8",
+]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cachepawl"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/cachepawl", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+disallow_any_explicit = true
+disallow_any_generics = true
+warn_unreachable = true
+warn_unused_ignores = true
+files = ["src/cachepawl", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["triton", "triton.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "gpu: requires a CUDA-capable GPU",
+]
