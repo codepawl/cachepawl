@@ -76,9 +76,7 @@ class HybridModelSpec:
     dtype: DType
 
 
-def _jamba_mini_layer_pattern(
-    total_layers: int = 32, attn_every: int = 8
-) -> tuple[LayerSpec, ...]:
+def _jamba_mini_layer_pattern(total_layers: int = 32, attn_every: int = 8) -> tuple[LayerSpec, ...]:
     """Build a Jamba-Mini-style 1:7 attention:mamba interleave.
 
     Layer index ``i`` is attention when ``i % attn_every == 0`` and

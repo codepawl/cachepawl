@@ -58,6 +58,7 @@ class _AllocatorStatsExporter(Protocol):
 
     def get_allocator_stats(self) -> Mapping[str, float]: ...
 
+
 _EVENT_DEPARTURE = 0
 _EVENT_GROWTH = 1
 _EVENT_ARRIVAL = 2

@@ -51,9 +51,7 @@ def test_jamba_1_5_mini_ref_matches_published_dims() -> None:
     attn_layers = [
         layer for layer in JAMBA_1_5_MINI_REF.layers if layer.kind is LayerKind.ATTENTION
     ]
-    ssm_layers = [
-        layer for layer in JAMBA_1_5_MINI_REF.layers if layer.kind is LayerKind.MAMBA2
-    ]
+    ssm_layers = [layer for layer in JAMBA_1_5_MINI_REF.layers if layer.kind is LayerKind.MAMBA2]
     assert len(attn_layers) == 4
     assert len(ssm_layers) == 28
     assert JAMBA_1_5_MINI_REF.attention_profile.num_kv_heads == 8

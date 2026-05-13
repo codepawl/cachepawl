@@ -316,9 +316,7 @@ def _pop_float_mapping_optional(data: dict[str, object], key: str) -> dict[str, 
         if isinstance(raw_value, bool):
             raise ValueError(f"expected numeric value in {key!r}, got bool")
         if not isinstance(raw_value, (int, float)):
-            raise ValueError(
-                f"expected numeric value in {key!r}, got {type(raw_value).__name__}"
-            )
+            raise ValueError(f"expected numeric value in {key!r}, got {type(raw_value).__name__}")
         out[raw_key] = float(raw_value)
     return out
 
