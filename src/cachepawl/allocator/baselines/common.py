@@ -215,23 +215,34 @@ class LRURequestTracker:
         return len(self._entries)
 
 
-class LayerKindAware:
-    """Mixin granting allocators per-allocate layer-kind context.
+class AllocatorContext:
+    """Mixin granting baseline allocators per-allocate context.
 
-    The :class:`Allocator` ABC has no layer-kind parameter, so baselines
-    that route by attention vs SSM read a thread-local kind set by the
-    runner immediately before each ``allocate`` call.
+    The :class:`Allocator` ABC has no parameter for layer kind or owning
+    request id, so baselines that need either read thread-local values
+    that the runner sets immediately before each ``allocate`` call.
 
-    ``PaddedUnifiedPool`` inherits this and ignores the value;
-    ``FixedDualPool`` reads it to decide which sub-pool to hit.
+    - ``current_layer_kind`` routes ``FixedDualPool`` to the KV or SSM
+      sub-pool. ``PaddedUnifiedPool`` ignores it.
+    - ``current_request_id`` is used by both baselines to group pages
+      for LRU eviction. Defaults to ``-1`` when the runner has not set
+      anything, which puts every page in one anonymous bucket.
     """
 
     def __init__(self) -> None:
         self._current_layer_kind: LayerKind = LayerKind.ATTENTION
+        self._current_request_id: int = -1
 
     def set_current_layer_kind(self, kind: LayerKind) -> None:
         self._current_layer_kind = kind
 
+    def set_current_request_id(self, request_id: int) -> None:
+        self._current_request_id = request_id
+
     @property
     def current_layer_kind(self) -> LayerKind:
         return self._current_layer_kind
+
+    @property
+    def current_request_id(self) -> int:
+        return self._current_request_id

@@ -7,22 +7,24 @@ comparison data stays meaningful.
 """
 
 from cachepawl.allocator.baselines.common import (
+    AllocatorContext,
     BackingStore,
     BlockTable,
     CapacityError,
-    LayerKindAware,
     LRURequestTracker,
     PageHandle,
     PageTable,
     align_up,
 )
+from cachepawl.allocator.baselines.padded_unified import PaddedUnifiedPool
 
 __all__ = [
+    "AllocatorContext",
     "BackingStore",
     "BlockTable",
     "CapacityError",
     "LRURequestTracker",
-    "LayerKindAware",
+    "PaddedUnifiedPool",
     "PageHandle",
     "PageTable",
     "align_up",
