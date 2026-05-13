@@ -82,7 +82,7 @@ Top-level shape (schema version `1.0.0`):
 
 ```jsonc
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "spec": { "name": "uniform_short", "num_requests": 50, "dtype": "bf16", ... },
   "allocator_name": "mock",
   "hardware": { "device": "cpu", "gpu_name": null, ... },
@@ -99,7 +99,8 @@ Top-level shape (schema version `1.0.0`):
     "free_latency_percentiles":     {"p50_ns": 60,  "p95_ns": 140, "p99_ns": 220, "max_ns": 480},
     "oom_count": 0,
     "preemption_count": 0,
-    "active_requests_samples": [0, 1, 2, ...]
+    "active_requests_samples": [0, 1, 2, ...],
+    "allocator_specific_stats": {"padding_waste_bytes": 12345.0, "num_pages_total": 64.0, "num_pages_used": 16.0}
   },
   "notes": "growth_events=120"
 }
@@ -107,22 +108,50 @@ Top-level shape (schema version `1.0.0`):
 
 Round-trip via `BenchmarkRun.from_json(path.read_text())`.
 
-## REPL: run a one-off benchmark without a GPU
+## Schema version
 
-The registry in `cachepawl.benchmarks.REGISTRY` is empty in this PR.
-The first allocator PR appends to it. To exercise the harness today,
-register an in-process mock against the `Allocator` ABC:
+The current schema is `1.1.0`. Build behavior across versions:
+
+| Reading | 1.0.0 artifact | 1.1.0 artifact | 2.x artifact |
+|---|---|---|---|
+| `BenchmarkRun.from_json` | accepted; `allocator_specific_stats` defaults to `{}` | accepted | rejected with `ValueError` naming the version |
+
+`1.0.0 -> 1.1.0` change: `AllocatorMetrics.allocator_specific_stats: dict[str, float]` is the only new field. Convention is documented in the dataclass docstring: keys are strings, values are float. Counts and bytes convert to float at record time. Non-numeric tags go in `BenchmarkRun.notes`.
+
+## Registered allocators
+
+The default registry ships with two baselines:
+
+| Name | Source | Pathology surfaced via `allocator_specific_stats` |
+|---|---|---|
+| `padded_unified` | vLLM-style `HybridKVCacheCoordinator` mirror | `padding_waste_bytes`, `num_pages_total`, `num_pages_used`, `page_size_bytes` |
+| `fixed_dual` | SGLang-style static dual-pool mirror | `pool_underused_bytes_kv`, `pool_underused_bytes_ssm`, `mamba_ratio`, plus per-pool occupancy |
+
+Each baseline retains the documented upstream weakness on purpose so that comparison data against future allocators stays honest. See the module docstrings for pinned upstream commit citations.
+
+## REPL: register a custom allocator
+
+The two baselines run end to end without any setup. To plug in your own allocator instead:
 
 ```python
 from collections.abc import Sequence
 from pathlib import Path
 
+import torch
+
 from cachepawl.allocator.base import Allocator, AllocatorStats
-from cachepawl.benchmarks import PRESETS, REGISTRY, run_benchmark
+from cachepawl.benchmarks import (
+    PRESETS,
+    WorkloadSpec,
+    register_allocator,
+    run_benchmark,
+)
 
 
 class MockAllocator(Allocator):
-    def __init__(self) -> None:
+    def __init__(self, spec: WorkloadSpec, device: torch.device) -> None:
+        del spec
+        del device
         self._next = 0
         self._free: list[int] = []
         self._live: set[int] = set()
@@ -153,10 +182,11 @@ class MockAllocator(Allocator):
         )
 
 
-REGISTRY["mock"] = MockAllocator
+register_allocator("mock", MockAllocator)
 spec = PRESETS["uniform_short"]
+device = torch.device("cpu")
 run = run_benchmark(
-    allocator=MockAllocator(),
+    allocator=MockAllocator(spec, device),
     spec=spec,
     allocator_name="mock",
     output_dir=Path("benchmarks/results"),
