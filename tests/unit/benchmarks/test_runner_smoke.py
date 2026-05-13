@@ -51,7 +51,7 @@ def test_run_benchmark_writes_json_and_returns_run(tmp_path: Path) -> None:
     assert reloaded.allocator_name == "mock"
     assert reloaded.spec == spec
     parsed = json.loads(files[0].read_text())
-    assert parsed["schema_version"] == "1.0.0"
+    assert parsed["schema_version"] == "1.1.0"
     assert parsed["metrics"]["allocate_latency_percentiles"]["max_ns"] >= 0
 
 
