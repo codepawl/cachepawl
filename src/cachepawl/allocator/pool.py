@@ -17,12 +17,14 @@ class MemoryPool(Allocator):
 
     def allocate(self, num_blocks: int, *, dtype_bytes: int) -> list[int]:
         raise NotImplementedError(
-            "MemoryPool.allocate: implement once the asymmetric two-pool design lands."
+            f"MemoryPool.allocate: implement once the asymmetric two-pool design lands "
+            f"(requested num_blocks={num_blocks}, dtype_bytes={dtype_bytes})."
         )
 
     def free(self, block_ids: Sequence[int]) -> None:
         raise NotImplementedError(
-            "MemoryPool.free: implement once the asymmetric two-pool design lands."
+            f"MemoryPool.free: implement once the asymmetric two-pool design lands "
+            f"(received {len(block_ids)} block ids)."
         )
 
     def stats(self) -> AllocatorStats:
