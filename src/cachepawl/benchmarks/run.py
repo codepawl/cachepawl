@@ -23,6 +23,8 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+import torch
+
 from cachepawl.benchmarks import PRESETS, REGISTRY, run_benchmark
 from cachepawl.utils.device import get_device
 
@@ -59,7 +61,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         spec = dataclasses.replace(spec, seed=seed_override)
 
     factory = REGISTRY[allocator_name]
-    allocator = factory()
+    allocator = factory(spec, torch.device(device))
     run = run_benchmark(
         allocator=allocator,
         spec=spec,

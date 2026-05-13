@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import pytest
+import torch
 
 from cachepawl.allocator.base import Allocator, AllocatorStats
+from cachepawl.benchmarks.harness.workloads import WorkloadSpec
 
 
 class FakeAllocator(Allocator):
@@ -14,11 +16,20 @@ class FakeAllocator(Allocator):
 
     Hands out monotonically increasing block ids, recycles freed ids on
     later allocations, and reports plausible occupancy statistics. The
-    implementation is deterministic so that smoke tests can assert exact
-    call counts against it.
+    constructor accepts ``(spec, device)`` to satisfy the
+    ``AllocatorFactory`` signature when registered in
+    ``cachepawl.benchmarks.REGISTRY``; both are ignored.
     """
 
-    def __init__(self, total_blocks: int = 100_000) -> None:
+    def __init__(
+        self,
+        spec: WorkloadSpec | None = None,
+        device: torch.device | None = None,
+        *,
+        total_blocks: int = 100_000,
+    ) -> None:
+        del spec
+        del device
         self._total_blocks = total_blocks
         self._next_id = 0
         self._free_pool: list[int] = []

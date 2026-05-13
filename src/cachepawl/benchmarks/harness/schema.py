@@ -16,14 +16,12 @@ from cachepawl.benchmarks.harness.metrics import (
     LatencyPercentiles,
     compute_percentiles,
 )
-from cachepawl.benchmarks.harness.workloads import (
-    AttentionLayerProfile,
-    SSMLayerProfile,
-    WorkloadSpec,
-)
+from cachepawl.benchmarks.harness.workloads import WorkloadSpec
+from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 from cachepawl.quant.dtypes import DType
 
-SCHEMA_VERSION: Final[str] = "1.0.0"
+SCHEMA_VERSION: Final[str] = "1.1.0"
+SUPPORTED_SCHEMA_MAJOR: Final[str] = "1"
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,8 +77,15 @@ class BenchmarkRun:
 
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> BenchmarkRun:
+        version = _pop_str(data, "schema_version")
+        major = version.split(".", 1)[0]
+        if major != SUPPORTED_SCHEMA_MAJOR:
+            raise ValueError(
+                f"unsupported schema_version {version!r}: this build only reads "
+                f"major version {SUPPORTED_SCHEMA_MAJOR}.x"
+            )
         return cls(
-            schema_version=_pop_str(data, "schema_version"),
+            schema_version=version,
             spec=_spec_from_dict(_pop_dict(data, "spec")),
             allocator_name=_pop_str(data, "allocator_name"),
             hardware=_hardware_from_dict(_pop_dict(data, "hardware")),
@@ -200,6 +205,7 @@ def _metrics_to_dict(m: AllocatorMetrics) -> dict[str, object]:
         "oom_count": m.oom_count,
         "preemption_count": m.preemption_count,
         "active_requests_samples": list(m.active_requests_samples),
+        "allocator_specific_stats": dict(m.allocator_specific_stats),
     }
 
 
@@ -213,6 +219,7 @@ def _metrics_from_dict(data: dict[str, object]) -> AllocatorMetrics:
         oom_count=_pop_int(data, "oom_count"),
         preemption_count=_pop_int(data, "preemption_count"),
         active_requests_samples=_pop_int_list(data, "active_requests_samples"),
+        allocator_specific_stats=_pop_float_mapping_optional(data, "allocator_specific_stats"),
     )
 
 
@@ -290,8 +297,33 @@ def _pop_float_list(data: dict[str, object], key: str) -> list[float]:
     return out
 
 
+def _pop_float_mapping_optional(data: dict[str, object], key: str) -> dict[str, float]:
+    """Return a ``dict[str, float]`` at ``key``; missing key yields ``{}``.
+
+    Used for schema fields that were added in a minor version bump and
+    must round-trip through older JSON artifacts without raising.
+    """
+
+    value = data.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise ValueError(f"expected object at key {key!r}, got {type(value).__name__}")
+    out: dict[str, float] = {}
+    for raw_key, raw_value in value.items():
+        if not isinstance(raw_key, str):
+            raise ValueError(f"expected string keys in {key!r}, got {type(raw_key).__name__}")
+        if isinstance(raw_value, bool):
+            raise ValueError(f"expected numeric value in {key!r}, got bool")
+        if not isinstance(raw_value, (int, float)):
+            raise ValueError(f"expected numeric value in {key!r}, got {type(raw_value).__name__}")
+        out[raw_key] = float(raw_value)
+    return out
+
+
 __all__ = [
     "SCHEMA_VERSION",
+    "SUPPORTED_SCHEMA_MAJOR",
     "BenchmarkRun",
     "Environment",
     "Hardware",

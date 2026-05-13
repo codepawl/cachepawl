@@ -52,6 +52,13 @@ class AllocatorMetrics:
     All fields are aggregate over the entire run. Per-sample lists are
     in order of capture; the runner is responsible for ordering them
     coherently.
+
+    ``allocator_specific_stats`` is a free-form mapping that lets
+    individual allocators surface their characteristic metrics
+    (padding waste, per-pool underuse) without polluting the shared
+    field set. Convention: keys are strings, values are ``float``.
+    Counts and bytes get converted to ``float`` at record time.
+    Non-numeric tags belong in ``BenchmarkRun.notes`` instead.
     """
 
     peak_reserved_bytes: int = 0
@@ -62,6 +69,7 @@ class AllocatorMetrics:
     oom_count: int = 0
     preemption_count: int = 0
     active_requests_samples: list[int] = field(default_factory=list)
+    allocator_specific_stats: dict[str, float] = field(default_factory=dict)
 
     def allocate_latency_percentiles(self) -> LatencyPercentiles:
         return compute_percentiles(self.allocate_latency_ns)
