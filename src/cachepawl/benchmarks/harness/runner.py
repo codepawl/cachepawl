@@ -18,9 +18,11 @@ import math
 import platform
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 import numpy
 import torch
@@ -38,7 +40,23 @@ from cachepawl.benchmarks.harness.workloads import (
     WorkloadSpec,
     generate_request_stream,
 )
+from cachepawl.models.spec import LayerKind
 from cachepawl.quant.dtypes import DType, bytes_per_element
+
+
+@runtime_checkable
+class _AllocatorContextProto(Protocol):
+    """Duck-typed surface baselines expose so the runner can set context."""
+
+    def set_current_layer_kind(self, kind: LayerKind) -> None: ...
+    def set_current_request_id(self, request_id: int) -> None: ...
+
+
+@runtime_checkable
+class _AllocatorStatsExporter(Protocol):
+    """Duck-typed surface for allocator-specific metrics export."""
+
+    def get_allocator_stats(self) -> Mapping[str, float]: ...
 
 _EVENT_DEPARTURE = 0
 _EVENT_GROWTH = 1
@@ -128,6 +146,8 @@ def run_benchmark(
             if event_count % sample_every_n_events == 0:
                 collector.sample(num_active_requests=len(active_blocks))
         collector.sample(num_active_requests=len(active_blocks))
+        if isinstance(allocator, _AllocatorStatsExporter):
+            collector.metrics.allocator_specific_stats = dict(allocator.get_allocator_stats())
 
     finished_at = _utc_now_iso()
     run = BenchmarkRun(
@@ -190,6 +210,8 @@ def _process_arrival(
 ) -> None:
     initial_kv_blocks_per_layer = max(1, math.ceil(request.prompt_len / kv_block_tokens))
     ids: list[int] = []
+    _set_request_id(allocator, request.request_id)
+    _set_layer_kind(allocator, LayerKind.ATTENTION)
     for _layer_idx in range(spec.attention_layers):
         ids.extend(
             _timed_allocate(
@@ -199,6 +221,7 @@ def _process_arrival(
                 dtype_bytes,
             )
         )
+    _set_layer_kind(allocator, LayerKind.MAMBA2)
     for _layer_idx in range(spec.ssm_layers):
         ids.extend(_timed_allocate(allocator, collector, 1, dtype_bytes))
     active_blocks[request.request_id] = ids
@@ -216,8 +239,20 @@ def _process_growth(
     held = active_blocks.get(request_id)
     if held is None:
         return
+    _set_request_id(allocator, request_id)
+    _set_layer_kind(allocator, LayerKind.ATTENTION)
     for _layer_idx in range(spec.attention_layers):
         held.extend(_timed_allocate(allocator, collector, 1, dtype_bytes))
+
+
+def _set_layer_kind(allocator: Allocator, kind: LayerKind) -> None:
+    if isinstance(allocator, _AllocatorContextProto):
+        allocator.set_current_layer_kind(kind)
+
+
+def _set_request_id(allocator: Allocator, request_id: int) -> None:
+    if isinstance(allocator, _AllocatorContextProto):
+        allocator.set_current_request_id(request_id)
 
 
 def _process_departure(
