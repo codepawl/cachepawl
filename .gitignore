@@ -31,3 +31,6 @@ coverage.xml
 # OS
 .DS_Store
 Thumbs.db
+
+# Benchmark outputs
+benchmarks/results/
