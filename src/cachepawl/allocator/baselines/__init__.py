@@ -16,6 +16,7 @@ from cachepawl.allocator.baselines.common import (
     PageTable,
     align_up,
 )
+from cachepawl.allocator.baselines.fixed_dual import FixedDualPool
 from cachepawl.allocator.baselines.padded_unified import PaddedUnifiedPool
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "BackingStore",
     "BlockTable",
     "CapacityError",
+    "FixedDualPool",
     "LRURequestTracker",
     "PaddedUnifiedPool",
     "PageHandle",
