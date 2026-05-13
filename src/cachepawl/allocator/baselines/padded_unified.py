@@ -127,14 +127,20 @@ class PaddedUnifiedPool(Allocator, AllocatorContext):
         return page_ids
 
     def free(self, block_ids: Sequence[int]) -> None:
-        unique_ids = [pid for pid in block_ids if pid in self._handles]
-        if not unique_ids:
+        seen: set[int] = set()
+        to_free: list[int] = []
+        for pid in block_ids:
+            if pid in seen or pid not in self._handles:
+                continue
+            seen.add(pid)
+            to_free.append(pid)
+        if not to_free:
             return
-        for pid in unique_ids:
+        for pid in to_free:
             handle = self._handles.pop(pid)
             waste = max(0, self._page_size_bytes - handle.bytes_size)
             self._padding_waste_bytes = max(0, self._padding_waste_bytes - waste)
-        self._table.free(unique_ids)
+        self._table.free(to_free)
 
     def stats(self) -> AllocatorStats:
         total = self._table.num_pages_total

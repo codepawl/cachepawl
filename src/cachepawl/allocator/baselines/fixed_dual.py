@@ -129,9 +129,13 @@ class FixedDualPool(Allocator, AllocatorContext):
         )
 
     def free(self, block_ids: Sequence[int]) -> None:
+        seen: set[int] = set()
         kv_ids: list[int] = []
         ssm_ids: list[int] = []
         for hid in block_ids:
+            if hid in seen:
+                continue
+            seen.add(hid)
             handle = self._handles.pop(hid, None)
             if handle is None:
                 continue
