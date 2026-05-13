@@ -16,11 +16,8 @@ from cachepawl.benchmarks.harness.metrics import (
     LatencyPercentiles,
     compute_percentiles,
 )
-from cachepawl.benchmarks.harness.workloads import (
-    AttentionLayerProfile,
-    SSMLayerProfile,
-    WorkloadSpec,
-)
+from cachepawl.benchmarks.harness.workloads import WorkloadSpec
+from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 from cachepawl.quant.dtypes import DType
 
 SCHEMA_VERSION: Final[str] = "1.0.0"

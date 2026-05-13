@@ -25,14 +25,13 @@ from cachepawl.benchmarks.harness.workloads import (
     JAMBA_MINI_ATTN,
     JAMBA_MINI_SSM,
     PRESETS,
-    AttentionLayerProfile,
     Request,
-    SSMLayerProfile,
     WorkloadSpec,
     generate_request_stream,
     per_sequence_ssm_bytes,
     per_token_kv_bytes,
 )
+from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 
 AllocatorFactory = Callable[[], Allocator]
 REGISTRY: dict[str, AllocatorFactory] = {}

@@ -30,25 +30,10 @@ from typing import Final
 import numpy as np
 import numpy.typing as npt
 
+from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 from cachepawl.quant.dtypes import DType, bytes_per_element
 
 IntArray = npt.NDArray[np.int64]
-
-
-@dataclass(frozen=True, slots=True)
-class AttentionLayerProfile:
-    """KV-side shape parameters for one attention layer."""
-
-    num_kv_heads: int
-    head_dim: int
-
-
-@dataclass(frozen=True, slots=True)
-class SSMLayerProfile:
-    """State-side shape parameters for one SSM layer."""
-
-    d_inner: int
-    d_state: int
 
 
 @dataclass(frozen=True, slots=True)
