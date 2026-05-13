@@ -14,6 +14,7 @@ from cachepawl.benchmarks.harness.metrics import (
     MetricsCollector,
     compute_percentiles,
 )
+from cachepawl.benchmarks.harness.runner import run_benchmark
 from cachepawl.benchmarks.harness.schema import (
     SCHEMA_VERSION,
     BenchmarkRun,
@@ -57,4 +58,5 @@ __all__ = [
     "generate_request_stream",
     "per_sequence_ssm_bytes",
     "per_token_kv_bytes",
+    "run_benchmark",
 ]
