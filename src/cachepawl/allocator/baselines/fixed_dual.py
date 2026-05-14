@@ -20,10 +20,12 @@ starting point for synthetic comparisons; deployments that want to
 mirror SGLang's production default should pass ``mamba_ratio=0.9``.
 
 The static partition cannot rebalance when one pool fills before the
-other. Each ``allocate`` call whose target pool throws
-:class:`CapacityError` adds the *other* pool's free bytes to the
-running :attr:`pool_underused_bytes_<kv|ssm>` counter, surfacing the
-amount of memory stranded by the rigidity.
+other. ``get_allocator_stats()`` reports the snapshot
+``pool_free_bytes_<kv|ssm>`` at query time, bounded by each pool's
+``*_pool_total_bytes`` so the surface is comparable across allocators
+(see ``PaddedUnifiedPool.padding_waste_bytes``). If ``oom_count > 0``
+while ``pool_free_bytes`` is non-zero on the other pool, the
+difference quantifies the bytes the rigid partition stranded.
 """
 
 from __future__ import annotations
@@ -104,8 +106,6 @@ class FixedDualPool(Allocator, AllocatorContext):
 
         self._handles: dict[int, PageHandle] = {}
         self._next_handle_id: int = 0
-        self._pool_underused_bytes_kv: int = 0
-        self._pool_underused_bytes_ssm: int = 0
 
     # ----- Allocator ABC -----
 
@@ -163,9 +163,17 @@ class FixedDualPool(Allocator, AllocatorContext):
     # ----- Allocator-specific stats surface -----
 
     def get_allocator_stats(self) -> Mapping[str, float]:
+        kv_page_size = self._kv_table.page_size_bytes
+        ssm_block_size = self._ssm_table.page_size_bytes
+        kv_total_bytes = self._kv_table.num_pages_total * kv_page_size
+        ssm_total_bytes = self._ssm_table.num_pages_total * ssm_block_size
+        kv_free_bytes = self._kv_table.num_pages_free * kv_page_size
+        ssm_free_bytes = self._ssm_table.num_pages_free * ssm_block_size
         return {
-            "pool_underused_bytes_kv": float(self._pool_underused_bytes_kv),
-            "pool_underused_bytes_ssm": float(self._pool_underused_bytes_ssm),
+            "pool_free_bytes_kv": float(kv_free_bytes),
+            "pool_free_bytes_ssm": float(ssm_free_bytes),
+            "kv_pool_total_bytes": float(kv_total_bytes),
+            "ssm_pool_total_bytes": float(ssm_total_bytes),
             "mamba_ratio": float(self._mamba_ratio),
             "kv_pages_total": float(self._kv_table.num_pages_total),
             "kv_pages_used": float(self._kv_table.num_pages_used),
@@ -210,7 +218,6 @@ class FixedDualPool(Allocator, AllocatorContext):
         try:
             return table.alloc(num_blocks)
         except CapacityError as first:
-            self._record_cross_pool_underuse(table)
             self._evict_one_from(table=table, tracker=tracker)
             try:
                 return table.alloc(num_blocks)
@@ -232,14 +239,3 @@ class FixedDualPool(Allocator, AllocatorContext):
             self._handles.pop(hid, None)
         if page_ids:
             table.free(page_ids)
-
-    def _record_cross_pool_underuse(self, target_table: PageTable) -> None:
-        # When the target pool throws CapacityError, the other pool's free bytes are
-        # stranded by the static partition. Add them to the running total so the
-        # rigidity stat surfaces non-zero under skewed workloads.
-        if target_table is self._kv_table:
-            other_free = self._ssm_table.num_pages_free * self._ssm_table.page_size_bytes
-            self._pool_underused_bytes_kv += other_free
-        else:
-            other_free = self._kv_table.num_pages_free * self._kv_table.page_size_bytes
-            self._pool_underused_bytes_ssm += other_free

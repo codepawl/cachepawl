@@ -1,11 +1,16 @@
 """Unit tests for FixedDualPool.
 
-The pool faithfully reproduces SGLang's static dual-pool partition. The
-tests assert two pathology-defining behaviors:
+The pool faithfully reproduces SGLang's static dual-pool partition.
+The tests assert four pathology-defining behaviors:
 
 - KV exhaustion does **not** evict SSM (cross-pool isolation).
-- ``pool_underused_bytes`` grows positively when the workload skews
-  toward one pool while the other has slack (rigidity surfacing).
+- ``pool_free_bytes_*`` is a snapshot at query time, bounded by the
+  pool's total bytes (never accumulates across events).
+- After a full alloc-then-free cycle, ``pool_free_bytes_*`` returns to
+  the corresponding ``*_pool_total_bytes`` for each pool.
+- ``mamba_ratio = X`` assigns ``X * total_bytes`` to the SSM pool,
+  matching SGLang's ``mamba_full_memory_ratio`` convention (commit
+  ``22012ba1``).
 """
 
 from __future__ import annotations
@@ -119,31 +124,123 @@ def test_kv_exhaustion_does_not_evict_ssm(
     )
 
 
-def test_pool_underused_bytes_under_skewed_workload(
+def test_pool_free_bytes_starts_full_on_construction(
     jamba_spec: HybridModelSpec,
     cpu_device: torch.device,
 ) -> None:
-    total_bytes = 4 * 1024**2
+    """A freshly constructed pool reports free_bytes == pool_total_bytes."""
+
     pool = FixedDualPool(
         model_spec=jamba_spec,
-        total_bytes=total_bytes,
+        total_bytes=4 * 1024**2,
         device=cpu_device,
         mamba_ratio=0.5,
     )
-    stats0 = pool.get_allocator_stats()
-    ssm_blocks_total = int(stats0["ssm_blocks_total"])
+    stats = pool.get_allocator_stats()
+    assert stats["pool_free_bytes_kv"] == stats["kv_pool_total_bytes"]
+    assert stats["pool_free_bytes_ssm"] == stats["ssm_pool_total_bytes"]
+
+
+def test_pool_free_bytes_never_exceeds_pool_size_under_skewed_load(
+    jamba_spec: HybridModelSpec,
+    cpu_device: torch.device,
+) -> None:
+    """Repeated SSM exhaustions must not drive any free_bytes counter above its pool size.
+
+    Earlier code accumulated cross-pool stranded bytes on every
+    CapacityError, producing values orders of magnitude larger than
+    the pool itself. The replacement is a snapshot bounded by pool
+    capacity. This test triggers many failed allocates against an
+    already-full SSM pool and verifies the bound holds.
+    """
+
+    pool = FixedDualPool(
+        model_spec=jamba_spec,
+        total_bytes=4 * 1024**2,
+        device=cpu_device,
+        mamba_ratio=0.5,
+    )
+    ssm_blocks_total = int(pool.get_allocator_stats()["ssm_blocks_total"])
 
     pool.set_current_layer_kind(LayerKind.MAMBA2)
     for i in range(ssm_blocks_total):
         pool.set_current_request_id(i)
         pool.allocate(1, dtype_bytes=2)
 
-    pool.set_current_request_id(9999)
-    pool.allocate(1, dtype_bytes=2)
+    # Force several allocation failures; each evicts one and retries.
+    for j in range(8):
+        pool.set_current_request_id(10_000 + j)
+        pool.allocate(1, dtype_bytes=2)
 
     stats_after = pool.get_allocator_stats()
-    assert stats_after["pool_underused_bytes_ssm"] > 0.0
-    assert stats_after["pool_underused_bytes_kv"] == 0.0
+    assert 0.0 <= stats_after["pool_free_bytes_ssm"] <= stats_after["ssm_pool_total_bytes"]
+    assert 0.0 <= stats_after["pool_free_bytes_kv"] <= stats_after["kv_pool_total_bytes"]
+
+
+def test_pool_free_bytes_restored_after_free_all(
+    jamba_spec: HybridModelSpec,
+    cpu_device: torch.device,
+) -> None:
+    """After alloc-then-free of every block, pools report full again."""
+
+    pool = FixedDualPool(
+        model_spec=jamba_spec,
+        total_bytes=4 * 1024**2,
+        device=cpu_device,
+        mamba_ratio=0.5,
+    )
+    ssm_blocks_total = int(pool.get_allocator_stats()["ssm_blocks_total"])
+    kv_pages_total = int(pool.get_allocator_stats()["kv_pages_total"])
+
+    pool.set_current_layer_kind(LayerKind.MAMBA2)
+    ssm_handles: list[int] = []
+    for i in range(ssm_blocks_total):
+        pool.set_current_request_id(i)
+        ssm_handles.extend(pool.allocate(1, dtype_bytes=2))
+
+    pool.set_current_layer_kind(LayerKind.ATTENTION)
+    kv_handles: list[int] = []
+    for i in range(kv_pages_total):
+        pool.set_current_request_id(1000 + i)
+        kv_handles.extend(pool.allocate(1, dtype_bytes=2))
+
+    pool.free(ssm_handles)
+    pool.free(kv_handles)
+
+    stats = pool.get_allocator_stats()
+    assert stats["pool_free_bytes_ssm"] == stats["ssm_pool_total_bytes"]
+    assert stats["pool_free_bytes_kv"] == stats["kv_pool_total_bytes"]
+
+
+def test_mamba_ratio_09_assigns_90_percent_to_ssm_pool(
+    jamba_spec: HybridModelSpec,
+    cpu_device: torch.device,
+) -> None:
+    """Lock the SGLang convention: mamba_ratio is the SSM fraction.
+
+    SGLang commit 22012ba1 defines ``mamba_full_memory_ratio = 0.9``
+    (server_args.py:641, argparse help "The ratio of mamba state
+    memory to full kv cache memory"); higher values give MORE bytes to
+    mamba/SSM. Cachepawl mirrors this: ``mamba_ratio = X`` assigns
+    ``X * total_bytes`` to the SSM pool. mr=0.9 means SSM-heavy, NOT
+    KV-heavy. This test pins the convention so any future inversion
+    surfaces immediately.
+    """
+
+    total_bytes = 16 * 1024**2
+    pool = FixedDualPool(
+        model_spec=jamba_spec,
+        total_bytes=total_bytes,
+        device=cpu_device,
+        mamba_ratio=0.9,
+    )
+    stats = pool.get_allocator_stats()
+    ssm_total = stats["ssm_pool_total_bytes"]
+    kv_total = stats["kv_pool_total_bytes"]
+    # Page-size alignment can round each pool down; allow modest slack
+    # while still distinguishing the two endpoints.
+    assert ssm_total >= 0.85 * total_bytes
+    assert kv_total <= 0.15 * total_bytes
 
 
 def test_stats_round_trip_schema_1_1_0(
@@ -234,5 +331,7 @@ def test_fixed_dual_uniform_short_on_cuda(tmp_path: object) -> None:
     )
     assert run.schema_version == "1.1.0"
     stats = run.metrics.allocator_specific_stats
-    assert math.isfinite(stats["pool_underused_bytes_kv"])
-    assert math.isfinite(stats["pool_underused_bytes_ssm"])
+    assert math.isfinite(stats["pool_free_bytes_kv"])
+    assert math.isfinite(stats["pool_free_bytes_ssm"])
+    assert 0.0 <= stats["pool_free_bytes_kv"] <= stats["kv_pool_total_bytes"]
+    assert 0.0 <= stats["pool_free_bytes_ssm"] <= stats["ssm_pool_total_bytes"]
