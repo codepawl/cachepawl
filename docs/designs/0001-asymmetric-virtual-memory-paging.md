@@ -247,10 +247,29 @@ Cachepawl as additional `Allocator` subclasses:
 - `FixedDualPoolAllocator` mimics the SGLang static dual pool. The
   attention to SSM split is a constructor argument, frozen for the run.
 
-All three allocators run the same dummy workload trace. Output is a CSV
-of metric values keyed by (allocator, workload, seed) so revisions can
-be diffed without rerunning the baseline. The harness lives under
-`benchmarks/dummy_cache_workload.py`, which is a TODO stub today.
+All three allocators run the same dummy workload trace. Output is keyed
+by (allocator, workload, seed) so revisions can be diffed without
+rerunning the baseline.
+
+The comparison harness now ships in
+[`src/cachepawl/benchmarks/compare/`](../../src/cachepawl/benchmarks/compare/)
+with a CLI at `python -m cachepawl.benchmarks.compare`. A 3-cell
+`--quick` reference run on CPU is committed under
+[`benchmarks/results/baseline/quick/`](../../benchmarks/results/baseline/quick/);
+see `report.md` for the rendered comparison. Headline numbers AVMP must
+beat:
+
+| variant | fragmentation_during_load | fragmentation_peak | oom_count |
+|---|---|---|---|
+| padded_unified  | 0.682 | 0.995 |   0 |
+| fixed_dual_mr05 | 0.202 | 0.961 |   5 |
+| fixed_dual_mr09 | 0.219 | 0.969 | 247 |
+
+AVMP wins if it lands closer to the fixed_dual fragmentation column
+while staying at or below the padded_unified OOM column, on the same
+workload and pool budget. The "Data sanity invariants" section of
+`benchmarks/README.md` is the regression net every new allocator must
+pass before its numbers are trusted.
 
 ## 7. Open questions
 

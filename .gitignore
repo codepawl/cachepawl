@@ -33,4 +33,6 @@ coverage.xml
 Thumbs.db
 
 # Benchmark outputs
-benchmarks/results/
+benchmarks/results/*
+# Keep the committed reference --quick artifacts as a baseline snapshot.
+!benchmarks/results/baseline/

@@ -20,10 +20,12 @@ starting point for synthetic comparisons; deployments that want to
 mirror SGLang's production default should pass ``mamba_ratio=0.9``.
 
 The static partition cannot rebalance when one pool fills before the
-other. Each ``allocate`` call whose target pool throws
-:class:`CapacityError` adds the *other* pool's free bytes to the
-running :attr:`pool_underused_bytes_<kv|ssm>` counter, surfacing the
-amount of memory stranded by the rigidity.
+other. ``get_allocator_stats()`` reports the snapshot
+``pool_free_bytes_<kv|ssm>`` at query time, bounded by each pool's
+``*_pool_total_bytes`` so the surface is comparable across allocators
+(see ``PaddedUnifiedPool.padding_waste_bytes``). If ``oom_count > 0``
+while ``pool_free_bytes`` is non-zero on the other pool, the
+difference quantifies the bytes the rigid partition stranded.
 """
 
 from __future__ import annotations
@@ -104,8 +106,6 @@ class FixedDualPool(Allocator, AllocatorContext):
 
         self._handles: dict[int, PageHandle] = {}
         self._next_handle_id: int = 0
-        self._pool_underused_bytes_kv: int = 0
-        self._pool_underused_bytes_ssm: int = 0
 
     # ----- Allocator ABC -----
 
@@ -128,6 +128,8 @@ class FixedDualPool(Allocator, AllocatorContext):
             num_blocks=num_blocks,
         )
 
+    # ----- Helpers (continued below) -----
+
     def free(self, block_ids: Sequence[int]) -> None:
         seen: set[int] = set()
         kv_ids: list[int] = []
@@ -145,8 +147,10 @@ class FixedDualPool(Allocator, AllocatorContext):
                 ssm_ids.append(handle.page_id)
         if kv_ids:
             self._kv_table.free(kv_ids)
+            self._kv_tracker.remove_pages(kv_ids)
         if ssm_ids:
             self._ssm_table.free(ssm_ids)
+            self._ssm_tracker.remove_pages(ssm_ids)
 
     def stats(self) -> AllocatorStats:
         total = self._kv_table.num_pages_total + self._ssm_table.num_pages_total
@@ -163,9 +167,17 @@ class FixedDualPool(Allocator, AllocatorContext):
     # ----- Allocator-specific stats surface -----
 
     def get_allocator_stats(self) -> Mapping[str, float]:
+        kv_page_size = self._kv_table.page_size_bytes
+        ssm_block_size = self._ssm_table.page_size_bytes
+        kv_total_bytes = self._kv_table.num_pages_total * kv_page_size
+        ssm_total_bytes = self._ssm_table.num_pages_total * ssm_block_size
+        kv_free_bytes = self._kv_table.num_pages_free * kv_page_size
+        ssm_free_bytes = self._ssm_table.num_pages_free * ssm_block_size
         return {
-            "pool_underused_bytes_kv": float(self._pool_underused_bytes_kv),
-            "pool_underused_bytes_ssm": float(self._pool_underused_bytes_ssm),
+            "pool_free_bytes_kv": float(kv_free_bytes),
+            "pool_free_bytes_ssm": float(ssm_free_bytes),
+            "kv_pool_total_bytes": float(kv_total_bytes),
+            "ssm_pool_total_bytes": float(ssm_total_bytes),
             "mamba_ratio": float(self._mamba_ratio),
             "kv_pages_total": float(self._kv_table.num_pages_total),
             "kv_pages_used": float(self._kv_table.num_pages_used),
@@ -184,7 +196,7 @@ class FixedDualPool(Allocator, AllocatorContext):
         num_blocks: int,
     ) -> list[int]:
         page_ids = self._try_alloc_with_eviction(
-            table=table, tracker=tracker, num_blocks=num_blocks
+            table=table, tracker=tracker, pool_id=pool_id, num_blocks=num_blocks
         )
         handle_ids: list[int] = []
         for pid in page_ids:
@@ -205,13 +217,13 @@ class FixedDualPool(Allocator, AllocatorContext):
         *,
         table: PageTable,
         tracker: LRURequestTracker,
+        pool_id: int,
         num_blocks: int,
     ) -> list[int]:
         try:
             return table.alloc(num_blocks)
         except CapacityError as first:
-            self._record_cross_pool_underuse(table)
-            self._evict_one_from(table=table, tracker=tracker)
+            self._evict_one_from(table=table, tracker=tracker, pool_id=pool_id)
             try:
                 return table.alloc(num_blocks)
             except CapacityError as exc:
@@ -219,27 +231,26 @@ class FixedDualPool(Allocator, AllocatorContext):
                     f"fixed_dual pool exhausted after eviction (origin={first}): {exc}"
                 ) from exc
 
-    def _evict_one_from(self, *, table: PageTable, tracker: LRURequestTracker) -> None:
+    def _evict_one_from(
+        self,
+        *,
+        table: PageTable,
+        tracker: LRURequestTracker,
+        pool_id: int,
+    ) -> None:
         victim_id = tracker.select_oldest()
         if victim_id is None:
             return
         page_ids = tracker.drop(victim_id)
-        # Build the inverse mapping from internal page id back to the public handle id.
+        # Filter by pool_id so an eviction in one pool does not pop
+        # handles whose page_id collides numerically in the other pool.
+        page_set = set(page_ids)
         invalidated: list[int] = [
-            hid for hid, handle in list(self._handles.items()) if handle.page_id in page_ids
+            hid
+            for hid, handle in list(self._handles.items())
+            if handle.pool_id == pool_id and handle.page_id in page_set
         ]
         for hid in invalidated:
             self._handles.pop(hid, None)
         if page_ids:
             table.free(page_ids)
-
-    def _record_cross_pool_underuse(self, target_table: PageTable) -> None:
-        # When the target pool throws CapacityError, the other pool's free bytes are
-        # stranded by the static partition. Add them to the running total so the
-        # rigidity stat surfaces non-zero under skewed workloads.
-        if target_table is self._kv_table:
-            other_free = self._ssm_table.num_pages_free * self._ssm_table.page_size_bytes
-            self._pool_underused_bytes_kv += other_free
-        else:
-            other_free = self._kv_table.num_pages_free * self._kv_table.page_size_bytes
-            self._pool_underused_bytes_ssm += other_free

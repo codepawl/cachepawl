@@ -211,6 +211,28 @@ class LRURequestTracker:
         entry = self._entries.get(request_id)
         return [] if entry is None else list(entry.page_ids)
 
+    def remove_pages(self, page_ids: Sequence[int]) -> None:
+        """Remove ``page_ids`` from every entry, dropping now-empty entries.
+
+        Called whenever a public ``Allocator.free`` returns pages to a
+        table so that subsequent ``select_oldest`` / ``drop`` calls do
+        not see stale page ids that have already been freed. Without
+        this, eviction can pick a departed request's lingering entry
+        and re-free its pages, growing ``num_pages_free`` past
+        ``num_pages_total``.
+        """
+
+        if not page_ids:
+            return
+        page_set = set(page_ids)
+        empty_keys: list[int] = []
+        for req_id, entry in self._entries.items():
+            entry.page_ids = [pid for pid in entry.page_ids if pid not in page_set]
+            if not entry.page_ids:
+                empty_keys.append(req_id)
+        for req_id in empty_keys:
+            del self._entries[req_id]
+
     def __len__(self) -> int:
         return len(self._entries)
 

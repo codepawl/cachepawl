@@ -198,6 +198,93 @@ print(run.metrics.allocate_latency_percentiles())
 The JSON lands at `benchmarks/results/mock/uniform_short/*.json`.
 The `benchmarks/results/` directory is gitignored.
 
+## Comparison sweep
+
+For multi-cell sweeps with replicate aggregation and report rendering:
+
+```bash
+uv run python -m cachepawl.benchmarks.compare --quick --device cpu \
+    --output benchmarks/results/baseline/quick/
+```
+
+`--quick` runs three cells (one per registered baseline variant on
+`uniform_short` x `jamba_1_5_mini` x 1 GiB x one seed) and writes a
+markdown report, two PNG figures, raw per-cell JSON, and a
+`SWEEP_METADATA.json` provenance file. Drop `--quick` for the full
+3 x 3 x 2 x 3 x 3 = 162-cell sweep across all workloads, both model
+specs, three pool sizes, and three seed replicates.
+
+## Committed reference artifacts
+
+`benchmarks/results/baseline/quick/` carries the committed `--quick`
+output as a reference snapshot. It is NOT a fixture the tests pin on;
+it exists so anyone can see what the report and figures look like
+without running the sweep. Regenerate with the command above. The
+`aggregated_deterministic.json` sibling is bit-stable across reruns at
+the same seed on CPU; the rest is provenance and visualization.
+
+## Known limitations of this baseline data
+
+The committed `--quick` snapshot is a sanity-check artifact, not a
+production performance characterization. Three caveats matter for anyone
+reading the numbers or planning follow-up work:
+
+- `fragmentation_peak` samples at end-of-run when `allocated_blocks`
+  approaches zero, so its value reflects the late-run drain phase as
+  much as the worst in-flight moment. Keep it as a coarse signal until
+  the time-weighted underuse metric (see below) lands.
+- `pool_free_bytes_kv` and `pool_free_bytes_ssm` are point-in-time
+  snapshots at end-of-run, not a rigidity measure. On a cleanly-departing
+  workload they trivially equal the pool totals. The correct metric is a
+  time-weighted average of per-pool free bytes during load, sampled via
+  `MetricsCollector` at every tick. That is a deliberate follow-up.
+- The 247 OOMs on `fixed_dual_mr09 + uniform_short` are not a bug. They
+  surface SGLang's rigidity weakness when the workload does not match
+  the configured `mamba_ratio`: an SSM-heavy split starves the KV pool
+  on short-prompt traffic. This is the empirical baseline AVMP must beat
+  by rebalancing dynamically.
+
+## Data sanity invariants
+
+Every emitted metric below must satisfy its valid range. Run the
+checklist against any new sweep output before trusting the numbers.
+This section exists because three of the metrics in the first
+committed snapshot did NOT satisfy their ranges and the bug took a
+human eye to catch; the table now serves as the reviewer's checklist.
+
+| Metric | Source | Unit | Valid range | Comment |
+|---|---|---|---|---|
+| `fragmentation_during_load_mean` | mean of `1 - allocated/reserved` over ticks with `active_requests_samples[i] > 0` | dimensionless | `[0, 1]` | filtered to ignore the post-teardown sample (the runner emits one final tick with `active == 0` where ratio is forced to 1.0) |
+| `fragmentation_peak` | max of the same filtered series | dimensionless | `[0, 1]` | worst-case during load |
+| `peak_reserved_bytes` | `torch.cuda.max_memory_reserved` on CUDA; pool's `total_blocks` on CPU | bytes (CUDA) or blocks (CPU) | `>= 0` | on CPU this is a block count, not a byte count (existing harness quirk; CUDA gives bytes) |
+| `oom_count` | runner-caught `OutOfMemoryError` | count | `>= 0` | non-zero indicates pool starvation |
+| `padding_waste_bytes` (padded_unified) | sum of `(page_size - logical_bytes)` per live page | bytes | `0 <= x <= peak_allocated_bytes` | snapshot at run end. Drops to 0 on a workload where every request departs cleanly; the metric is meaningful mid-run, not at teardown |
+| `pool_free_bytes_kv` (fixed_dual) | `num_pages_free * page_size_bytes` for the KV table | bytes | `0 <= x <= kv_pool_total_bytes` | snapshot at run end. On a cleanly-departing workload this equals `kv_pool_total_bytes`; for rigidity comparisons, prefer `oom_count` and `fragmentation_peak` |
+| `pool_free_bytes_ssm` (fixed_dual) | `num_pages_free * page_size_bytes` for the SSM table | bytes | `0 <= x <= ssm_pool_total_bytes` | same caveat as `pool_free_bytes_kv` |
+| `kv_pool_total_bytes`, `ssm_pool_total_bytes` (fixed_dual) | constructor-time pool sizes | bytes | `> 0`, sum near `total_bytes` minus alignment slack | constants for the life of the allocator |
+| `mamba_ratio` | constructor arg | dimensionless | `(0, 1)` exclusive | fraction of `total_bytes` assigned to the SSM pool (see "mamba_ratio convention" below) |
+| `allocate_p50_ns`, `p95_ns`, `p99_ns` | `time.perf_counter_ns` | nanoseconds | `>= 0` | NOT deterministic across reruns |
+
+Smell tests, in priority order:
+
+- A pool's `free_bytes` must never exceed that pool's `total_bytes`. If it does, the field is a cumulator masquerading as a snapshot.
+- `fragmentation > 1` or `fragmentation < 0` means the metric source is misconfigured (look for divide-by-zero shortcuts in `MetricsCollector.sample`).
+- `mamba_ratio` outside `(0, 1)` is rejected at construction.
+- If `oom_count > 0` while `pool_free_bytes_<other>` is non-zero, that quantifies the rigidity cost of the static partition (stranded bytes that could have served evicted requests).
+- A fragmentation_during_load value of exactly 1.000 across every variant is the canonical signature of "aggregator picked the wrong tick" (the teardown sample). Sanity-check the active count alignment.
+
+### mamba_ratio convention
+
+`mamba_ratio` in `FixedDualPool` mirrors SGLang's `mamba_full_memory_ratio` at commit [`22012ba1`](https://github.com/sgl-project/sglang/blob/22012ba1bc2166f2280be2ad648ba732a0ff382b/python/sglang/srt/server_args.py): the argparse help string is `"The ratio of mamba state memory to full kv cache memory"` and the default is `0.9`. Higher values give MORE bytes to mamba/SSM, less to KV.
+
+In practice:
+
+- `mamba_ratio = 0.5`: neutral 50/50 split; the synthetic-comparison baseline this repo ships with as the constructor default.
+- `mamba_ratio = 0.9`: matches SGLang's production default. **SSM-heavy, NOT KV-heavy.** The SSM pool gets 90% of `total_bytes`. On short-context, KV-dominated workloads (for example `uniform_short` with 128-1024 token prompts) this strands the KV pool and produces many OOMs - that's the legitimate SGLang-default datapoint, not a bug.
+- If you want the KV-heavy endpoint (10% to SSM, 90% to KV), pass `mamba_ratio = 0.1`. The default sweep does not currently include this; add it as a follow-up if relevant.
+
+The convention is locked by `test_mamba_ratio_09_assigns_90_percent_to_ssm_pool` in `tests/unit/allocator/baselines/test_fixed_dual.py`.
+
 ## Stub kept for compatibility
 
 `benchmarks/dummy_cache_workload.py` predates the harness and will host
