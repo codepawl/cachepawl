@@ -198,6 +198,31 @@ print(run.metrics.allocate_latency_percentiles())
 The JSON lands at `benchmarks/results/mock/uniform_short/*.json`.
 The `benchmarks/results/` directory is gitignored.
 
+## Comparison sweep
+
+For multi-cell sweeps with replicate aggregation and report rendering:
+
+```bash
+uv run python -m cachepawl.benchmarks.compare --quick --device cpu \
+    --output benchmarks/results/baseline/quick/
+```
+
+`--quick` runs three cells (one per registered baseline variant on
+`uniform_short` x `jamba_1_5_mini` x 1 GiB x one seed) and writes a
+markdown report, two PNG figures, raw per-cell JSON, and a
+`SWEEP_METADATA.json` provenance file. Drop `--quick` for the full
+3 x 3 x 2 x 3 x 3 = 162-cell sweep across all workloads, both model
+specs, three pool sizes, and three seed replicates.
+
+## Committed reference artifacts
+
+`benchmarks/results/baseline/quick/` carries the committed `--quick`
+output as a reference snapshot. It is NOT a fixture the tests pin on;
+it exists so anyone can see what the report and figures look like
+without running the sweep. Regenerate with the command above. The
+`aggregated_deterministic.json` sibling is bit-stable across reruns at
+the same seed on CPU; the rest is provenance and visualization.
+
 ## Stub kept for compatibility
 
 `benchmarks/dummy_cache_workload.py` predates the harness and will host
