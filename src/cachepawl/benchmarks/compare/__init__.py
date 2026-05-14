@@ -7,6 +7,12 @@ rendering reports plus matplotlib plots.
 Invoke the CLI via ``python -m cachepawl.benchmarks.compare``.
 """
 
+from cachepawl.benchmarks.compare.aggregate import (
+    AggregatedMetrics,
+    AggregatedRow,
+    aggregate_runs,
+    compute_relative_improvement,
+)
 from cachepawl.benchmarks.compare.sweep import (
     DEFAULT_MODEL_SPEC_NAMES,
     DEFAULT_SEED_REPLICATES,
@@ -43,11 +49,15 @@ __all__ = [
     "QUICK_TOTAL_BYTES_OPTIONS",
     "QUICK_WORKLOAD_NAMES",
     "SMOKE_NUM_REQUESTS",
+    "AggregatedMetrics",
+    "AggregatedRow",
     "AllocatorVariant",
     "CellFailure",
     "SweepConfig",
     "SweepMetadata",
     "SweepResult",
+    "aggregate_runs",
+    "compute_relative_improvement",
     "get_model_spec",
     "known_model_spec_names",
     "make_default_config",
