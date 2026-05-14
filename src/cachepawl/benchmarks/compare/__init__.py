@@ -13,6 +13,11 @@ from cachepawl.benchmarks.compare.aggregate import (
     aggregate_runs,
     compute_relative_improvement,
 )
+from cachepawl.benchmarks.compare.report import (
+    render_deterministic_summary,
+    render_json_summary,
+    render_markdown_report,
+)
 from cachepawl.benchmarks.compare.sweep import (
     DEFAULT_MODEL_SPEC_NAMES,
     DEFAULT_SEED_REPLICATES,
@@ -63,6 +68,9 @@ __all__ = [
     "make_default_config",
     "make_quick_config",
     "make_smoke_config",
+    "render_deterministic_summary",
+    "render_json_summary",
+    "render_markdown_report",
     "run_sweep",
     "total_bytes_human",
 ]
