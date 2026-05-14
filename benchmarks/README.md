@@ -223,6 +223,27 @@ without running the sweep. Regenerate with the command above. The
 `aggregated_deterministic.json` sibling is bit-stable across reruns at
 the same seed on CPU; the rest is provenance and visualization.
 
+## Known limitations of this baseline data
+
+The committed `--quick` snapshot is a sanity-check artifact, not a
+production performance characterization. Three caveats matter for anyone
+reading the numbers or planning follow-up work:
+
+- `fragmentation_peak` samples at end-of-run when `allocated_blocks`
+  approaches zero, so its value reflects the late-run drain phase as
+  much as the worst in-flight moment. Keep it as a coarse signal until
+  the time-weighted underuse metric (see below) lands.
+- `pool_free_bytes_kv` and `pool_free_bytes_ssm` are point-in-time
+  snapshots at end-of-run, not a rigidity measure. On a cleanly-departing
+  workload they trivially equal the pool totals. The correct metric is a
+  time-weighted average of per-pool free bytes during load, sampled via
+  `MetricsCollector` at every tick. That is a deliberate follow-up.
+- The 247 OOMs on `fixed_dual_mr09 + uniform_short` are not a bug. They
+  surface SGLang's rigidity weakness when the workload does not match
+  the configured `mamba_ratio`: an SSM-heavy split starves the KV pool
+  on short-prompt traffic. This is the empirical baseline AVMP must beat
+  by rebalancing dynamically.
+
 ## Data sanity invariants
 
 Every emitted metric below must satisfy its valid range. Run the
