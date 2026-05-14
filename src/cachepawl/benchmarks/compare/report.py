@@ -102,12 +102,12 @@ def _render_how_to_read() -> str:
         "- `alloc_p50_us` / `alloc_p99_us`: allocate-call latency in microseconds "
         "(latency varies across reruns; not deterministic).",
         "- `oom_count`: number of `OutOfMemoryError` raised during the run (lower is better).",
-        "- `padding_waste_MiB`: bytes wasted by padded_unified rounding SSM blocks up to the "
-        "KV page size. Snapshot at end of run. Only meaningful for `padded_unified` rows.",
-        "- `kv_free_MiB`, `ssm_free_MiB`: snapshot of free bytes in each fixed_dual pool at "
-        "end of run, bounded by that pool's total bytes. If `oom_count > 0` while these are "
-        "non-zero, the static partition stranded bytes that could have served evicted "
-        "requests. Only meaningful for `fixed_dual_*` rows.",
+        "- `padding_waste_MiB` (padded_unified) and `kv_free_MiB`, `ssm_free_MiB` "
+        "(fixed_dual) are END-OF-RUN snapshots. On a workload where every request "
+        "departs cleanly, padding_waste drops to 0 and pool_free returns to the pool "
+        "total; the snapshots then carry little comparison weight. The interesting "
+        "rigidity signal is the pair `(oom_count, fragmentation_peak)`: lower OOMs at "
+        "comparable fragmentation means the allocator absorbed more load.",
         "- `mean +- std`: mean across replicates with population standard deviation (ddof=0).",
     ]
     return "\n".join(lines)

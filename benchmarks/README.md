@@ -237,9 +237,9 @@ human eye to catch; the table now serves as the reviewer's checklist.
 | `fragmentation_peak` | max of the same filtered series | dimensionless | `[0, 1]` | worst-case during load |
 | `peak_reserved_bytes` | `torch.cuda.max_memory_reserved` on CUDA; pool's `total_blocks` on CPU | bytes (CUDA) or blocks (CPU) | `>= 0` | on CPU this is a block count, not a byte count (existing harness quirk; CUDA gives bytes) |
 | `oom_count` | runner-caught `OutOfMemoryError` | count | `>= 0` | non-zero indicates pool starvation |
-| `padding_waste_bytes` (padded_unified) | sum of `(page_size - logical_bytes)` per live page | bytes | `0 <= x <= peak_allocated_bytes` | snapshot, mutated on alloc/free |
-| `pool_free_bytes_kv` (fixed_dual) | `num_pages_free * page_size_bytes` for the KV table | bytes | `0 <= x <= kv_pool_total_bytes` | snapshot at query time |
-| `pool_free_bytes_ssm` (fixed_dual) | `num_pages_free * page_size_bytes` for the SSM table | bytes | `0 <= x <= ssm_pool_total_bytes` | snapshot at query time |
+| `padding_waste_bytes` (padded_unified) | sum of `(page_size - logical_bytes)` per live page | bytes | `0 <= x <= peak_allocated_bytes` | snapshot at run end. Drops to 0 on a workload where every request departs cleanly; the metric is meaningful mid-run, not at teardown |
+| `pool_free_bytes_kv` (fixed_dual) | `num_pages_free * page_size_bytes` for the KV table | bytes | `0 <= x <= kv_pool_total_bytes` | snapshot at run end. On a cleanly-departing workload this equals `kv_pool_total_bytes`; for rigidity comparisons, prefer `oom_count` and `fragmentation_peak` |
+| `pool_free_bytes_ssm` (fixed_dual) | `num_pages_free * page_size_bytes` for the SSM table | bytes | `0 <= x <= ssm_pool_total_bytes` | same caveat as `pool_free_bytes_kv` |
 | `kv_pool_total_bytes`, `ssm_pool_total_bytes` (fixed_dual) | constructor-time pool sizes | bytes | `> 0`, sum near `total_bytes` minus alignment slack | constants for the life of the allocator |
 | `mamba_ratio` | constructor arg | dimensionless | `(0, 1)` exclusive | fraction of `total_bytes` assigned to the SSM pool (see "mamba_ratio convention" below) |
 | `allocate_p50_ns`, `p95_ns`, `p99_ns` | `time.perf_counter_ns` | nanoseconds | `>= 0` | NOT deterministic across reruns |
