@@ -45,7 +45,7 @@
   "cuda_version": "13.0",
   "device": "cpu",
   "failures": [],
-  "git_sha": "557992298f92f753315384276953a9457cc4d6e1",
+  "git_sha": "37cb9ff4e48ad26eba7851e8a60af90d84a190d1",
   "gpu_name": null,
   "hardware_label": "cpu (linux x86_64)",
   "n_cells_failed": 0,
@@ -53,8 +53,8 @@
   "n_cells_succeeded": 3,
   "numpy_version": "2.2.6",
   "python_version": "3.10.19",
-  "sweep_finished_at": "2026-05-14T18:55:57Z",
-  "sweep_started_at": "2026-05-14T18:55:40Z",
+  "sweep_finished_at": "2026-05-14T19:30:02Z",
+  "sweep_started_at": "2026-05-14T19:29:48Z",
   "torch_version": "2.12.0+cu130",
-  "total_wall_seconds": 16.510087155000292
+  "total_wall_seconds": 14.170919618998596
 }
