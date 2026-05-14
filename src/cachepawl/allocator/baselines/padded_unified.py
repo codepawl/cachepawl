@@ -141,6 +141,7 @@ class PaddedUnifiedPool(Allocator, AllocatorContext):
             waste = max(0, self._page_size_bytes - handle.bytes_size)
             self._padding_waste_bytes = max(0, self._padding_waste_bytes - waste)
         self._table.free(to_free)
+        self._tracker.remove_pages(to_free)
 
     def stats(self) -> AllocatorStats:
         total = self._table.num_pages_total

@@ -128,6 +128,8 @@ class FixedDualPool(Allocator, AllocatorContext):
             num_blocks=num_blocks,
         )
 
+    # ----- Helpers (continued below) -----
+
     def free(self, block_ids: Sequence[int]) -> None:
         seen: set[int] = set()
         kv_ids: list[int] = []
@@ -145,8 +147,10 @@ class FixedDualPool(Allocator, AllocatorContext):
                 ssm_ids.append(handle.page_id)
         if kv_ids:
             self._kv_table.free(kv_ids)
+            self._kv_tracker.remove_pages(kv_ids)
         if ssm_ids:
             self._ssm_table.free(ssm_ids)
+            self._ssm_tracker.remove_pages(ssm_ids)
 
     def stats(self) -> AllocatorStats:
         total = self._kv_table.num_pages_total + self._ssm_table.num_pages_total
@@ -192,7 +196,7 @@ class FixedDualPool(Allocator, AllocatorContext):
         num_blocks: int,
     ) -> list[int]:
         page_ids = self._try_alloc_with_eviction(
-            table=table, tracker=tracker, num_blocks=num_blocks
+            table=table, tracker=tracker, pool_id=pool_id, num_blocks=num_blocks
         )
         handle_ids: list[int] = []
         for pid in page_ids:
@@ -213,12 +217,13 @@ class FixedDualPool(Allocator, AllocatorContext):
         *,
         table: PageTable,
         tracker: LRURequestTracker,
+        pool_id: int,
         num_blocks: int,
     ) -> list[int]:
         try:
             return table.alloc(num_blocks)
         except CapacityError as first:
-            self._evict_one_from(table=table, tracker=tracker)
+            self._evict_one_from(table=table, tracker=tracker, pool_id=pool_id)
             try:
                 return table.alloc(num_blocks)
             except CapacityError as exc:
@@ -226,14 +231,24 @@ class FixedDualPool(Allocator, AllocatorContext):
                     f"fixed_dual pool exhausted after eviction (origin={first}): {exc}"
                 ) from exc
 
-    def _evict_one_from(self, *, table: PageTable, tracker: LRURequestTracker) -> None:
+    def _evict_one_from(
+        self,
+        *,
+        table: PageTable,
+        tracker: LRURequestTracker,
+        pool_id: int,
+    ) -> None:
         victim_id = tracker.select_oldest()
         if victim_id is None:
             return
         page_ids = tracker.drop(victim_id)
-        # Build the inverse mapping from internal page id back to the public handle id.
+        # Filter by pool_id so an eviction in one pool does not pop
+        # handles whose page_id collides numerically in the other pool.
+        page_set = set(page_ids)
         invalidated: list[int] = [
-            hid for hid, handle in list(self._handles.items()) if handle.page_id in page_ids
+            hid
+            for hid, handle in list(self._handles.items())
+            if handle.pool_id == pool_id and handle.page_id in page_set
         ]
         for hid in invalidated:
             self._handles.pop(hid, None)

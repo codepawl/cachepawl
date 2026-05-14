@@ -212,6 +212,54 @@ def test_pool_free_bytes_restored_after_free_all(
     assert stats["pool_free_bytes_kv"] == stats["kv_pool_total_bytes"]
 
 
+def test_eviction_after_departure_does_not_double_free_pages(
+    jamba_spec: HybridModelSpec,
+    cpu_device: torch.device,
+) -> None:
+    """A departed request's tracker entry must not survive into the next eviction.
+
+    Reproduces the bug observed in the quick reference data where
+    pool_free_bytes_kv exceeded kv_pool_total_bytes (and kv_pages_used
+    went negative). Root cause: FixedDualPool.free returned pages to
+    the underlying PageTable but did not clean up the LRU tracker
+    entry. A subsequent allocation that triggered eviction could
+    select the departed request as the oldest victim, call drop on
+    its stale tracker entry, and re-call PageTable.free on pages that
+    were already in the free list. Each cycle grew num_pages_free
+    past num_pages_total. The fix wires FixedDualPool.free to call
+    LRURequestTracker.remove_pages on the same ids.
+    """
+
+    pool = FixedDualPool(
+        model_spec=jamba_spec,
+        total_bytes=4 * 1024**2,
+        device=cpu_device,
+        mamba_ratio=0.5,
+    )
+    pool.set_current_layer_kind(LayerKind.ATTENTION)
+    total = int(pool.get_allocator_stats()["kv_pages_total"])
+
+    # A few alloc->depart cycles to seed the tracker, then a chain of
+    # eviction-triggering allocations. After each step assert the
+    # invariant that bounds pool_free_bytes by kv_pool_total_bytes.
+    for cycle in range(4):
+        rid_a = 100 + 2 * cycle
+        rid_b = 101 + 2 * cycle
+        pool.set_current_request_id(rid_a)
+        ids_a = pool.allocate(total // 2, dtype_bytes=2)
+        pool.free(ids_a)
+        pool.set_current_request_id(rid_b)
+        pool.allocate(total // 2, dtype_bytes=2)
+        pool.set_current_request_id(rid_b + 50)
+        pool.allocate(total // 2, dtype_bytes=2)
+        stats = pool.get_allocator_stats()
+        assert stats["pool_free_bytes_kv"] <= stats["kv_pool_total_bytes"], (
+            f"cycle {cycle}: free={stats['pool_free_bytes_kv']} "
+            f"exceeded total={stats['kv_pool_total_bytes']}"
+        )
+        assert stats["kv_pages_used"] >= 0
+
+
 def test_mamba_ratio_09_assigns_90_percent_to_ssm_pool(
     jamba_spec: HybridModelSpec,
     cpu_device: torch.device,
