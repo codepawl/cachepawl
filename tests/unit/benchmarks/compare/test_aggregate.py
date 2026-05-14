@@ -83,8 +83,47 @@ def test_aggregate_three_replicates_mean_and_std() -> None:
     assert row.peak_reserved_bytes_std == pytest.approx(expected_std)
     assert row.peak_reserved_bytes_min == 100
     assert row.peak_reserved_bytes_max == 300
-    assert row.fragmentation_final_mean == pytest.approx(0.20)
+    assert row.fragmentation_during_load_mean == pytest.approx(0.20)
     assert row.oom_count_mean == pytest.approx(0.0)
+
+
+def test_aggregate_ignores_post_teardown_fragmentation_samples() -> None:
+    """Final sample taken when active=0 must not poison fragmentation_during_load.
+
+    The runner emits one post-teardown sample after every request has
+    departed (active_requests_samples[-1] == 0); at that instant
+    allocated == 0 so the fragmentation ratio is ~1.0. The aggregator
+    must filter that idle tail out, not average it in.
+    """
+
+    config = SweepConfig(
+        variants=(AllocatorVariant("padded_unified", "padded_unified", ()),),
+        workload_names=("uniform_short",),
+        model_spec_names=("jamba_1_5_mini",),
+        total_bytes_options=(1 * 1024**3,),
+        device="cpu",
+        output_dir=Path("/tmp/probe"),
+        seed_replicates=1,
+    )
+    run = make_run(
+        allocator_label="padded_unified",
+        workload_name="uniform_short",
+        seed=1,
+        peak_reserved_bytes=100,
+        final_fragmentation=0.0,  # unused; we supply parallel lists below
+        oom_count=0,
+        allocator_specific_stats={"padding_waste_bytes": 0.0},
+        fragmentation_samples=[0.05, 0.05, 0.05, 1.0],
+        active_requests_samples=[1, 1, 1, 0],
+    )
+    stem = "jamba_1_5_mini__tb1gib__seed1"
+    result = make_sweep_result(config=config, runs=[run], cell_stems=[stem])
+    aggregated = aggregate_runs(result)
+    row = aggregated.rows[0]
+    # Naive mean of all 4 samples would be 0.275; filtered mean is 0.05.
+    assert row.fragmentation_during_load_mean == pytest.approx(0.05)
+    assert row.fragmentation_during_load_max == pytest.approx(0.05)
+    assert row.fragmentation_peak == pytest.approx(0.05)
 
 
 def test_aggregate_allocator_specific_median_and_iqr() -> None:
@@ -153,7 +192,7 @@ def test_aggregate_groups_replicates_correctly() -> None:
         peak_values=[200, 200, 200],
         final_frags=[0.05, 0.05, 0.05],
         oom_values=[1, 1, 1],
-        allocator_specifics=[{"pool_underused_bytes_kv": 3.0, "pool_underused_bytes_ssm": 7.0}] * 3,
+        allocator_specifics=[{"pool_free_bytes_kv": 3.0, "pool_free_bytes_ssm": 7.0}] * 3,
     )
     result = make_sweep_result(
         config=config,
@@ -181,10 +220,11 @@ def test_compute_relative_improvement_lower_is_better() -> None:
             peak_reserved_bytes_std=0.0,
             peak_reserved_bytes_min=int(peak),
             peak_reserved_bytes_max=int(peak),
-            fragmentation_final_mean=frag,
-            fragmentation_final_std=0.0,
-            fragmentation_final_min=frag,
-            fragmentation_final_max=frag,
+            fragmentation_during_load_mean=frag,
+            fragmentation_during_load_std=0.0,
+            fragmentation_during_load_min=frag,
+            fragmentation_during_load_max=frag,
+            fragmentation_peak=frag,
             oom_count_mean=oom,
             oom_count_std=0.0,
             allocator_specific_median=(),
@@ -198,7 +238,7 @@ def test_compute_relative_improvement_lower_is_better() -> None:
     target = [_row("fixed_dual_mr05", 0.02, 50.0, 5.0)]
     deltas = compute_relative_improvement(baseline, target)
     key = ("uniform_short", "jamba_1_5_mini", "fixed_dual_mr05", 1 * 1024**3)
-    assert deltas[key]["fragmentation_final_mean"] == pytest.approx(60.0)
+    assert deltas[key]["fragmentation_during_load_mean"] == pytest.approx(60.0)
     assert deltas[key]["peak_reserved_bytes_mean"] == pytest.approx(50.0)
     assert deltas[key]["oom_count_mean"] == pytest.approx(50.0)
 
@@ -218,10 +258,11 @@ def test_compute_relative_improvement_rejects_duplicate_baseline_cells() -> None
             peak_reserved_bytes_std=0.0,
             peak_reserved_bytes_min=0,
             peak_reserved_bytes_max=0,
-            fragmentation_final_mean=0.0,
-            fragmentation_final_std=0.0,
-            fragmentation_final_min=0.0,
-            fragmentation_final_max=0.0,
+            fragmentation_during_load_mean=0.0,
+            fragmentation_during_load_std=0.0,
+            fragmentation_during_load_min=0.0,
+            fragmentation_during_load_max=0.0,
+            fragmentation_peak=0.0,
             oom_count_mean=0.0,
             oom_count_std=0.0,
             allocator_specific_median=(),

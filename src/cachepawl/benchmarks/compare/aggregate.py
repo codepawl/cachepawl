@@ -40,6 +40,12 @@ from cachepawl.benchmarks.compare.sweep import (
 class AggregatedRow:
     """One row of aggregated metrics for a (variant, workload, model_spec, tb) cell.
 
+    ``fragmentation_during_load_*`` summaries are computed from samples
+    taken while ``active_requests_samples`` was positive; this filters
+    out the post-teardown sample the runner emits at end-of-trace,
+    which would otherwise force the ratio to 1.0 (allocator empty).
+    ``fragmentation_peak`` is the max of that filtered series.
+
     ``allocator_specific_median`` and ``..._iqr`` are tuples of (key, value)
     pairs sorted by key so the dataclass remains hashable. ``allocator_name``
     is the underlying class name (``padded_unified`` or ``fixed_dual``);
@@ -58,10 +64,11 @@ class AggregatedRow:
     peak_reserved_bytes_min: int
     peak_reserved_bytes_max: int
 
-    fragmentation_final_mean: float
-    fragmentation_final_std: float
-    fragmentation_final_min: float
-    fragmentation_final_max: float
+    fragmentation_during_load_mean: float
+    fragmentation_during_load_std: float
+    fragmentation_during_load_min: float
+    fragmentation_during_load_max: float
+    fragmentation_peak: float
 
     oom_count_mean: float
     oom_count_std: float
@@ -85,10 +92,11 @@ class AggregatedRow:
             "peak_reserved_bytes_std": self.peak_reserved_bytes_std,
             "peak_reserved_bytes_min": self.peak_reserved_bytes_min,
             "peak_reserved_bytes_max": self.peak_reserved_bytes_max,
-            "fragmentation_final_mean": self.fragmentation_final_mean,
-            "fragmentation_final_std": self.fragmentation_final_std,
-            "fragmentation_final_min": self.fragmentation_final_min,
-            "fragmentation_final_max": self.fragmentation_final_max,
+            "fragmentation_during_load_mean": self.fragmentation_during_load_mean,
+            "fragmentation_during_load_std": self.fragmentation_during_load_std,
+            "fragmentation_during_load_min": self.fragmentation_during_load_min,
+            "fragmentation_during_load_max": self.fragmentation_during_load_max,
+            "fragmentation_peak": self.fragmentation_peak,
             "oom_count_mean": self.oom_count_mean,
             "oom_count_std": self.oom_count_std,
             "allocator_specific_median": dict(self.allocator_specific_median),
@@ -112,10 +120,11 @@ class AggregatedRow:
             "peak_reserved_bytes_std": self.peak_reserved_bytes_std,
             "peak_reserved_bytes_min": self.peak_reserved_bytes_min,
             "peak_reserved_bytes_max": self.peak_reserved_bytes_max,
-            "fragmentation_final_mean": self.fragmentation_final_mean,
-            "fragmentation_final_std": self.fragmentation_final_std,
-            "fragmentation_final_min": self.fragmentation_final_min,
-            "fragmentation_final_max": self.fragmentation_final_max,
+            "fragmentation_during_load_mean": self.fragmentation_during_load_mean,
+            "fragmentation_during_load_std": self.fragmentation_during_load_std,
+            "fragmentation_during_load_min": self.fragmentation_during_load_min,
+            "fragmentation_during_load_max": self.fragmentation_during_load_max,
+            "fragmentation_peak": self.fragmentation_peak,
             "oom_count_mean": self.oom_count_mean,
             "oom_count_std": self.oom_count_std,
             "allocator_specific_median": dict(self.allocator_specific_median),
@@ -189,7 +198,9 @@ def _aggregate_one_cell(
     if not runs:
         raise ValueError(f"cannot aggregate empty replicate list for {key!r}")
     peak_reserved = [r.metrics.peak_reserved_bytes for r in runs]
-    final_frag = [_final_fragmentation(r) for r in runs]
+    per_run_during_load = [_fragmentation_during_load(r) for r in runs]
+    per_run_mean_frag = [_mean(samples) for samples in per_run_during_load]
+    per_run_peak_frag = [max(samples) if samples else 0.0 for samples in per_run_during_load]
     ooms = [r.metrics.oom_count for r in runs]
     p50s = [compute_percentiles(r.metrics.allocate_latency_ns).p50_ns for r in runs]
     p95s = [compute_percentiles(r.metrics.allocate_latency_ns).p95_ns for r in runs]
@@ -209,10 +220,11 @@ def _aggregate_one_cell(
         peak_reserved_bytes_std=_std(peak_reserved),
         peak_reserved_bytes_min=min(peak_reserved),
         peak_reserved_bytes_max=max(peak_reserved),
-        fragmentation_final_mean=_mean(final_frag),
-        fragmentation_final_std=_std(final_frag),
-        fragmentation_final_min=min(final_frag),
-        fragmentation_final_max=max(final_frag),
+        fragmentation_during_load_mean=_mean(per_run_mean_frag),
+        fragmentation_during_load_std=_std(per_run_mean_frag),
+        fragmentation_during_load_min=min(per_run_mean_frag) if per_run_mean_frag else 0.0,
+        fragmentation_during_load_max=max(per_run_mean_frag) if per_run_mean_frag else 0.0,
+        fragmentation_peak=max(per_run_peak_frag) if per_run_peak_frag else 0.0,
         oom_count_mean=_mean(ooms),
         oom_count_std=_std(ooms),
         allocator_specific_median=allocator_specific[0],
@@ -223,11 +235,24 @@ def _aggregate_one_cell(
     )
 
 
-def _final_fragmentation(run: BenchmarkRun) -> float:
-    samples = run.metrics.fragmentation_samples
-    if not samples:
-        return 0.0
-    return float(samples[-1])
+def _fragmentation_during_load(run: BenchmarkRun) -> list[float]:
+    """Fragmentation samples taken while at least one request was active.
+
+    The runner emits one final ``collector.sample`` call AFTER the event
+    loop drains, at which point every request has departed and
+    ``allocated == 0`` forces fragmentation to ~1.0. That tail sample is
+    a teardown artifact, not a measurement of pool behavior under load.
+    Filter it (and any other idle ticks) by pairing each sample with
+    its ``active_requests_samples`` entry and keeping only entries with
+    positive active count. Empty result is legal (smoke runs that fit
+    in one tick); callers fall back to 0.0 for the corresponding
+    summary statistics.
+    """
+
+    frags = run.metrics.fragmentation_samples
+    actives = run.metrics.active_requests_samples
+    n = min(len(frags), len(actives))
+    return [float(frags[i]) for i in range(n) if actives[i] > 0]
 
 
 def _mean(values: Sequence[float]) -> float:
@@ -270,7 +295,7 @@ def _aggregate_allocator_specific(
 
 
 _LOWER_IS_BETTER_DEFAULT: tuple[str, ...] = (
-    "fragmentation_final_mean",
+    "fragmentation_during_load_mean",
     "peak_reserved_bytes_mean",
     "oom_count_mean",
 )

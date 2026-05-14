@@ -91,15 +91,23 @@ def _render_how_to_read() -> str:
     lines = [
         "## How to read",
         "",
-        "- `peak_reserved_MiB`: max bytes the pool held during the run (lower is better).",
-        "- `fragmentation_ratio`: final `1 - allocated/reserved` sample (lower is better).",
+        "- `peak_reserved_MiB`: peak `reserved` figure from the allocator over the run "
+        "(lower is better). On CUDA this is `torch.cuda.max_memory_reserved`; on CPU it is "
+        "the pool's `total_blocks` count, so CPU rows show small integers.",
+        "- `fragmentation_during_load`: mean of `1 - allocated/reserved` across only the "
+        "ticks where the workload had at least one active request. Filters out the "
+        "post-teardown sample that the runner emits when all requests have departed "
+        "(which would force the ratio to 1.0). Lower is better.",
+        "- `fragmentation_peak`: max of that same filtered series; worst-case during load.",
         "- `alloc_p50_us` / `alloc_p99_us`: allocate-call latency in microseconds "
-        "(latency varies across reruns).",
+        "(latency varies across reruns; not deterministic).",
         "- `oom_count`: number of `OutOfMemoryError` raised during the run (lower is better).",
         "- `padding_waste_MiB`: bytes wasted by padded_unified rounding SSM blocks up to the "
-        "KV page size. Only meaningful for `padded_unified` rows.",
-        "- `kv_underused_MiB`, `ssm_underused_MiB`: bytes in each fixed_dual pool that were "
-        "reserved but unused. Only meaningful for `fixed_dual_*` rows.",
+        "KV page size. Snapshot at end of run. Only meaningful for `padded_unified` rows.",
+        "- `kv_free_MiB`, `ssm_free_MiB`: snapshot of free bytes in each fixed_dual pool at "
+        "end of run, bounded by that pool's total bytes. If `oom_count > 0` while these are "
+        "non-zero, the static partition stranded bytes that could have served evicted "
+        "requests. Only meaningful for `fixed_dual_*` rows.",
         "- `mean +- std`: mean across replicates with population standard deviation (ddof=0).",
     ]
     return "\n".join(lines)
@@ -122,11 +130,12 @@ def _render_workload_table(workload_name: str, rows: Sequence[AggregatedRow]) ->
     if not cells:
         return ""
     header = (
-        "| variant | model_spec | total_bytes | peak_reserved_MiB | fragmentation_ratio | "
+        "| variant | model_spec | total_bytes | peak_reserved_MiB | "
+        "fragmentation_during_load | fragmentation_peak | "
         "alloc_p50_us | alloc_p99_us | oom_count | padding_waste_MiB | "
-        "kv_underused_MiB | ssm_underused_MiB |"
+        "kv_free_MiB | ssm_free_MiB |"
     )
-    divider = "| " + " | ".join(["---"] * 11) + " |"
+    divider = "| " + " | ".join(["---"] * 12) + " |"
     body = [_render_row(row) for row in cells]
     lines = [f"## Workload: {workload_name}", "", header, divider, *body]
     return "\n".join(lines)
@@ -142,23 +151,25 @@ def _render_row(row: AggregatedRow) -> str:
     stats_map = dict(row.allocator_specific_median)
     if row.allocator_name == "padded_unified":
         padding_waste_mib_text = _format_mib(stats_map.get("padding_waste_bytes", 0.0))
-        kv_under_text = "-"
-        ssm_under_text = "-"
+        kv_free_text = "-"
+        ssm_free_text = "-"
     elif row.allocator_name == "fixed_dual":
         padding_waste_mib_text = "-"
-        kv_under_text = _format_mib(stats_map.get("pool_underused_bytes_kv", 0.0))
-        ssm_under_text = _format_mib(stats_map.get("pool_underused_bytes_ssm", 0.0))
+        kv_free_text = _format_mib(stats_map.get("pool_free_bytes_kv", 0.0))
+        ssm_free_text = _format_mib(stats_map.get("pool_free_bytes_ssm", 0.0))
     else:
         padding_waste_mib_text = "-"
-        kv_under_text = "-"
-        ssm_under_text = "-"
+        kv_free_text = "-"
+        ssm_free_text = "-"
 
     return (
         f"| {row.variant_label} | {row.model_spec_name} | {tb_label} | "
         f"{peak_mib_mean:.2f} +- {peak_mib_std:.2f} | "
-        f"{row.fragmentation_final_mean:.3f} +- {row.fragmentation_final_std:.3f} | "
+        f"{row.fragmentation_during_load_mean:.3f} +- "
+        f"{row.fragmentation_during_load_std:.3f} | "
+        f"{row.fragmentation_peak:.3f} | "
         f"{p50_us:.2f} | {p99_us:.2f} | {row.oom_count_mean:.1f} | "
-        f"{padding_waste_mib_text} | {kv_under_text} | {ssm_under_text} |"
+        f"{padding_waste_mib_text} | {kv_free_text} | {ssm_free_text} |"
     )
 
 
@@ -195,7 +206,7 @@ def _render_relative_improvement(rows: Sequence[AggregatedRow]) -> str:
             metrics = deltas[key]
             sections.append(
                 f"| {workload} | {model_spec} | {total_bytes_human(total_bytes)} | "
-                f"{_format_pct(metrics.get('fragmentation_final_mean', 0.0))} | "
+                f"{_format_pct(metrics.get('fragmentation_during_load_mean', 0.0))} | "
                 f"{_format_pct(metrics.get('peak_reserved_bytes_mean', 0.0))} | "
                 f"{_format_pct(metrics.get('oom_count_mean', 0.0))} |"
             )

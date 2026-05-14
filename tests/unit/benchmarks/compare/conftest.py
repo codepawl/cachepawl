@@ -35,9 +35,22 @@ def make_run(
     oom_count: int,
     allocator_specific_stats: Mapping[str, float],
     allocate_latency_ns: list[int] | None = None,
+    fragmentation_samples: list[float] | None = None,
+    active_requests_samples: list[int] | None = None,
 ) -> BenchmarkRun:
-    """Build a BenchmarkRun with deliberately chosen metric values."""
+    """Build a BenchmarkRun with deliberately chosen metric values.
 
+    By default, ``fragmentation_samples`` is a single tick with the
+    provided ``final_fragmentation`` value, paired against a single
+    ``active_requests_samples`` entry of ``1`` so the during-load
+    filter keeps it. Callers that want to exercise the teardown filter
+    can pass their own parallel lists explicitly.
+    """
+
+    if fragmentation_samples is None:
+        fragmentation_samples = [final_fragmentation]
+    if active_requests_samples is None:
+        active_requests_samples = [1] * len(fragmentation_samples)
     spec = WorkloadSpec(
         name=workload_name,
         num_requests=16,
@@ -51,12 +64,12 @@ def make_run(
     metrics = AllocatorMetrics(
         peak_reserved_bytes=peak_reserved_bytes,
         peak_allocated_bytes=0,
-        fragmentation_samples=[final_fragmentation],
+        fragmentation_samples=list(fragmentation_samples),
         allocate_latency_ns=list(allocate_latency_ns or [1000, 2000, 3000]),
         free_latency_ns=[500, 700, 900],
         oom_count=oom_count,
         preemption_count=0,
-        active_requests_samples=[],
+        active_requests_samples=list(active_requests_samples),
         allocator_specific_stats=dict(allocator_specific_stats),
     )
     return BenchmarkRun(

@@ -47,8 +47,8 @@ def _build_runs() -> tuple[list[BenchmarkRun], list[str]]:
                     specific = {"padding_waste_bytes": 1024.0 * 1024.0}
                 else:
                     specific = {
-                        "pool_underused_bytes_kv": 512.0 * 1024.0,
-                        "pool_underused_bytes_ssm": 256.0 * 1024.0,
+                        "pool_free_bytes_kv": 512.0 * 1024.0,
+                        "pool_free_bytes_ssm": 256.0 * 1024.0,
                     }
                 runs.append(
                     make_run(
@@ -87,8 +87,10 @@ def test_render_markdown_report_contains_required_sections(tmp_path: Path) -> No
     assert "padded_unified" in text
     assert "fixed_dual_mr05" in text
     assert "padding_waste_MiB" in text
-    assert "kv_underused_MiB" in text
-    assert "ssm_underused_MiB" in text
+    assert "kv_free_MiB" in text
+    assert "ssm_free_MiB" in text
+    assert "fragmentation_during_load" in text
+    assert "fragmentation_peak" in text
     assert "git SHA 0123456789ab" in text  # short SHA (12 chars)
     assert "2026-05-14" in text
     assert "+-" in text  # ASCII +-, not unicode +/-
@@ -150,5 +152,6 @@ def test_deterministic_summary_omits_latency(tmp_path: Path) -> None:
         assert "allocate_p99_ns_median" not in row
         # but the deterministic fields must remain
         assert "peak_reserved_bytes_mean" in row
-        assert "fragmentation_final_mean" in row
+        assert "fragmentation_during_load_mean" in row
+        assert "fragmentation_peak" in row
         assert "allocator_specific_median" in row

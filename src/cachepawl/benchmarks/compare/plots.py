@@ -10,15 +10,15 @@ uses a PIL pixel diff with tolerance.
 Two figures:
 
 * ``plot_fragmentation_vs_workload``: grouped bar chart of
-  ``fragmentation_final_mean`` per workload, one bar per variant, with
-  error bars taken from the population std across replicates. Filtered
+  ``fragmentation_during_load_mean`` per workload, one bar per variant,
+  with error bars from the population std across replicates. Filtered
   to one (model_spec, total_bytes) pair to keep the figure legible.
 
-* ``plot_padding_waste_vs_state_size``: line plot of padding waste
-  versus SSM ``d_state``. ``padded_unified`` plots its allocator-specific
-  ``padding_waste_bytes`` directly; ``fixed_dual_*`` plots the sum of
-  ``pool_underused_bytes_kv`` and ``pool_underused_bytes_ssm`` so the
-  two allocator families share one y-axis.
+* ``plot_padding_waste_vs_state_size``: line plot of the rigidity
+  surface vs SSM ``d_state``. ``padded_unified`` plots its
+  ``padding_waste_bytes`` snapshot; ``fixed_dual_*`` plots
+  ``pool_free_bytes_kv + pool_free_bytes_ssm`` at end of run, i.e. the
+  bytes stranded by the static partition.
 """
 
 from __future__ import annotations
@@ -83,8 +83,8 @@ def plot_fragmentation_vs_workload(
             row = _find_row(cells, variant=variant, workload=workload)
             if row is None:
                 continue
-            matrix_mean[vi, wi] = row.fragmentation_final_mean
-            matrix_std[vi, wi] = row.fragmentation_final_std
+            matrix_mean[vi, wi] = row.fragmentation_during_load_mean
+            matrix_std[vi, wi] = row.fragmentation_during_load_std
 
     fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=_FIG_DPI)
     bar_width = 0.8 / max(1, len(variants))
@@ -102,10 +102,11 @@ def plot_fragmentation_vs_workload(
     ax.set_xticks(indices)
     ax.set_xticklabels(workloads, rotation=0)
     ax.set_xlabel("workload")
-    ax.set_ylabel("fragmentation_ratio (final, lower is better)")
+    ax.set_ylabel("fragmentation during load (mean, lower is better)")
     tb_label = total_bytes_human(total_bytes_filter)
     ax.set_title(
-        f"Final fragmentation by workload  (model_spec={model_spec_filter}, total_bytes={tb_label})"
+        f"Fragmentation during load by workload  "
+        f"(model_spec={model_spec_filter}, total_bytes={tb_label})"
     )
     ax.legend(loc="best", fontsize=9)
     ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
@@ -125,12 +126,13 @@ def plot_padding_waste_vs_state_size(
     git_sha: str = "",
     run_date: str = "",
 ) -> None:
-    """Line plot: per-variant padding waste vs SSM d_state.
+    """Line plot: per-variant rigidity surface vs SSM d_state.
 
     For padded_unified, plots ``padding_waste_bytes`` directly. For
-    fixed_dual variants, plots ``kv_underused + ssm_underused`` so all
-    variants share one y-axis. Filter to one (workload, total_bytes)
-    pair for clarity. In quick mode there is one data point per line.
+    fixed_dual variants, plots ``pool_free_bytes_kv + pool_free_bytes_ssm``
+    at end of run so all variants share one y-axis. Filter to one
+    (workload, total_bytes) pair for clarity. In quick mode there is one
+    data point per line.
     """
 
     matching = [r for r in aggregated.rows if r.workload_name == workload_filter]
@@ -155,11 +157,10 @@ def plot_padding_waste_vs_state_size(
         ax.plot(xs, ys, marker="o", label=variant)
 
     ax.set_xlabel("SSM d_state")
-    ax.set_ylabel("padding_waste_or_pool_underused (MiB, median across replicates)")
+    ax.set_ylabel("padding_waste (padded) or pool_free total (fixed_dual), MiB")
     tb_label = total_bytes_human(total_bytes_filter)
     ax.set_title(
-        f"Padding / pool-underuse vs SSM state size  "
-        f"(workload={workload_filter}, total_bytes={tb_label})"
+        f"Rigidity surface vs SSM state size  (workload={workload_filter}, total_bytes={tb_label})"
     )
     ax.legend(loc="best", fontsize=9)
     ax.grid(linestyle="--", linewidth=0.5, alpha=0.5)
@@ -182,12 +183,22 @@ def _d_state_for_spec(model_spec_name: str) -> int:
 
 
 def _padding_waste_mib(row: AggregatedRow) -> float:
+    """Per-variant rigidity surface in MiB for the padding-vs-state-size plot.
+
+    For padded_unified, this is ``padding_waste_bytes`` (bytes lost to
+    SSM-block padding inside the unified page). For fixed_dual, this is
+    ``pool_free_bytes_kv + pool_free_bytes_ssm`` at end of run, i.e.
+    the bytes the static partition stranded because of cross-pool
+    imbalance. Both quantities are snapshot-style and bounded by
+    ``total_bytes``.
+    """
+
     stats = dict(row.allocator_specific_median)
     if row.allocator_name == "padded_unified":
         return float(stats.get("padding_waste_bytes", 0.0)) / _MIB
     if row.allocator_name == "fixed_dual":
-        kv = float(stats.get("pool_underused_bytes_kv", 0.0))
-        ssm = float(stats.get("pool_underused_bytes_ssm", 0.0))
+        kv = float(stats.get("pool_free_bytes_kv", 0.0))
+        ssm = float(stats.get("pool_free_bytes_ssm", 0.0))
         return (kv + ssm) / _MIB
     return 0.0
 

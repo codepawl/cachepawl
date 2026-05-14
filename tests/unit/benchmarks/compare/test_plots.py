@@ -42,8 +42,8 @@ def _build_two_spec_sweep(
                     specific = {"padding_waste_bytes": 2_000_000.0}
                 else:
                     specific = {
-                        "pool_underused_bytes_kv": 1_000_000.0,
-                        "pool_underused_bytes_ssm": 500_000.0,
+                        "pool_free_bytes_kv": 1_000_000.0,
+                        "pool_free_bytes_ssm": 500_000.0,
                     }
                 runs.append(
                     make_run(
