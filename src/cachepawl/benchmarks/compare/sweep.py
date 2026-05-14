@@ -24,7 +24,9 @@ variant labels still match the registry's names plus a kwargs suffix.
 
 from __future__ import annotations
 
+import argparse
 import dataclasses
+import json
 import platform
 import subprocess
 import sys
@@ -43,6 +45,7 @@ from cachepawl.allocator.base import Allocator
 from cachepawl.allocator.baselines import FixedDualPool, PaddedUnifiedPool
 from cachepawl.benchmarks import PRESETS, BenchmarkRun, run_benchmark
 from cachepawl.models.spec import JAMBA_1_5_MINI_REF, MAMBA2_1B3_REF, HybridModelSpec
+from cachepawl.utils.device import get_device
 
 # Stem grammar: <model_spec_slug>__tb<size_human>__seed<seed>
 # Two underscores between fields, single underscores within model spec
@@ -653,6 +656,138 @@ def _as_dict(value: object) -> Mapping[str, object]:
     return value
 
 
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entrypoint for ``python -m cachepawl.benchmarks.compare``.
+
+    Builds a SweepConfig from arguments, executes the sweep, writes the
+    SWEEP_METADATA.json, aggregates the runs, and renders the report,
+    JSON summaries, and PNG plots. Returns 0 on success, 1 if any cell
+    failed.
+    """
+
+    # Imports here avoid a hard dependency on matplotlib at module
+    # import time. Sites that only need run_sweep do not pull plots.
+    from cachepawl.benchmarks.compare.aggregate import aggregate_runs
+    from cachepawl.benchmarks.compare.plots import (
+        plot_fragmentation_vs_workload,
+        plot_padding_waste_vs_state_size,
+    )
+    from cachepawl.benchmarks.compare.report import (
+        render_deterministic_summary,
+        render_json_summary,
+        render_markdown_report,
+    )
+
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    output_dir = Path(args.output)
+    device: str = args.device or get_device()
+
+    if args.smoke:
+        config = make_smoke_config(output_dir, device)
+    elif args.quick:
+        config = make_quick_config(output_dir, device)
+    else:
+        config = make_default_config(output_dir, device)
+
+    if args.seed_replicates is not None:
+        config = dataclasses.replace(config, seed_replicates=args.seed_replicates)
+
+    result = run_sweep(config)
+
+    metadata_dict: dict[str, object] = {
+        **result.metadata.to_dict(),
+        "config": config.to_dict(),
+        "failures": [f.to_dict() for f in result.failures],
+    }
+    metadata_path = output_dir / "SWEEP_METADATA.json"
+    metadata_path.parent.mkdir(parents=True, exist_ok=True)
+    metadata_path.write_text(
+        json.dumps(metadata_dict, sort_keys=True, indent=2, ensure_ascii=True) + "\n"
+    )
+
+    aggregated = aggregate_runs(result)
+    run_date = result.metadata.sweep_started_at[:10]
+    report_path = output_dir / "report.md"
+    render_markdown_report(
+        aggregated,
+        report_path,
+        git_sha=result.metadata.git_sha,
+        run_date=run_date,
+        hardware_label=result.metadata.hardware_label,
+    )
+    render_json_summary(aggregated, output_dir / "aggregated.json")
+    render_deterministic_summary(aggregated, output_dir / "aggregated_deterministic.json")
+
+    figures_dir = output_dir / "figures"
+    if aggregated.rows:
+        plot_fragmentation_vs_workload(
+            aggregated,
+            figures_dir / "fragmentation_vs_workload.png",
+            model_spec_filter=config.model_spec_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+        plot_padding_waste_vs_state_size(
+            aggregated,
+            figures_dir / "padding_waste_vs_state_size.png",
+            workload_filter=config.workload_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+
+    mins = int(result.metadata.total_wall_seconds // 60)
+    secs = int(result.metadata.total_wall_seconds % 60)
+    print(
+        f"sweep complete: "
+        f"{result.metadata.n_cells_succeeded}/{result.metadata.n_cells_planned} cells, "
+        f"{result.metadata.n_cells_failed} failures, total {mins:02d}:{secs:02d}",
+        flush=True,
+    )
+    print(f"wrote report: {report_path}", flush=True)
+    return 0 if result.metadata.n_cells_failed == 0 else 1
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m cachepawl.benchmarks.compare",
+        description=(
+            "Sweep registered baseline allocators across the workload x model-spec x "
+            "pool-size grid, aggregate replicates, and write a markdown report plus "
+            "PNG plots."
+        ),
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="root output directory for the sweep artifacts",
+    )
+    parser.add_argument(
+        "--device",
+        choices=["cpu", "cuda"],
+        default=None,
+        help="device to run on; defaults to cachepawl.utils.device.get_device()",
+    )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="run a 3-cell sweep on uniform_short + jamba_1_5_mini + 1 GiB",
+    )
+    parser.add_argument(
+        "--seed-replicates",
+        type=int,
+        default=None,
+        help="override seed_replicates per cell (default 3, or 1 in --quick)",
+    )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help=argparse.SUPPRESS,
+    )
+    return parser
+
+
 __all__ = [
     "CELL_STEM_PATTERN",
     "DEFAULT_MODEL_SPEC_NAMES",
@@ -672,6 +807,7 @@ __all__ = [
     "SweepResult",
     "get_model_spec",
     "known_model_spec_names",
+    "main",
     "make_default_config",
     "make_quick_config",
     "make_smoke_config",
