@@ -34,5 +34,6 @@ Thumbs.db
 
 # Benchmark outputs
 benchmarks/results/*
-# Keep the committed reference --quick artifacts as a baseline snapshot.
+# Keep the committed reference --quick artifacts as baseline snapshots.
 !benchmarks/results/baseline/
+!benchmarks/results/avmp-v1-preview/
