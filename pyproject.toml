@@ -41,6 +41,7 @@ dev = [
     "pre-commit>=3.8",
     "matplotlib>=3.9",
     "pillow>=10",
+    "hypothesis>=6.100",
 ]
 
 [build-system]
@@ -80,6 +81,13 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = ["matplotlib", "matplotlib.*", "mpl_toolkits.*", "PIL", "PIL.*"]
 ignore_missing_imports = true
+
+# Hypothesis's @rule / @invariant decorators and SearchStrategy generics
+# carry Any in their public types. Loosening disallow_any_explicit only
+# inside the stateful test package keeps strict mode everywhere else.
+[[tool.mypy.overrides]]
+module = ["tests.unit.allocator.stateful.*"]
+disallow_any_explicit = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
