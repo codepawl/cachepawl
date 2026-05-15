@@ -147,5 +147,3 @@ def test_stats_round_trip_through_schema_1_1_0(
     assert reloaded.metrics.allocator_specific_stats == metrics.allocator_specific_stats
     assert reloaded.metrics.allocator_specific_stats["mamba_ratio"] == 0.5
     assert reloaded.metrics.allocator_specific_stats["cross_pool_eviction_count"] == 0.0
-
-
