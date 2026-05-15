@@ -1,0 +1,272 @@
+"""AsymmetricVirtualPool: AVMP v1 allocator.
+
+Composes the PR1 primitives (``KVPagesStore``, ``SSMBlocksStore``,
+``VirtualPageTable``) behind the :class:`Allocator` ABC, mirroring
+:class:`FixedDualPool` for API consistency. The single distinct
+AVMP behavior in v1 is the virtual handle abstraction: the integer
+ids returned by :meth:`allocate` are minted by ``VirtualPageTable``
+and never reused within one pool lifetime, so a stale handle's
+``free`` call is rejected by :meth:`VirtualPageTable.remove`
+rather than silently colliding with an unrelated fresh allocation.
+
+Scope of v1, deliberately scaffolded:
+
+- Static partition at construction time, identical formula to
+  ``FixedDualPool``. ``mamba_ratio`` selects the fraction of
+  ``total_bytes`` assigned to the SSM pool.
+- Per-pool LRU eviction with cross-pool isolation. Filling the KV
+  pool while SSM has free bytes raises
+  :class:`torch.cuda.OutOfMemoryError`, not an eviction into the
+  SSM pool. The ``cross_pool_eviction_count`` stat exists and
+  always reports ``0.0`` in v1; the field stays in the schema so
+  the v2 cross-pool migration path can light it up without a
+  follow-on schema bump.
+
+Performance expectation versus :class:`FixedDualPool` at the same
+``mamba_ratio``: parity. The contribution that beats ``fixed_dual``
+on rigidity is dynamic cross-pool rebalancing per
+``docs/designs/0001-asymmetric-virtual-memory-paging.md`` section
+4.5, which lands in a follow-up PR.
+
+PR seam notes:
+
+- ``VirtualHandle.layer_idx`` is recorded as ``0`` for every handle.
+  :class:`AllocatorContext` only carries layer kind, not layer
+  index. A future extension can carry the index if real per-layer
+  accounting becomes useful; for v1 the field is a placeholder.
+- ``VirtualHandle.virtual_offset`` equals the physical offset in v1
+  because no remapping happens. Both numbers will diverge in a
+  later milestone when cross-pool migration is introduced and the
+  virtual offset becomes stable across physical relocation.
+
+Primitives reused, with file paths:
+
+- ``src/cachepawl/allocator/avmp/physical.py``: ``KVPagesStore`` and
+  ``SSMBlocksStore``.
+- ``src/cachepawl/allocator/avmp/page_table.py``: ``VirtualPageTable``.
+- ``src/cachepawl/allocator/baselines/common.py``: ``LRURequestTracker``,
+  ``AllocatorContext``, ``CapacityError``.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+
+import torch
+
+from cachepawl.allocator.avmp.handle import HandleKind
+from cachepawl.allocator.avmp.page_table import VirtualPageTable
+from cachepawl.allocator.avmp.physical import KVPagesStore, SSMBlocksStore
+from cachepawl.allocator.base import Allocator, AllocatorStats
+from cachepawl.allocator.baselines.common import (
+    AllocatorContext,
+    CapacityError,
+    LRURequestTracker,
+)
+from cachepawl.allocator.policy import EvictionPolicy
+from cachepawl.models.spec import HybridModelSpec, LayerKind
+
+
+class AsymmetricVirtualPool(Allocator, AllocatorContext):
+    """Static-partition AVMP allocator with same-pool LRU eviction."""
+
+    def __init__(
+        self,
+        model_spec: HybridModelSpec,
+        total_bytes: int,
+        device: torch.device,
+        mamba_ratio: float = 0.5,
+        attention_page_tokens: int = 16,
+        eviction: EvictionPolicy = EvictionPolicy.LRU,
+    ) -> None:
+        if eviction is not EvictionPolicy.LRU:
+            raise NotImplementedError(
+                f"AsymmetricVirtualPool: eviction={eviction.name} is not implemented in v1; "
+                "only EvictionPolicy.LRU is wired up."
+            )
+        if total_bytes <= 0:
+            raise ValueError(f"total_bytes must be positive, got {total_bytes}")
+        if not 0.0 < mamba_ratio < 1.0:
+            raise ValueError(f"mamba_ratio must lie in the open interval (0, 1), got {mamba_ratio}")
+        if attention_page_tokens <= 0:
+            raise ValueError(f"attention_page_tokens must be positive, got {attention_page_tokens}")
+
+        AllocatorContext.__init__(self)
+        self._model_spec = model_spec
+        self._mamba_ratio = mamba_ratio
+
+        ssm_bytes = int(total_bytes * mamba_ratio)
+        kv_bytes = total_bytes - ssm_bytes
+        if kv_bytes <= 0 or ssm_bytes <= 0:
+            raise ValueError(
+                f"computed per-pool size invalid: kv_bytes={kv_bytes} ssm_bytes={ssm_bytes}"
+            )
+
+        self._kv_store = KVPagesStore(
+            model_spec=model_spec,
+            attention_page_tokens=attention_page_tokens,
+            total_bytes=kv_bytes,
+            device=device,
+        )
+        self._ssm_store = SSMBlocksStore(
+            model_spec=model_spec,
+            total_bytes=ssm_bytes,
+            device=device,
+        )
+        self._page_table = VirtualPageTable()
+        self._kv_tracker = LRURequestTracker()
+        self._ssm_tracker = LRURequestTracker()
+        self._cross_pool_eviction_count: int = 0
+
+    # ----- Allocator ABC -----
+
+    def allocate(self, num_blocks: int, *, dtype_bytes: int) -> list[int]:
+        if num_blocks <= 0:
+            return []
+        if dtype_bytes <= 0:
+            raise ValueError(f"dtype_bytes must be positive, got {dtype_bytes}")
+        kind = self._kind_from_context()
+        return self._allocate_into(kind=kind, num_blocks=num_blocks)
+
+    def free(self, block_ids: Sequence[int]) -> None:
+        seen: set[int] = set()
+        kv_freed: list[int] = []
+        ssm_freed: list[int] = []
+        for hid in block_ids:
+            if hid in seen:
+                continue
+            seen.add(hid)
+            try:
+                handle, physical_offset = self._page_table.remove(hid)
+            except KeyError:
+                continue
+            if handle.kind is HandleKind.KV_PAGE:
+                self._kv_store.free_one(physical_offset)
+                kv_freed.append(hid)
+            else:
+                self._ssm_store.free_one(physical_offset)
+                ssm_freed.append(hid)
+        if kv_freed:
+            self._kv_tracker.remove_pages(kv_freed)
+        if ssm_freed:
+            self._ssm_tracker.remove_pages(ssm_freed)
+
+    def stats(self) -> AllocatorStats:
+        kv_total = self._kv_store.num_total
+        ssm_total = self._ssm_store.num_total
+        kv_used = self._kv_store.num_used
+        ssm_used = self._ssm_store.num_used
+        total = kv_total + ssm_total
+        allocated = kv_used + ssm_used
+        free = total - allocated
+        ratio = (free / total) if total > 0 else 0.0
+        return AllocatorStats(
+            total_blocks=total,
+            free_blocks=free,
+            allocated_blocks=allocated,
+            fragmentation_ratio=ratio,
+        )
+
+    # ----- Allocator-specific stats surface (duck-typed by the runner) -----
+
+    def get_allocator_stats(self) -> Mapping[str, float]:
+        kv_page_size = self._kv_store.page_size_bytes
+        ssm_block_size = self._ssm_store.block_size_bytes
+        return {
+            "kv_pages_total": float(self._kv_store.num_total),
+            "kv_pages_used": float(self._kv_store.num_used),
+            "kv_pages_free": float(self._kv_store.num_free),
+            "ssm_blocks_total": float(self._ssm_store.num_total),
+            "ssm_blocks_used": float(self._ssm_store.num_used),
+            "ssm_blocks_free": float(self._ssm_store.num_free),
+            "virtual_handles_live": float(
+                self._page_table.num_kv_handles_live + self._page_table.num_ssm_handles_live
+            ),
+            "cross_pool_eviction_count": float(self._cross_pool_eviction_count),
+            "kv_pool_bytes": float(self._kv_store.num_total * kv_page_size),
+            "ssm_pool_bytes": float(self._ssm_store.num_total * ssm_block_size),
+            "mamba_ratio": float(self._mamba_ratio),
+        }
+
+    # ----- Helpers -----
+
+    def _kind_from_context(self) -> HandleKind:
+        if self._current_layer_kind is LayerKind.ATTENTION:
+            return HandleKind.KV_PAGE
+        return HandleKind.SSM_BLOCK
+
+    def _allocate_into(self, *, kind: HandleKind, num_blocks: int) -> list[int]:
+        offsets = self._try_bulk_allocate_with_eviction(kind=kind, num_blocks=num_blocks)
+        size_bytes = self._size_bytes_for(kind)
+        handle_ids: list[int] = []
+        request_id_str = str(self._current_request_id)
+        for offset in offsets:
+            handle = self._page_table.mint(
+                kind=kind,
+                virtual_offset=offset,
+                size_bytes=size_bytes,
+                request_id=request_id_str,
+                layer_idx=0,
+                physical_offset=offset,
+            )
+            handle_ids.append(handle.handle_id)
+        tracker = self._tracker_for(kind)
+        tracker.touch(self._current_request_id, handle_ids)
+        return handle_ids
+
+    def _try_bulk_allocate_with_eviction(self, *, kind: HandleKind, num_blocks: int) -> list[int]:
+        try:
+            return self._bulk_allocate(kind=kind, num_blocks=num_blocks)
+        except CapacityError as first:
+            self._evict_one(kind=kind)
+            try:
+                return self._bulk_allocate(kind=kind, num_blocks=num_blocks)
+            except CapacityError as exc:
+                raise torch.cuda.OutOfMemoryError(
+                    f"avmp pool ({kind.name}) exhausted after eviction (origin={first}): {exc}"
+                ) from exc
+
+    def _bulk_allocate(self, *, kind: HandleKind, num_blocks: int) -> list[int]:
+        store_alloc = (
+            self._kv_store.allocate_one
+            if kind is HandleKind.KV_PAGE
+            else self._ssm_store.allocate_one
+        )
+        store_free = (
+            self._kv_store.free_one if kind is HandleKind.KV_PAGE else self._ssm_store.free_one
+        )
+        acquired: list[int] = []
+        try:
+            for _ in range(num_blocks):
+                acquired.append(store_alloc())
+        except CapacityError:
+            for offset in acquired:
+                store_free(offset)
+            raise
+        return acquired
+
+    def _evict_one(self, *, kind: HandleKind) -> None:
+        tracker = self._tracker_for(kind)
+        victim_id = tracker.select_oldest()
+        if victim_id is None:
+            return
+        victim_handle_ids = tracker.drop(victim_id)
+        for hid in victim_handle_ids:
+            try:
+                handle, physical_offset = self._page_table.remove(hid)
+            except KeyError:
+                continue
+            if handle.kind is HandleKind.KV_PAGE:
+                self._kv_store.free_one(physical_offset)
+            else:
+                self._ssm_store.free_one(physical_offset)
+
+    def _tracker_for(self, kind: HandleKind) -> LRURequestTracker:
+        if kind is HandleKind.KV_PAGE:
+            return self._kv_tracker
+        return self._ssm_tracker
+
+    def _size_bytes_for(self, kind: HandleKind) -> int:
+        if kind is HandleKind.KV_PAGE:
+            return self._kv_store.page_size_bytes
+        return self._ssm_store.block_size_bytes
