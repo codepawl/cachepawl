@@ -285,6 +285,19 @@ In practice:
 
 The convention is locked by `test_mamba_ratio_09_assigns_90_percent_to_ssm_pool` in `tests/unit/allocator/baselines/test_fixed_dual.py`.
 
+### AVMP-specific invariants (avmp_static)
+
+For `avmp_static` runs the eleven keys in `allocator_specific_stats` satisfy four extra invariants on top of the table above:
+
+- `kv_pages_used + kv_pages_free == kv_pages_total` at every recorded sample.
+- `ssm_blocks_used + ssm_blocks_free == ssm_blocks_total` at every recorded sample.
+- `virtual_handles_live == kv_pages_used + ssm_blocks_used`.
+- `cross_pool_eviction_count == 0.0` in v1. The field exists in the stats dict so the v2 cross-pool rebalancing path can light it up without a schema bump.
+
+These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
+
+The AVMP report rows reuse the same `kv_free_MiB` / `ssm_free_MiB` columns as `fixed_dual`; per-pool free bytes are derived from `pages_free * (pool_bytes / pages_total)`. AVMP-specific stats (`virtual_handles_live`, `cross_pool_eviction_count`) stay in the per-cell JSON for drill-down. AVMP v2 will introduce dedicated report columns once the cross-pool rebalancing signal differentiates from the baselines.
+
 ## Stub kept for compatibility
 
 `benchmarks/dummy_cache_workload.py` predates the harness and will host

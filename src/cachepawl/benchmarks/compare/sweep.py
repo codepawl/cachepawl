@@ -41,6 +41,7 @@ import numpy
 import torch
 
 from cachepawl import __version__ as cachepawl_version
+from cachepawl.allocator.avmp import AsymmetricVirtualPool
 from cachepawl.allocator.base import Allocator
 from cachepawl.allocator.baselines import FixedDualPool, PaddedUnifiedPool
 from cachepawl.benchmarks import PRESETS, BenchmarkRun, run_benchmark
@@ -217,6 +218,11 @@ DEFAULT_VARIANTS: tuple[AllocatorVariant, ...] = (
         label="fixed_dual_mr09",
         allocator_name="fixed_dual",
         kwargs=(("mamba_ratio", 0.9),),
+    ),
+    AllocatorVariant(
+        label="avmp_static_mr05",
+        allocator_name="avmp_static",
+        kwargs=(("mamba_ratio", 0.5),),
     ),
 )
 
@@ -435,9 +441,22 @@ def _build_allocator(
             device=device,
             mamba_ratio=mamba_ratio,
         )
+    if variant.allocator_name == "avmp_static":
+        mamba_ratio = float(kwargs.pop("mamba_ratio", 0.5))
+        if kwargs:
+            raise ValueError(
+                f"avmp_static: unsupported kwargs {sorted(kwargs)}; "
+                "only 'mamba_ratio' is recognized"
+            )
+        return AsymmetricVirtualPool(
+            model_spec=model_spec,
+            total_bytes=total_bytes,
+            device=device,
+            mamba_ratio=mamba_ratio,
+        )
     raise ValueError(
         f"unknown allocator_name {variant.allocator_name!r}; "
-        "supported: 'padded_unified', 'fixed_dual'"
+        "supported: 'padded_unified', 'fixed_dual', 'avmp_static'"
     )
 
 
@@ -486,7 +505,7 @@ def _validate_config(config: SweepConfig) -> None:
         if total_bytes < _MIN_TOTAL_BYTES:
             raise ValueError(f"total_bytes {total_bytes} below the {_MIN_TOTAL_BYTES}-byte floor")
     for variant in config.variants:
-        if variant.allocator_name not in {"padded_unified", "fixed_dual"}:
+        if variant.allocator_name not in {"padded_unified", "fixed_dual", "avmp_static"}:
             raise ValueError(
                 f"variant {variant.label!r}: unknown allocator_name {variant.allocator_name!r}"
             )

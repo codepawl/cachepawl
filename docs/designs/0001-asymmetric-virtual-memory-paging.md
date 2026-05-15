@@ -7,6 +7,8 @@
 | Created          | 2026-05-13                                     |
 | Target milestone | M1: first concrete `MemoryPool` prototype       |
 | Prerequisite     | codepawl/cachepawl#1 (initial scaffold)        |
+| v1 prototype     | Implemented across PR #6 (primitives), PR #7 (pool), and the harness-integration PR that adds this row |
+| v2 (dynamic rebalancing) | Deferred. Covers section 3.4 (rebalancing) and the cross-pool eviction path. |
 
 ## 1. Problem statement
 
@@ -270,6 +272,17 @@ while staying at or below the padded_unified OOM column, on the same
 workload and pool budget. The "Data sanity invariants" section of
 `benchmarks/README.md` is the regression net every new allocator must
 pass before its numbers are trusted.
+
+AVMP v1 preview data lands at
+[`benchmarks/results/avmp-v1-preview/quick/`](../../benchmarks/results/avmp-v1-preview/quick/);
+see `report.md` for the rendered comparison. AVMP v1 reports through
+the same column shape as `fixed_dual_mr05` because v1 is parity
+targeted; v2 introduces AVMP-specific columns when the rigidity vs
+flexibility signal differentiates from baselines. The expected v1
+outcome is parity with `fixed_dual_mr05` on fragmentation and OOM
+count; the v2 contribution (dynamic cross-pool rebalancing, section
+3.4) is what should beat `fixed_dual_mr09` on the `uniform_short`
+247-OOM case identified in the baseline phase.
 
 ## 7. Open questions
 

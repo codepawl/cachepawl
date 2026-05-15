@@ -157,6 +157,17 @@ def _render_row(row: AggregatedRow) -> str:
         padding_waste_mib_text = "-"
         kv_free_text = _format_mib(stats_map.get("pool_free_bytes_kv", 0.0))
         ssm_free_text = _format_mib(stats_map.get("pool_free_bytes_ssm", 0.0))
+    elif row.allocator_name == "avmp_static":
+        # v1 uses the same columns as fixed_dual because the contribution
+        # is API surface, not new metrics. v2 will add columns when
+        # cross_pool_eviction_count and rebalancing-frequency metrics
+        # become meaningful. AVMP-specific stats (virtual_handles_live,
+        # cross_pool_eviction_count) live in the per-cell JSON for
+        # drill-down. Per-pool free bytes are derived from
+        # pages_free * (pool_bytes / pages_total).
+        padding_waste_mib_text = "-"
+        kv_free_text = _format_mib(_avmp_pool_free_bytes(stats_map, kind="kv"))
+        ssm_free_text = _format_mib(_avmp_pool_free_bytes(stats_map, kind="ssm"))
     else:
         padding_waste_mib_text = "-"
         kv_free_text = "-"
@@ -175,6 +186,26 @@ def _render_row(row: AggregatedRow) -> str:
 
 def _format_mib(byte_value: float) -> str:
     return f"{byte_value / _MIB:.3f}"
+
+
+def _avmp_pool_free_bytes(stats_map: dict[str, float], *, kind: str) -> float:
+    """Derive per-pool free bytes for an avmp_static row.
+
+    AVMP's allocator_specific_stats expose pages_free, pages_total, and
+    pool_bytes for each kind, so per-page byte size is the quotient. A
+    zero pages_total (which the constructor rejects in practice) short-
+    circuits to 0.0 instead of dividing.
+    """
+
+    pages_free = stats_map.get(f"{kind}_pages_free" if kind == "kv" else f"{kind}_blocks_free", 0.0)
+    pages_total = stats_map.get(
+        f"{kind}_pages_total" if kind == "kv" else f"{kind}_blocks_total", 0.0
+    )
+    pool_bytes = stats_map.get(f"{kind}_pool_bytes", 0.0)
+    if pages_total <= 0:
+        return 0.0
+    page_size = pool_bytes / pages_total
+    return pages_free * page_size
 
 
 def _render_relative_improvement(rows: Sequence[AggregatedRow]) -> str:
