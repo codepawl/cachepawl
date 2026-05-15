@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 import torch
 
+from cachepawl.allocator.avmp import AsymmetricVirtualPool
 from cachepawl.allocator.base import Allocator
 from cachepawl.allocator.baselines import FixedDualPool, PaddedUnifiedPool
 from cachepawl.benchmarks.harness.metrics import (
@@ -104,8 +105,17 @@ def _fixed_dual_factory(spec: WorkloadSpec, device: torch.device) -> FixedDualPo
     )
 
 
+def _avmp_static_factory(spec: WorkloadSpec, device: torch.device) -> AsymmetricVirtualPool:
+    return AsymmetricVirtualPool(
+        model_spec=_hybrid_spec_from_workload(spec),
+        total_bytes=_DEFAULT_TOTAL_BYTES,
+        device=device,
+    )
+
+
 register_allocator("padded_unified", _padded_unified_factory)
 register_allocator("fixed_dual", _fixed_dual_factory)
+register_allocator("avmp_static", _avmp_static_factory)
 
 
 __all__ = [
@@ -117,6 +127,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "AllocatorFactory",
     "AllocatorMetrics",
+    "AsymmetricVirtualPool",
     "AttentionLayerProfile",
     "BenchmarkRun",
     "Environment",
