@@ -200,7 +200,38 @@ def _padding_waste_mib(row: AggregatedRow) -> float:
         kv = float(stats.get("pool_free_bytes_kv", 0.0))
         ssm = float(stats.get("pool_free_bytes_ssm", 0.0))
         return (kv + ssm) / _MIB
+    if row.allocator_name == "avmp_static":
+        # Same rigidity-surface formula as fixed_dual: end-of-run free
+        # bytes across both pools quantify what the static partition
+        # stranded. v1 plots parity with fixed_dual_mr05; differentiation
+        # lands in v2 when cross-pool rebalancing reduces this surface.
+        return _avmp_total_free_mib(stats)
     return 0.0
+
+
+def _avmp_total_free_mib(stats: dict[str, float]) -> float:
+    kv_free_bytes = _avmp_per_pool_free(
+        stats, free_key="kv_pages_free", total_key="kv_pages_total", pool_key="kv_pool_bytes"
+    )
+    ssm_free_bytes = _avmp_per_pool_free(
+        stats,
+        free_key="ssm_blocks_free",
+        total_key="ssm_blocks_total",
+        pool_key="ssm_pool_bytes",
+    )
+    return (kv_free_bytes + ssm_free_bytes) / _MIB
+
+
+def _avmp_per_pool_free(
+    stats: dict[str, float], *, free_key: str, total_key: str, pool_key: str
+) -> float:
+    pages_free = float(stats.get(free_key, 0.0))
+    pages_total = float(stats.get(total_key, 0.0))
+    pool_bytes = float(stats.get(pool_key, 0.0))
+    if pages_total <= 0:
+        return 0.0
+    page_size = pool_bytes / pages_total
+    return pages_free * page_size
 
 
 def _add_watermark(fig: object, git_sha: str, run_date: str) -> None:
