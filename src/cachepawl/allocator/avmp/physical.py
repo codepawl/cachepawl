@@ -110,6 +110,14 @@ class KVPagesStore:
         page_id = physical_offset // page_size
         self._table.free([page_id])
 
+    def resize_capacity(self, new_capacity_bytes: int) -> None:
+        """Reserved for v2 sub-PR 2 (RFC 0002 section 4.4 migration mechanics)."""
+
+        raise NotImplementedError(
+            "KVPagesStore.resize_capacity: migration mechanics land in v2 sub-PR 2 "
+            "(RFC 0002 section 8)"
+        )
+
 
 class SSMBlocksStore:
     """Coarse SSM state blocks backed by one contiguous slab.
@@ -169,3 +177,11 @@ class SSMBlocksStore:
             )
         block_id = physical_offset // block_size
         self._table.free([block_id])
+
+    def resize_capacity(self, new_capacity_bytes: int) -> None:
+        """Reserved for v2 sub-PR 2 (RFC 0002 section 4.4 migration mechanics)."""
+
+        raise NotImplementedError(
+            "SSMBlocksStore.resize_capacity: migration mechanics land in v2 sub-PR 2 "
+            "(RFC 0002 section 8)"
+        )
