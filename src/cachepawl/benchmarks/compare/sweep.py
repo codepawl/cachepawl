@@ -747,6 +747,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.seed_replicates is not None:
         config = dataclasses.replace(config, seed_replicates=args.seed_replicates)
 
+    if args.max_total_bytes is not None:
+        if args.max_total_bytes <= 0:
+            raise ValueError(f"--max-total-bytes must be positive, got {args.max_total_bytes}")
+        capped = [min(b, args.max_total_bytes) for b in config.total_bytes_options]
+        seen: set[int] = set()
+        deduped: list[int] = []
+        for value in capped:
+            if value not in seen:
+                seen.add(value)
+                deduped.append(value)
+        config = dataclasses.replace(config, total_bytes_options=tuple(deduped))
+
     result = run_sweep(config)
 
     metadata_dict: dict[str, object] = {
@@ -844,6 +856,19 @@ def _build_parser() -> argparse.ArgumentParser:
         "--smoke",
         action="store_true",
         help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--max-total-bytes",
+        type=int,
+        default=None,
+        help=(
+            "Cap each cell's total_bytes at this value. Cells whose default size "
+            "would exceed the cap are clamped to the cap. Useful on memory-"
+            "constrained GPUs where the AVMP 2x physical footprint (RFC 0002 "
+            "section 4.3) pushes the 8 GiB default cell over VRAM. The clamped "
+            "set is deduplicated; passing 6442450944 (6 GiB) on the default "
+            "options (1 GiB, 4 GiB, 8 GiB) yields (1 GiB, 4 GiB, 6 GiB)."
+        ),
     )
     return parser
 
