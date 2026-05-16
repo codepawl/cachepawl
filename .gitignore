@@ -38,6 +38,8 @@ benchmarks/results/*
 !benchmarks/results/baseline/
 !benchmarks/results/avmp-v1-preview/
 !benchmarks/results/avmp-v2/
+!benchmarks/results/avmp-v2-r2/
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
 benchmarks/results/avmp-v2/full/runs/
+benchmarks/results/avmp-v2-r2/full/runs/
