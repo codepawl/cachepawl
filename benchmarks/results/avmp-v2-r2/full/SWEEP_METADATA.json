@@ -1,0 +1,130 @@
+{
+  "cachepawl_version": "0.1.0",
+  "config": {
+    "device": "cpu",
+    "model_spec_names": [
+      "jamba_1_5_mini",
+      "mamba2_1b3"
+    ],
+    "output_dir": "benchmarks/results/avmp-v2-r2/full",
+    "seed_replicates": 3,
+    "smoke_num_requests": null,
+    "total_bytes_options": [
+      1073741824,
+      4294967296,
+      8589934592
+    ],
+    "variants": [
+      {
+        "allocator_name": "padded_unified",
+        "kwargs": [],
+        "label": "padded_unified"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "fixed_dual_mr05"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.9
+          ]
+        ],
+        "label": "fixed_dual_mr09"
+      },
+      {
+        "allocator_name": "avmp_static",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_static_mr05"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_dynamic_mr05"
+      }
+    ],
+    "workload_names": [
+      "uniform_short",
+      "mixed_long",
+      "agentic_burst"
+    ]
+  },
+  "cuda_version": "13.0",
+  "determinism_check": {
+    "caveat": "avmp_dynamic_mr05 was the only variant re-run; baselines and avmp_static_mr05 were not (cost). The aggregate.py deterministic_subset now strips time_spent_rebalancing_ns from allocator_specific_median/iqr because the counter is wall-clock dependent and that defeats the operation-counter throttle fix. Every other field (rebalance_count, bytes_migrated_total, current_kv_pool_bytes, current_ssm_pool_bytes, auto_rebalance_skipped_throttle, bytes_wasted_to_alignment_total, current_pressure_state_code, kv/ssm_free_ratio) matches byte-for-byte across primary and rerun.",
+    "cells_rerun": 54,
+    "method": "Independent rerun (avmp_dynamic_mr05 variant), compared to primary aggregated_deterministic.json rows filtered to variant_label == avmp_dynamic_mr05",
+    "rerun_started_at": "2026-05-16T15:38:00Z",
+    "result": "byte-identical (SHA-256 ae09329225e321efa6204c8d4d5bf3b5ecef205954621d2e7b3fb7e15ad34c65). Resolves RFC 0002 section 8 question 5 for the deterministic-subset contract.",
+    "scope": "avmp_dynamic_mr05 only"
+  },
+  "device": "cpu",
+  "failures": [],
+  "git_sha": "19d190a7d1bbcbe3aa778c952881dccd4c65973b",
+  "gpu_name": null,
+  "hardware_label": "cpu (linux x86_64)",
+  "n_cells_failed": 0,
+  "n_cells_planned": 270,
+  "n_cells_succeeded": 270,
+  "numpy_version": "2.2.6",
+  "python_version": "3.10.19",
+  "success_criterion": {
+    "c1_passed": "uniform_short and agentic_burst",
+    "c2_observed_improvement_pct": 0.38,
+    "c2_passed": false,
+    "c2_required_improvement_pct": 5.0,
+    "criterion": "AVMP v2 must achieve total_oom <= min(fixed_dual_mr05.total_oom, fixed_dual_mr09.total_oom) on every workload in the default 270-cell sweep, with the v2 variant configured_total_bytes not exceeding any baseline configured_total_bytes.",
+    "cross_workload_total_oom": {
+      "avmp_dynamic_mr05": 786.3,
+      "avmp_static_mr05": 784.7,
+      "fixed_dual_mr05": 784.7,
+      "fixed_dual_mr09": 1507.3,
+      "padded_unified": 1826.3
+    },
+    "note": "CapacityError-branch placement (RFC 0002 section 4.2 wording, sub-PR 4) materially reduces OOMs on uniform_short and agentic_burst. mixed_long shows a small regression (+8.7) because the trigger fires inside heavy mixed_long cells but cannot find enough free SSM/KV to relieve pressure; rebalance overhead adds to total OOMs without recovery. Follow-up RFC: per-workload threshold tuning or batch-size scaling.",
+    "per_workload_oom_sum": {
+      "agentic_burst": {
+        "avmp_dynamic_mr05": 220.7,
+        "fixed_dual_mr05": 227.3,
+        "fixed_dual_mr09": 286.7,
+        "min_baseline": 227.3
+      },
+      "mixed_long": {
+        "avmp_dynamic_mr05": 558.7,
+        "fixed_dual_mr05": 550.0,
+        "fixed_dual_mr09": 686.7,
+        "min_baseline": 550.0
+      },
+      "uniform_short": {
+        "avmp_dynamic_mr05": 7.0,
+        "fixed_dual_mr05": 7.3,
+        "fixed_dual_mr09": 534.0,
+        "min_baseline": 7.3
+      }
+    },
+    "stop_condition_verdict": "CONTINUE",
+    "verdict": "DID NOT PASS the strict success criterion (mixed_long: 558.7 > 550.0, +8.7 OOMs), BUT the pre-registered C1 stop-condition holds on uniform_short (7.0 < 7.3) and agentic_burst (220.7 < 227.3). Per the brief, C1 is a CONTINUE condition."
+  },
+  "sweep_finished_at": "2026-05-16T15:47:15Z",
+  "sweep_started_at": "2026-05-16T14:50:40Z",
+  "torch_version": "2.12.0+cu130",
+  "total_wall_seconds": 3085.636430054001
+}

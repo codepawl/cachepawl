@@ -89,7 +89,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         threshold_low: float = 0.05,
         threshold_high: float = 0.30,
         migration_batch_size: int = 1,
-        min_rebalance_interval_ns: int = 1_000_000,
+        min_rebalance_interval_ops: int = 1000,
     ) -> None:
         if eviction is not EvictionPolicy.LRU:
             raise NotImplementedError(
@@ -109,9 +109,9 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             )
         if migration_batch_size < 1:
             raise ValueError(f"migration_batch_size must be >= 1, got {migration_batch_size}")
-        if min_rebalance_interval_ns < 0:
+        if min_rebalance_interval_ops < 0:
             raise ValueError(
-                f"min_rebalance_interval_ns must be >= 0, got {min_rebalance_interval_ns}"
+                f"min_rebalance_interval_ops must be >= 0, got {min_rebalance_interval_ops}"
             )
 
         AllocatorContext.__init__(self)
@@ -121,7 +121,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         self._threshold_low = threshold_low
         self._threshold_high = threshold_high
         self._migration_batch_size = migration_batch_size
-        self._min_rebalance_interval_ns = min_rebalance_interval_ns
+        self._min_rebalance_interval_ops = min_rebalance_interval_ops
 
         ssm_bytes = int(total_bytes * mamba_ratio)
         kv_bytes = total_bytes - ssm_bytes
@@ -170,7 +170,10 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         self._bytes_wasted_to_alignment_total: int = 0
         self._time_spent_rebalancing_ns: int = 0
         # v2 sub-PR 3 (RFC 0002 section 4.2, section 8 question 3) auto-trigger throttle.
-        self._last_auto_rebalance_ns: int = 0
+        # Sub-PR 4 (section 8 question 5): the counter is logical (operation_count
+        # on the monitor) rather than wall-clock, so two identical runs produce
+        # identical throttle decisions and byte-identical aggregated stats.
+        self._last_auto_rebalance_op: int = 0
         self._auto_rebalance_skipped_throttle: int = 0
 
     # ----- Allocator ABC -----
@@ -182,8 +185,9 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             raise ValueError(f"dtype_bytes must be positive, got {dtype_bytes}")
         kind = self._kind_from_context()
         result = self._allocate_into(kind=kind, num_blocks=num_blocks)
-        # v2 sub-PR 3: observe state and (when rebalance_enabled) attempt an
-        # auto-rebalance if the pool is pressured (RFC 0002 section 4.2).
+        # v2 sub-PR 4: observe state for stats and counter accuracy. The
+        # auto-trigger fires from the CapacityError branch of
+        # _try_bulk_allocate_with_eviction, not from this hook (RFC 0002 §4.2).
         self._observe_pressure_state()
         return result
 
@@ -209,8 +213,9 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             self._kv_tracker.remove_pages(kv_freed)
         if ssm_freed:
             self._ssm_tracker.remove_pages(ssm_freed)
-        # v2 sub-PR 3: observe state and (when rebalance_enabled) attempt an
-        # auto-rebalance if the pool is pressured (RFC 0002 section 4.2).
+        # v2 sub-PR 4: observe state for stats and counter accuracy. The
+        # auto-trigger fires from the CapacityError branch of
+        # _try_bulk_allocate_with_eviction, not from this hook (RFC 0002 §4.2).
         self._observe_pressure_state()
 
     def stats(self) -> AllocatorStats:
@@ -326,10 +331,27 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             self._evict_one(kind=kind)
             try:
                 return self._bulk_allocate(kind=kind, num_blocks=num_blocks)
-            except CapacityError as exc:
+            except CapacityError as evict_failed:
+                # v2 sub-PR 4 (RFC 0002 section 4.2): cross-pool rebalance is
+                # the last-chance recovery before OOM. PR #13 placed the
+                # auto-trigger at the post-allocate observation hook, which
+                # never reached this path. Direction comes from ``kind`` (the
+                # pool that failed); ``_bulk_allocate`` already rolled back
+                # its partial acquisition so per-pool free ratios are not
+                # informative here.
+                outcome = self._maybe_auto_rebalance(forced=True, pressured_kind=kind)
+                if outcome is not None and outcome.success:
+                    try:
+                        return self._bulk_allocate(kind=kind, num_blocks=num_blocks)
+                    except CapacityError as still_failed:
+                        raise torch.cuda.OutOfMemoryError(
+                            f"avmp pool ({kind.name}) exhausted after eviction and "
+                            f"rebalance (origin={first}): {still_failed}"
+                        ) from still_failed
                 raise torch.cuda.OutOfMemoryError(
-                    f"avmp pool ({kind.name}) exhausted after eviction (origin={first}): {exc}"
-                ) from exc
+                    f"avmp pool ({kind.name}) exhausted after eviction (origin={first}): "
+                    f"{evict_failed}"
+                ) from evict_failed
 
     def _bulk_allocate(self, *, kind: HandleKind, num_blocks: int) -> list[int]:
         store_alloc = (
@@ -386,19 +408,18 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         return kv_free_ratio, ssm_free_ratio
 
     def _observe_pressure_state(self) -> None:
-        """Read pressure state, record transitions, and attempt auto-rebalance.
+        """Compute the current pressure state and record any transition.
 
-        Two-step:
+        v2 sub-PR 4 (RFC 0002 section 4.2): this hook NO longer triggers an
+        auto-rebalance. The trigger now lives inside
+        :meth:`_try_bulk_allocate_with_eviction` so it fires when an allocate
+        would otherwise raise CapacityError. The observation here keeps
+        ``current_pressure_state_code`` accurate in stats and ticks the
+        monitor's deterministic operation counter (used by the non-forced
+        throttle path, currently dead but kept for the API surface).
 
-        1. Compute the new pressure state via the monitor and log any
-           transition into the ring buffer.
-        2. v2 sub-PR 3: when the new state is ``KV_PRESSURED`` or
-           ``SSM_PRESSURED`` AND the per-pool throttle interval has elapsed,
-           call ``_apply_rebalance`` to relieve the pressure before returning
-           to the caller.
-
-        When ``rebalance_enabled=False`` the monitor is ``None`` and both
-        steps no-op.
+        When ``rebalance_enabled=False`` the monitor is ``None`` and this
+        method returns immediately.
         """
 
         monitor = self._pressure_monitor
@@ -413,32 +434,55 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
                 time.monotonic_ns(),
             )
             self._current_pressure_state = new_state
-        self._maybe_auto_rebalance()
 
-    def _maybe_auto_rebalance(self) -> RebalanceOutcome | None:
-        """Trigger ``_apply_rebalance`` if the pool is pressured and the
-        throttle window has elapsed.
+    def _maybe_auto_rebalance(
+        self,
+        *,
+        forced: bool = False,
+        pressured_kind: HandleKind | None = None,
+    ) -> RebalanceOutcome | None:
+        """Trigger ``_apply_rebalance`` based on pressure or a forced override.
 
-        No-op when:
+        Two paths:
 
-        - the monitor is absent (``rebalance_enabled=False``);
-        - the current state is ``BALANCED`` or ``REBALANCING``;
-        - less than ``min_rebalance_interval_ns`` has elapsed since the
-          previous auto-trigger (increments ``auto_rebalance_skipped_throttle``).
+        * Non-forced (called from the observation hook, currently unused since
+          v2 sub-PR 4 moved the auto-trigger out of the observation hook).
+          Reads ``_current_pressure_state`` and the operation-counter throttle.
+          No-op when state is BALANCED/REBALANCING or fewer than
+          ``min_rebalance_interval_ops`` compute_state calls have elapsed
+          on the monitor since the previous auto-trigger (the latter
+          increments ``auto_rebalance_skipped_throttle``).
 
-        Manual triggers via ``trigger_manual_rebalance`` DO NOT consult the
-        throttle; it exists only to bound the auto-trigger rate under fast-
-        alternating workloads (RFC 0002 section 8 question 3).
+        * Forced (called from the CapacityError branch). Bypasses the throttle
+          AND the threshold check. Direction comes from ``pressured_kind``:
+          the pool the failing allocate targeted is the donor recipient.
+          ``pressured_kind`` is required when ``forced=True``; the threshold
+          check cannot identify pressure direction here because ``_bulk_allocate``
+          rolled back its partial acquisition before this method is called,
+          so per-pool free ratios are misleadingly high.
+
+        Manual triggers via ``trigger_manual_rebalance`` use neither path;
+        they go straight to ``_apply_rebalance``.
         """
 
         monitor = self._pressure_monitor
         if monitor is None:
             return None
+        if forced:
+            if pressured_kind is None:
+                return None
+            direction = (
+                RebalanceDirection.SSM_TO_KV
+                if pressured_kind is HandleKind.KV_PAGE
+                else RebalanceDirection.KV_TO_SSM
+            )
+            self._last_auto_rebalance_op = monitor.operation_count
+            return self._apply_rebalance(direction, self._migration_batch_size)
         state = self._current_pressure_state
         if state is PoolPressureState.BALANCED or state is PoolPressureState.REBALANCING:
             return None
-        now_ns = time.monotonic_ns()
-        if now_ns - self._last_auto_rebalance_ns < self._min_rebalance_interval_ns:
+        op_count = monitor.operation_count
+        if op_count - self._last_auto_rebalance_op < self._min_rebalance_interval_ops:
             self._auto_rebalance_skipped_throttle += 1
             return None
         direction = (
@@ -446,7 +490,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             if state is PoolPressureState.KV_PRESSURED
             else RebalanceDirection.KV_TO_SSM
         )
-        self._last_auto_rebalance_ns = now_ns
+        self._last_auto_rebalance_op = op_count
         return self._apply_rebalance(direction, self._migration_batch_size)
 
     # ----- v2 sub-PR 2: migration mechanics (RFC 0002 section 4.3) -----

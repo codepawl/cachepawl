@@ -75,6 +75,10 @@ class PoolPressureMonitor:
         self._transitions: collections.deque[tuple[int, PoolPressureState, PoolPressureState]] = (
             collections.deque(maxlen=ring_buffer_size)
         )
+        # v2 sub-PR 4 (RFC 0002 section 8 question 5): logical operation
+        # counter, incremented on each compute_state call. Pool uses this for
+        # the deterministic throttle in place of the prior wall-clock counter.
+        self._operation_count: int = 0
 
     @property
     def threshold_low(self) -> float:
@@ -88,15 +92,31 @@ class PoolPressureMonitor:
     def polling_strategy(self) -> str:
         return self._polling_strategy
 
+    @property
+    def operation_count(self) -> int:
+        """Number of ``compute_state`` calls made on this monitor.
+
+        v2 sub-PR 4: backs the deterministic throttle on the pool. Each
+        ``compute_state`` increments the counter; the pool reads it to
+        decide when enough operations have elapsed since the previous
+        auto-rebalance for another attempt to fire.
+        """
+
+        return self._operation_count
+
     def compute_state(self, kv_free_ratio: float, ssm_free_ratio: float) -> PoolPressureState:
         """Map the free-fraction pair to a pressure state.
 
         Returns ``KV_PRESSURED`` iff KV is below ``threshold_low`` AND SSM is
         above ``threshold_high``; ``SSM_PRESSURED`` for the mirror; otherwise
-        ``BALANCED``. ``REBALANCING`` is never returned in v2 sub-PR 1; the
-        pool drives that transition itself when migration starts (sub-PR 2).
+        ``BALANCED``. ``REBALANCING`` is never returned by this method; the
+        pool drives that transition itself when migration starts.
+
+        Also increments :attr:`operation_count` so the pool's throttle has a
+        deterministic clock independent of wall-clock time.
         """
 
+        self._operation_count += 1
         if kv_free_ratio < self._threshold_low and ssm_free_ratio > self._threshold_high:
             return PoolPressureState.KV_PRESSURED
         if ssm_free_ratio < self._threshold_low and kv_free_ratio > self._threshold_high:

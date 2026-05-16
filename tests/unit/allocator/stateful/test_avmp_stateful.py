@@ -29,7 +29,7 @@ class AvmpStateMachine(RuleBasedStateMachine):
 
     def __init__(self) -> None:
         super().__init__()
-        # min_rebalance_interval_ns set to an effectively-infinite value
+        # min_rebalance_interval_ops set to an effectively-infinite value
         # so the auto-trigger never fires under Hypothesis's exploration.
         # Auto-trigger uses time.monotonic_ns which is non-deterministic
         # across hypothesis re-runs; that would surface as a
@@ -44,7 +44,7 @@ class AvmpStateMachine(RuleBasedStateMachine):
             device=torch.device("cpu"),
             mamba_ratio=0.5,
             rebalance_enabled=True,
-            min_rebalance_interval_ns=2**62,
+            min_rebalance_interval_ops=2**30,
         )
         self.live_kv: dict[int, list[int]] = {}
         self.live_ssm: dict[int, list[int]] = {}

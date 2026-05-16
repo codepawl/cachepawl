@@ -10,9 +10,10 @@
 | Extends          | RFC 0001 section 3.4 (dynamic rebalancing, deferred from v1)           |
 | v1 prototype     | `avmp_static_mr05` variant, frozen at PR #9                            |
 | Implementation   | Three sub-PRs landed: sub-PR 1 (PR #11), sub-PR 2 (PR #12), sub-PR 3 (this PR) |
-| Sweep data       | [`benchmarks/results/avmp-v2/full/`](../../benchmarks/results/avmp-v2/full/), 270 cells, 5 variants, cpu (linux x86_64) |
-| Verdict          | DID NOT PASS the section 3 success criterion. avmp_dynamic_mr05 cross-workload `total_oom` = 789.3 vs `min(fixed_dual_mr05, fixed_dual_mr09)` = 784.7. Follow-up RFC will move the auto-trigger from the post-allocate / post-free observation hook into the `CapacityError` branch per section 4.2 wording. |
-| Paper draft      | Deferred. Gated on a passing v2 sweep                                  |
+| Sweep data       | [`benchmarks/results/avmp-v2/full/`](../../benchmarks/results/avmp-v2/full/) (sub-PR 3, 789.3 cross-workload OOMs); [`benchmarks/results/avmp-v2-r2/full/`](../../benchmarks/results/avmp-v2-r2/full/) (sub-PR 4, 786.3 cross-workload OOMs). Both 270 cells, cpu (linux x86_64) |
+| Sub-PR 3 verdict | DID NOT PASS section 3 strict criterion. avmp_dynamic_mr05 cross-workload `total_oom` = 789.3 vs `min(fixed_dual_mr05, fixed_dual_mr09)` = 784.7. Diagnosed: trigger placement at post-allocate hook missed OOM-prone code paths; throttle used `time.monotonic_ns` (RFC §8 q5) |
+| Sub-PR 4 verdict | Pre-registered C1 stop-condition holds: avmp_dynamic_mr05 strictly wins on 2 workloads (uniform_short 7.0 < 7.3; agentic_burst 220.7 < 227.3). mixed_long regresses (+8.7 OOMs). C2 (cross-workload >= 5% improvement) does NOT hold (0.4% gained). Verdict: CONTINUE. Determinism contract resolved for the deterministic JSON subset |
+| Paper draft      | Deferred. Gated on a strict-criterion-passing v2 sweep                 |
 
 ## 1. Relationship to RFC 0001
 

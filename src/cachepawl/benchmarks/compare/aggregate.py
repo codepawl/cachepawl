@@ -107,7 +107,16 @@ class AggregatedRow:
         }
 
     def deterministic_subset(self) -> dict[str, object]:
-        """Project only fields that are bit-stable across reruns on CPU."""
+        """Project only fields that are bit-stable across reruns on CPU.
+
+        v2 sub-PR 4: AVMP v2 surfaces ``time_spent_rebalancing_ns`` in its
+        allocator_specific_stats. The COUNTER value (how many nanoseconds
+        the pool spent inside ``_apply_rebalance``) is wall-clock dependent
+        and would re-introduce the very non-determinism that
+        ``min_rebalance_interval_ops`` was meant to remove. The field is
+        stripped here so the deterministic JSON subset stays byte-stable
+        when ``rebalance_enabled=True``.
+        """
 
         return {
             "variant_label": self.variant_label,
@@ -127,8 +136,12 @@ class AggregatedRow:
             "fragmentation_peak": self.fragmentation_peak,
             "oom_count_mean": self.oom_count_mean,
             "oom_count_std": self.oom_count_std,
-            "allocator_specific_median": dict(self.allocator_specific_median),
-            "allocator_specific_iqr": dict(self.allocator_specific_iqr),
+            "allocator_specific_median": {
+                k: v for k, v in self.allocator_specific_median if k != "time_spent_rebalancing_ns"
+            },
+            "allocator_specific_iqr": {
+                k: v for k, v in self.allocator_specific_iqr if k != "time_spent_rebalancing_ns"
+            },
         }
 
 

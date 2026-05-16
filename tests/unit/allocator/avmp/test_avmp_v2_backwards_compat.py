@@ -3,7 +3,7 @@
 When ``rebalance_enabled=False`` (the constructor default through sub-PR
 3) the pool reproduces v1 behavior: the same allocate / free sequence
 produces the same ``get_allocator_stats`` snapshot regardless of which
-new v2 kwargs are passed. Sub-PR 3's new ``min_rebalance_interval_ns``
+new v2 kwargs are passed. Sub-PR 3's new ``min_rebalance_interval_ops``
 param does not change behavior when no auto-trigger or manual trigger
 fires.
 
@@ -41,7 +41,7 @@ def _make_pool(
     device: torch.device,
     *,
     rebalance_enabled: bool,
-    min_rebalance_interval_ns: int = 1_000_000,
+    min_rebalance_interval_ops: int = 1000,
 ) -> AsymmetricVirtualPool:
     return AsymmetricVirtualPool(
         model_spec=spec,
@@ -49,7 +49,7 @@ def _make_pool(
         device=device,
         mamba_ratio=0.5,
         rebalance_enabled=rebalance_enabled,
-        min_rebalance_interval_ns=min_rebalance_interval_ns,
+        min_rebalance_interval_ops=min_rebalance_interval_ops,
     )
 
 
@@ -58,11 +58,11 @@ def test_rebalance_disabled_with_v2_kwargs_matches_v1_baseline(
     cpu_device: torch.device,
 ) -> None:
     """Two pools, identical config except one passes the new
-    ``min_rebalance_interval_ns`` kwarg, produce byte-identical stats."""
+    ``min_rebalance_interval_ops`` kwarg, produce byte-identical stats."""
 
     pool_default = _make_pool(jamba_spec, cpu_device, rebalance_enabled=False)
     pool_with_v2_kwargs = _make_pool(
-        jamba_spec, cpu_device, rebalance_enabled=False, min_rebalance_interval_ns=5_000_000
+        jamba_spec, cpu_device, rebalance_enabled=False, min_rebalance_interval_ops=5000
     )
 
     _drive(pool_default)
