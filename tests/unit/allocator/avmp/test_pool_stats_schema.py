@@ -40,8 +40,9 @@ _EXPECTED_V1_KEYS: frozenset[str] = frozenset(
     }
 )
 
-# v2 sub-PR 1 (RFC 0002 section 4.7) adds twelve observability keys. The
-# full set lands in this PR; migration counters stay at 0.0 until sub-PR 2.
+# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 adds the
+# thirteenth, ``bytes_wasted_to_alignment_total``, which accumulates the
+# page-size rounding residue across successful migrations.
 _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
     {
         "rebalance_enabled",
@@ -56,6 +57,7 @@ _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
         "rebalance_count",
         "bytes_migrated_total",
         "time_spent_rebalancing_ns",
+        "bytes_wasted_to_alignment_total",
     }
 )
 

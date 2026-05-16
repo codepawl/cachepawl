@@ -316,19 +316,26 @@ v1 invariants:
 - `virtual_handles_live == kv_pages_used + ssm_blocks_used`.
 - `cross_pool_eviction_count == 0.0` in v1. The field exists in the stats dict so the v2 cross-pool rebalancing path can light it up without a schema bump.
 
-v2 sub-PR 1 invariants (observability only, no migration yet):
+v2 sub-PR 1 invariants (observability):
 
 - `0.0 <= kv_free_ratio <= 1.0`; `0.0 <= ssm_free_ratio <= 1.0`.
 - `rebalance_enabled` in `{0.0, 1.0}`.
 - `threshold_low < threshold_high`, both in `(0.0, 1.0)`.
 - `migration_batch_size >= 1.0`.
-- `current_pressure_state_code` in `{0.0, 1.0, 2.0, 3.0}` encoding `PoolPressureState`: `BALANCED`, `KV_PRESSURED`, `SSM_PRESSURED`, `REBALANCING`. In v2 sub-PR 1, `compute_state` never returns `REBALANCING`, so the value 3.0 should not appear; sub-PR 2 lights it up when migration starts.
-- `rebalance_count >= 0.0`; in v2 sub-PR 1 always `0.0`.
-- `bytes_migrated_total >= 0.0`; in v2 sub-PR 1 always `0.0`.
-- `time_spent_rebalancing_ns >= 0.0`; in v2 sub-PR 1 always `0.0`.
-- `current_kv_pool_bytes + current_ssm_pool_bytes` is conserved in sub-PR 1 (both mirror their v1 counterparts). The sum becomes eventually-consistent inside the `REBALANCING` state in sub-PR 2 (RFC 0002 section 8 question 4).
+- `current_pressure_state_code` in `{0.0, 1.0, 2.0, 3.0}` encoding `PoolPressureState`: `BALANCED`, `KV_PRESSURED`, `SSM_PRESSURED`, `REBALANCING`. `compute_state` never returns `REBALANCING`; the pool itself transitions through that state during a migration leg.
+- `rebalance_count >= 0.0`.
+- `bytes_migrated_total >= 0.0`.
+- `time_spent_rebalancing_ns >= 0.0`.
 
-These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py` and by the v2 tests under `tests/unit/allocator/avmp/test_pool_v2_*.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
+v2 sub-PR 2 invariants (migration mechanics):
+
+- `bytes_wasted_to_alignment_total >= 0.0`; accumulates `(donor_bytes mod recipient_native_unit_bytes)` on each successful migration.
+- `current_kv_pool_bytes + current_ssm_pool_bytes + bytes_wasted_to_alignment_total` is invariant across every successful migration (anchored at the post-construction sum, not at `total_bytes`, because initial page/block alignment shaves bytes off at construction time and that loss is NOT tracked in `bytes_wasted_to_alignment_total`).
+- After a failed migration (either donor shrink rejected or recipient grow rejected and rolled back), pool sizes equal their pre-migration values and the four migration counters are unchanged.
+
+Worked example: `block_size_bytes = 64 KiB`, `page_size_bytes = 24 KiB`, `migration_batch_size = 2`, direction `SSM_TO_KV`. Donor releases `2 * 64 = 128 KiB`. Recipient grows by `floor(128 / 24) * 24 = 120 KiB` (5 pages). Per-event waste `= 128 mod 24 = 8 KiB`. After this event, `bytes_wasted_to_alignment_total += 8 KiB`.
+
+These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py`, the v2 tests under `tests/unit/allocator/avmp/test_pool_v2_*.py`, the migration tests in `tests/unit/allocator/avmp/test_pool_migration.py`, and the stateful invariants in `tests/unit/allocator/stateful/test_avmp_stateful.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
 
 The AVMP report rows reuse the same `kv_free_MiB` / `ssm_free_MiB` columns as `fixed_dual`; per-pool free bytes are derived from `pages_free * (pool_bytes / pages_total)`. AVMP-specific stats (`virtual_handles_live`, `cross_pool_eviction_count`) stay in the per-cell JSON for drill-down. AVMP v2 will introduce dedicated report columns once the cross-pool rebalancing signal differentiates from the baselines.
 

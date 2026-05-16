@@ -136,8 +136,31 @@ def test_rebalance_disabled_surfaces_all_v2_keys_at_defaults(
     assert stats["rebalance_count"] == 0.0
     assert stats["bytes_migrated_total"] == 0.0
     assert stats["time_spent_rebalancing_ns"] == 0.0
+    assert stats["bytes_wasted_to_alignment_total"] == 0.0
     # Empty pool: full free ratios.
     assert stats["kv_free_ratio"] == 1.0
     assert stats["ssm_free_ratio"] == 1.0
     assert stats["current_kv_pool_bytes"] == stats["kv_pool_bytes"]
     assert stats["current_ssm_pool_bytes"] == stats["ssm_pool_bytes"]
+
+
+def test_kv_pressure_does_not_auto_trigger_migration(
+    jamba_spec: HybridModelSpec,
+    cpu_device: torch.device,
+) -> None:
+    """v2 sub-PR 2: even with rebalance_enabled=True and a KV-pressured pool,
+    the migration counters stay at 0 because the automatic trigger is not
+    wired yet. Sub-PR 3 wires it.
+    """
+
+    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=True)
+    kv_total = int(pool.get_allocator_stats()["kv_pages_total"])
+    pool.set_current_layer_kind(LayerKind.ATTENTION)
+    pool.set_current_request_id(1)
+    pool.allocate(kv_total, dtype_bytes=2)
+
+    stats = pool.get_allocator_stats()
+    assert stats["current_pressure_state_code"] == float(PoolPressureState.KV_PRESSURED.value)
+    assert stats["rebalance_count"] == 0.0
+    assert stats["bytes_migrated_total"] == 0.0
+    assert stats["bytes_wasted_to_alignment_total"] == 0.0

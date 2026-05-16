@@ -157,6 +157,50 @@ class PageTable:
             raise ValueError(f"page id {page_id} out of range [0, {self._num_pages_total})")
         return self._start_offset + page_id * self._page_size
 
+    def set_num_pages_total(self, new_total: int) -> None:
+        """Adjust the active page count after construction.
+
+        Used by AVMP v2 (RFC 0002 section 4.4) to grow or shrink a pool's
+        effective capacity without re-allocating the underlying
+        ``BackingStore``. Tail-only: no used page id may sit at or above
+        ``new_total``.
+
+        - On shrink, free ids ``>= new_total`` are dropped from the free
+          list. Raises :class:`CapacityError` if any USED page id sits in
+          the to-be-released region.
+        - On grow, ids in ``[old_total, new_total)`` are appended to the
+          free list (in ascending order, so subsequent ``alloc`` calls
+          consume the lowest of the newly added ids first).
+
+        Baselines (``FixedDualPool`` / ``PaddedUnifiedPool``) do not call
+        this; it is AVMP-only.
+        """
+
+        if new_total < 0:
+            raise ValueError(f"new_total must be non-negative, got {new_total}")
+        max_pages = (self._store.total_bytes - self._start_offset) // self._page_size
+        if new_total > max_pages:
+            raise ValueError(
+                f"new_total {new_total} exceeds backing store capacity "
+                f"{max_pages} (store.total_bytes={self._store.total_bytes}, "
+                f"start_offset={self._start_offset}, page_size={self._page_size})"
+            )
+        if new_total < self._num_pages_total:
+            free_set = set(self._free_pages)
+            used_ids = [p for p in range(self._num_pages_total) if p not in free_set]
+            if used_ids and max(used_ids) >= new_total:
+                raise CapacityError(
+                    f"cannot shrink to {new_total}: page id {max(used_ids)} is still in use"
+                )
+            self._free_pages = [p for p in self._free_pages if p < new_total]
+        elif new_total > self._num_pages_total:
+            # New high ids appended in ascending order; pop() from the end
+            # then naturally consumes them in descending order, but the
+            # initial free list also held high ids first, so existing
+            # alloc semantics carry over once the original list drains.
+            self._free_pages.extend(range(self._num_pages_total, new_total))
+        self._num_pages_total = new_total
+
 
 class BlockTable(PageTable):
     """Coarse-block paging table.

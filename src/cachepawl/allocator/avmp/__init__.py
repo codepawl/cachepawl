@@ -11,6 +11,19 @@ Migration mechanics land in v2 sub-PR 2.
 """
 
 from cachepawl.allocator.avmp.pool import AsymmetricVirtualPool
-from cachepawl.allocator.avmp.state import PoolPressureMonitor, PoolPressureState
+from cachepawl.allocator.avmp.state import (
+    PoolPressureMonitor,
+    PoolPressureState,
+    RebalanceDirection,
+    RebalanceOutcome,
+    ResizeResult,
+)
 
-__all__ = ["AsymmetricVirtualPool", "PoolPressureMonitor", "PoolPressureState"]
+__all__ = [
+    "AsymmetricVirtualPool",
+    "PoolPressureMonitor",
+    "PoolPressureState",
+    "RebalanceDirection",
+    "RebalanceOutcome",
+    "ResizeResult",
+]

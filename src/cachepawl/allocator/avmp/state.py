@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import collections
 import enum
+from dataclasses import dataclass
 
 
 class PoolPressureState(enum.IntEnum):
@@ -126,3 +127,47 @@ class PoolPressureMonitor:
         """Read-only snapshot of buffered transitions, oldest first."""
 
         return tuple(self._transitions)
+
+
+class RebalanceDirection(enum.Enum):
+    """Capacity-migration direction. See RFC 0002 section 4.3."""
+
+    SSM_TO_KV = "ssm_to_kv"
+    KV_TO_SSM = "kv_to_ssm"
+
+
+@dataclass(frozen=True, slots=True)
+class ResizeResult:
+    """Outcome of one ``resize_capacity`` call on a physical store.
+
+    ``pages_delta`` is signed: positive on grow, negative on shrink, zero
+    if the rounded new capacity equals the old. ``bytes_actually_moved``
+    is the realized capacity delta in bytes after page-size rounding.
+    """
+
+    old_capacity_bytes: int
+    new_capacity_bytes: int
+    pages_delta: int
+    bytes_actually_moved: int
+
+
+@dataclass(frozen=True, slots=True)
+class RebalanceOutcome:
+    """Outcome of one ``_apply_rebalance`` call on the pool.
+
+    ``bytes_migrated`` is the donor-side delta (always ``> 0`` on success).
+    ``bytes_wasted_to_alignment`` is the recipient-side rounding residue,
+    i.e. ``bytes_migrated mod recipient_native_unit_bytes``. On rollback
+    or rejection the pool sizes match the *before* snapshot.
+    """
+
+    direction: RebalanceDirection
+    success: bool
+    failure_reason: str | None
+    bytes_migrated: int
+    bytes_wasted_to_alignment: int
+    kv_pool_bytes_before: int
+    kv_pool_bytes_after: int
+    ssm_pool_bytes_before: int
+    ssm_pool_bytes_after: int
+    elapsed_ns: int
