@@ -1,0 +1,106 @@
+{
+  "cachepawl_version": "0.1.0",
+  "config": {
+    "device": "cpu",
+    "model_spec_names": [
+      "jamba_1_5_mini",
+      "mamba2_1b3"
+    ],
+    "output_dir": "benchmarks/results/avmp-v2/full",
+    "seed_replicates": 3,
+    "smoke_num_requests": null,
+    "total_bytes_options": [
+      1073741824,
+      4294967296,
+      8589934592
+    ],
+    "variants": [
+      {
+        "allocator_name": "padded_unified",
+        "kwargs": [],
+        "label": "padded_unified"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "fixed_dual_mr05"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.9
+          ]
+        ],
+        "label": "fixed_dual_mr09"
+      },
+      {
+        "allocator_name": "avmp_static",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_static_mr05"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_dynamic_mr05"
+      }
+    ],
+    "workload_names": [
+      "uniform_short",
+      "mixed_long",
+      "agentic_burst"
+    ]
+  },
+  "cuda_version": "13.0",
+  "determinism_check": {
+    "caveat": "Baselines and avmp_static_mr05 were not re-run for cost reasons. The deterministic subset excludes latency and other timing-sensitive columns by design. The auto-trigger uses time.monotonic_ns to throttle (RFC 0002 section 4.2), so its decisions are wall-clock dependent; byte-identity is NOT expected for rebalance_enabled=True runs, and the rerun confirmed this. See RFC 0002 section 8 question 5.",
+    "cells_rerun": 54,
+    "method": "Independent rerun (avmp_dynamic_mr05 variant), compared to primary aggregated_deterministic.json rows filtered to variant_label == avmp_dynamic_mr05",
+    "rerun_started_at": "2026-05-16T08:55:00Z",
+    "result": "NOT byte-identical (primary SHA-256 aca213258f349d58140c2eb47c7de152f2536f18d6d5d715ccc8b3d0b77de04c; rerun SHA-256 26e3acedd92f06e9824bc0434f5bf4aaa78d488b8f51a8ce5f791908e0c033a1). Concrete instance of RFC 0002 section 8 question 5: auto-trigger ordering depends on time.monotonic_ns through the throttle interval, so the migration sequence varies between runs and propagates into per-cell aggregated counters.",
+    "scope": "avmp_dynamic_mr05 only"
+  },
+  "device": "cpu",
+  "failures": [],
+  "git_sha": "1f5b2f73397bc69c0e1d2e84e41e9ab6f99bb4ab",
+  "gpu_name": null,
+  "hardware_label": "cpu (linux x86_64)",
+  "n_cells_failed": 0,
+  "n_cells_planned": 270,
+  "n_cells_succeeded": 270,
+  "numpy_version": "2.2.6",
+  "python_version": "3.10.19",
+  "success_criterion": {
+    "criterion": "AVMP v2 must achieve total_oom <= min(fixed_dual_mr05.total_oom, fixed_dual_mr09.total_oom) on every workload in the default 270-cell sweep, with the v2 variant configured_total_bytes not exceeding any baseline configured_total_bytes.",
+    "cross_workload_totals": {
+      "avmp_dynamic_mr05": 789.3,
+      "avmp_static_mr05": 784.7,
+      "fixed_dual_mr05": 784.7,
+      "fixed_dual_mr09": 1507.3,
+      "padded_unified": 1826.3
+    },
+    "gap_oom": 4.6,
+    "note": "avmp_dynamic_mr05 cross-workload total exceeds the min-baseline (fixed_dual_mr05 = 784.7) by 4.6 OOMs. uniform_short cells never sustained pressure (rebalance_count = 0 for every avmp_dynamic uniform_short row) because the brief-specified placement (after successful allocate/free) does not reach OOM-prone code paths. mixed_long cells did trigger heavily (313 to 1531 migrations per cell) and produced near-parity OOM outcomes. Follow-up: move the auto-trigger into the CapacityError branch per RFC 0002 section 4.2 wording (which differs from the sub-PR 3 brief placement).",
+    "verdict": "DID NOT PASS"
+  },
+  "sweep_finished_at": "2026-05-16T08:46:13Z",
+  "sweep_started_at": "2026-05-16T07:54:29Z",
+  "torch_version": "2.12.0+cu130",
+  "total_wall_seconds": 2794.6188070339995
+}
