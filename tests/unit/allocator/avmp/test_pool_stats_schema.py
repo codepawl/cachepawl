@@ -24,7 +24,7 @@ from cachepawl.benchmarks import (
 )
 from cachepawl.models.spec import HybridModelSpec, LayerKind
 
-_EXPECTED_KEYS: frozenset[str] = frozenset(
+_EXPECTED_V1_KEYS: frozenset[str] = frozenset(
     {
         "kv_pages_total",
         "kv_pages_used",
@@ -39,6 +39,27 @@ _EXPECTED_KEYS: frozenset[str] = frozenset(
         "mamba_ratio",
     }
 )
+
+# v2 sub-PR 1 (RFC 0002 section 4.7) adds twelve observability keys. The
+# full set lands in this PR; migration counters stay at 0.0 until sub-PR 2.
+_EXPECTED_V2_KEYS: frozenset[str] = frozenset(
+    {
+        "rebalance_enabled",
+        "threshold_low",
+        "threshold_high",
+        "migration_batch_size",
+        "current_kv_pool_bytes",
+        "current_ssm_pool_bytes",
+        "kv_free_ratio",
+        "ssm_free_ratio",
+        "current_pressure_state_code",
+        "rebalance_count",
+        "bytes_migrated_total",
+        "time_spent_rebalancing_ns",
+    }
+)
+
+_EXPECTED_KEYS: frozenset[str] = _EXPECTED_V1_KEYS | _EXPECTED_V2_KEYS
 
 
 def _make_pool(spec: HybridModelSpec, device: torch.device) -> AsymmetricVirtualPool:
@@ -147,3 +168,7 @@ def test_stats_round_trip_through_schema_1_1_0(
     assert reloaded.metrics.allocator_specific_stats == metrics.allocator_specific_stats
     assert reloaded.metrics.allocator_specific_stats["mamba_ratio"] == 0.5
     assert reloaded.metrics.allocator_specific_stats["cross_pool_eviction_count"] == 0.0
+    # v2 sub-PR 1 (RFC 0002 section 4.7) keys flow through the open-shape
+    # allocator_specific_stats dict without a schema bump.
+    assert reloaded.metrics.allocator_specific_stats["current_pressure_state_code"] == 0.0
+    assert reloaded.metrics.allocator_specific_stats["rebalance_enabled"] == 0.0

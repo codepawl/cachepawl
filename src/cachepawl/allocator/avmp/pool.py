@@ -204,9 +204,29 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
     # ----- Allocator-specific stats surface (duck-typed by the runner) -----
 
     def get_allocator_stats(self) -> Mapping[str, float]:
+        """Return the AVMP stats dict.
+
+        The 11 v1 keys are unchanged. The 12 v2 keys land in this PR per RFC
+        0002 section 4.7 to lock in observability before migration mechanics
+        ship in sub-PR 2.
+
+        ``current_pressure_state_code`` encodes the :class:`PoolPressureState`
+        enum: BALANCED=0, KV_PRESSURED=1, SSM_PRESSURED=2, REBALANCING=3.
+
+        In v2 sub-PR 1, ``current_kv_pool_bytes`` and ``current_ssm_pool_bytes``
+        always equal ``kv_pool_bytes`` and ``ssm_pool_bytes`` respectively;
+        capacity becomes time-varying in sub-PR 2. ``rebalance_count``,
+        ``bytes_migrated_total``, and ``time_spent_rebalancing_ns`` are always
+        0.0 in this PR because no migration runs yet.
+        """
+
         kv_page_size = self._kv_store.page_size_bytes
         ssm_block_size = self._ssm_store.block_size_bytes
+        kv_pool_bytes = self._kv_store.num_total * kv_page_size
+        ssm_pool_bytes = self._ssm_store.num_total * ssm_block_size
+        kv_free_ratio, ssm_free_ratio = self._free_ratios()
         return {
+            # v1 keys (unchanged)
             "kv_pages_total": float(self._kv_store.num_total),
             "kv_pages_used": float(self._kv_store.num_used),
             "kv_pages_free": float(self._kv_store.num_free),
@@ -217,9 +237,22 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
                 self._page_table.num_kv_handles_live + self._page_table.num_ssm_handles_live
             ),
             "cross_pool_eviction_count": float(self._cross_pool_eviction_count),
-            "kv_pool_bytes": float(self._kv_store.num_total * kv_page_size),
-            "ssm_pool_bytes": float(self._ssm_store.num_total * ssm_block_size),
+            "kv_pool_bytes": float(kv_pool_bytes),
+            "ssm_pool_bytes": float(ssm_pool_bytes),
             "mamba_ratio": float(self._mamba_ratio),
+            # v2 observability keys (RFC 0002 section 4.7)
+            "rebalance_enabled": 1.0 if self._rebalance_enabled else 0.0,
+            "threshold_low": float(self._threshold_low),
+            "threshold_high": float(self._threshold_high),
+            "migration_batch_size": float(self._migration_batch_size),
+            "current_kv_pool_bytes": float(kv_pool_bytes),
+            "current_ssm_pool_bytes": float(ssm_pool_bytes),
+            "kv_free_ratio": float(kv_free_ratio),
+            "ssm_free_ratio": float(ssm_free_ratio),
+            "current_pressure_state_code": float(self._current_pressure_state.value),
+            "rebalance_count": 0.0,
+            "bytes_migrated_total": 0.0,
+            "time_spent_rebalancing_ns": 0.0,
         }
 
     # ----- Helpers -----
