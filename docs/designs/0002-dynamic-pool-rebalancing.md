@@ -2,14 +2,17 @@
 
 | Field            | Value                                                                  |
 |------------------|------------------------------------------------------------------------|
-| Status           | Draft                                                                  |
+| Status           | First-pass implementation complete; success criterion DID NOT PASS     |
 | Author           | codepawl                                                               |
 | Created          | 2026-05-16                                                             |
 | Target milestone | AVMP v2                                                                |
 | Prerequisite     | PR #9 merged on `main` (commit `bf93766`)                              |
 | Extends          | RFC 0001 section 3.4 (dynamic rebalancing, deferred from v1)           |
 | v1 prototype     | `avmp_static_mr05` variant, frozen at PR #9                            |
-| Implementation   | Three sub-PRs (see section 7); paper draft deferred until after the third lands with measured numbers |
+| Implementation   | Three sub-PRs landed: sub-PR 1 (PR #11), sub-PR 2 (PR #12), sub-PR 3 (this PR) |
+| Sweep data       | [`benchmarks/results/avmp-v2/full/`](../../benchmarks/results/avmp-v2/full/), 270 cells, 5 variants, cpu (linux x86_64) |
+| Verdict          | DID NOT PASS the section 3 success criterion. avmp_dynamic_mr05 cross-workload `total_oom` = 789.3 vs `min(fixed_dual_mr05, fixed_dual_mr09)` = 784.7. Follow-up RFC will move the auto-trigger from the post-allocate / post-free observation hook into the `CapacityError` branch per section 4.2 wording. |
+| Paper draft      | Deferred. Gated on a passing v2 sweep                                  |
 
 ## 1. Relationship to RFC 0001
 
