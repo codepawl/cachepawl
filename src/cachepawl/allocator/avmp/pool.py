@@ -225,18 +225,21 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
     def get_allocator_stats(self) -> Mapping[str, float]:
         """Return the AVMP stats dict.
 
-        The 11 v1 keys are unchanged. The 12 v2 keys land in this PR per RFC
-        0002 section 4.7 to lock in observability before migration mechanics
-        ship in sub-PR 2.
+        The 11 v1 keys are unchanged. The 13 v2 keys (12 added in sub-PR 1
+        plus ``bytes_wasted_to_alignment_total`` added in sub-PR 2) implement
+        RFC 0002 section 4.7's observability surface.
 
         ``current_pressure_state_code`` encodes the :class:`PoolPressureState`
         enum: BALANCED=0, KV_PRESSURED=1, SSM_PRESSURED=2, REBALANCING=3.
 
-        In v2 sub-PR 1, ``current_kv_pool_bytes`` and ``current_ssm_pool_bytes``
-        always equal ``kv_pool_bytes`` and ``ssm_pool_bytes`` respectively;
-        capacity becomes time-varying in sub-PR 2. ``rebalance_count``,
-        ``bytes_migrated_total``, and ``time_spent_rebalancing_ns`` are always
-        0.0 in this PR because no migration runs yet.
+        ``current_kv_pool_bytes`` and ``current_ssm_pool_bytes`` reflect the
+        live per-store active capacity. They equal their v1 counterparts
+        (``kv_pool_bytes`` / ``ssm_pool_bytes``) until the first successful
+        rebalance; sub-PR 2's ``trigger_manual_rebalance`` mutates them.
+
+        ``rebalance_count``, ``bytes_migrated_total``,
+        ``bytes_wasted_to_alignment_total``, and ``time_spent_rebalancing_ns``
+        accumulate across successful migrations.
         """
 
         kv_page_size = self._kv_store.page_size_bytes
@@ -269,9 +272,10 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             "kv_free_ratio": float(kv_free_ratio),
             "ssm_free_ratio": float(ssm_free_ratio),
             "current_pressure_state_code": float(self._current_pressure_state.value),
-            "rebalance_count": 0.0,
-            "bytes_migrated_total": 0.0,
-            "time_spent_rebalancing_ns": 0.0,
+            "rebalance_count": float(self._rebalance_count),
+            "bytes_migrated_total": float(self._bytes_migrated_total),
+            "time_spent_rebalancing_ns": float(self._time_spent_rebalancing_ns),
+            "bytes_wasted_to_alignment_total": float(self._bytes_wasted_to_alignment_total),
         }
 
     # ----- Helpers -----

@@ -34,9 +34,10 @@ _EXPECTED_V1_KEYS: frozenset[str] = frozenset(
     }
 )
 
-# v2 sub-PR 1 (RFC 0002 section 4.7) adds twelve observability keys. The
-# avmp_static factory constructs with rebalance_enabled=False, so the
-# migration counters and pressure-state code stay at their defaults.
+# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 adds the
+# thirteenth, ``bytes_wasted_to_alignment_total``. The avmp_static factory
+# constructs with rebalance_enabled=False AND calls no manual trigger, so
+# the migration counters and pressure-state code stay at their defaults.
 _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
     {
         "rebalance_enabled",
@@ -51,6 +52,7 @@ _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
         "rebalance_count",
         "bytes_migrated_total",
         "time_spent_rebalancing_ns",
+        "bytes_wasted_to_alignment_total",
     }
 )
 
@@ -91,12 +93,14 @@ def test_avmp_run_benchmark_uniform_short_cpu(tmp_path: Path) -> None:
     assert stats["ssm_blocks_used"] + stats["ssm_blocks_free"] == stats["ssm_blocks_total"]
     assert stats["virtual_handles_live"] == stats["kv_pages_used"] + stats["ssm_blocks_used"]
     assert stats["cross_pool_eviction_count"] == 0.0
-    # v2 sub-PR 1 invariants: harness factory uses rebalance_enabled=False,
-    # so the monitor is absent and the migration counters stay at 0.
+    # v2 invariants: harness factory uses rebalance_enabled=False and never
+    # calls trigger_manual_rebalance, so the monitor is absent and the
+    # migration counters stay at 0.
     assert stats["rebalance_enabled"] == 0.0
     assert stats["rebalance_count"] == 0.0
     assert stats["bytes_migrated_total"] == 0.0
     assert stats["time_spent_rebalancing_ns"] == 0.0
+    assert stats["bytes_wasted_to_alignment_total"] == 0.0
     assert stats["current_pressure_state_code"] == 0.0  # BALANCED
     assert 0.0 <= stats["kv_free_ratio"] <= 1.0
     assert 0.0 <= stats["ssm_free_ratio"] <= 1.0
