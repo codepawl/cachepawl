@@ -722,6 +722,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from cachepawl.benchmarks.compare.aggregate import aggregate_runs
     from cachepawl.benchmarks.compare.plots import (
         plot_fragmentation_vs_workload,
+        plot_oom_count_vs_workload,
         plot_padding_waste_vs_state_size,
     )
     from cachepawl.benchmarks.compare.report import (
@@ -785,6 +786,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             aggregated,
             figures_dir / "padding_waste_vs_state_size.png",
             workload_filter=config.workload_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+        plot_oom_count_vs_workload(
+            aggregated,
+            figures_dir / "oom_count_vs_workload.png",
+            model_spec_filter=config.model_spec_names[0],
             git_sha=result.metadata.git_sha,
             run_date=run_date,
         )

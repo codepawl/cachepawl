@@ -47,6 +47,24 @@ _SAVEFIG_METADATA: dict[str, str | None] = {
 
 _FIG_DPI: int = 120
 
+# Canonical legend / color-cycle order for the comparison plots: baselines
+# first (padded then fixed), then the AVMP contributions in chronological
+# order. Variants not in this tuple sort alphabetically AFTER all known
+# variants, so adding new variants keeps the existing ones stable.
+LEGEND_ORDER: tuple[str, ...] = (
+    "padded_unified",
+    "fixed_dual_mr05",
+    "fixed_dual_mr09",
+    "avmp_static_mr05",
+    "avmp_dynamic_mr05",
+)
+
+
+def _legend_position(variant: str) -> tuple[int, str]:
+    if variant in LEGEND_ORDER:
+        return (LEGEND_ORDER.index(variant), variant)
+    return (len(LEGEND_ORDER), variant)
+
 
 def plot_fragmentation_vs_workload(
     aggregated: AggregatedMetrics,
@@ -74,7 +92,7 @@ def plot_fragmentation_vs_workload(
         raise ValueError(f"no aggregated rows matched total_bytes_filter={total_bytes_filter}")
 
     workloads = sorted({r.workload_name for r in cells})
-    variants = sorted({r.variant_label for r in cells})
+    variants = sorted({r.variant_label for r in cells}, key=_legend_position)
 
     matrix_mean = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
     matrix_std = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
@@ -144,7 +162,7 @@ def plot_padding_waste_vs_state_size(
     if not cells:
         raise ValueError(f"no aggregated rows matched total_bytes_filter={total_bytes_filter}")
 
-    variants = sorted({r.variant_label for r in cells})
+    variants = sorted({r.variant_label for r in cells}, key=_legend_position)
 
     fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=_FIG_DPI)
     for variant in variants:
@@ -164,6 +182,73 @@ def plot_padding_waste_vs_state_size(
     )
     ax.legend(loc="best", fontsize=9)
     ax.grid(linestyle="--", linewidth=0.5, alpha=0.5)
+    _add_watermark(fig, git_sha, run_date)
+    fig.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output_path, dpi=_FIG_DPI, metadata=_SAVEFIG_METADATA)
+    plt.close(fig)
+
+
+def plot_oom_count_vs_workload(
+    aggregated: AggregatedMetrics,
+    output_path: Path,
+    *,
+    model_spec_filter: str = "jamba_1_5_mini",
+    total_bytes_filter: int | None = None,
+    git_sha: str = "",
+    run_date: str = "",
+) -> None:
+    """Headline v2 plot: grouped bar chart of ``oom_count_mean`` per workload.
+
+    Same filter convention as :func:`plot_fragmentation_vs_workload`. The
+    success-criterion verdict for AVMP v2 (RFC 0002 section 3) is read off
+    this figure: ``avmp_dynamic_mr05`` must be at-or-below
+    ``min(fixed_dual_mr05, fixed_dual_mr09)`` on every workload.
+    """
+
+    matching = [r for r in aggregated.rows if r.model_spec_name == model_spec_filter]
+    if not matching:
+        raise ValueError(f"no aggregated rows matched model_spec_filter={model_spec_filter!r}")
+    if total_bytes_filter is None:
+        total_bytes_filter = max(r.total_bytes for r in matching)
+    cells = [r for r in matching if r.total_bytes == total_bytes_filter]
+    if not cells:
+        raise ValueError(f"no aggregated rows matched total_bytes_filter={total_bytes_filter}")
+
+    workloads = sorted({r.workload_name for r in cells})
+    variants = sorted({r.variant_label for r in cells}, key=_legend_position)
+
+    matrix_mean = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
+    matrix_std = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        for wi, workload in enumerate(workloads):
+            row = _find_row(cells, variant=variant, workload=workload)
+            if row is None:
+                continue
+            matrix_mean[vi, wi] = row.oom_count_mean
+            matrix_std[vi, wi] = row.oom_count_std
+
+    fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=_FIG_DPI)
+    bar_width = 0.8 / max(1, len(variants))
+    indices = numpy.arange(len(workloads), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        offset = (vi - (len(variants) - 1) / 2.0) * bar_width
+        ax.bar(
+            indices + offset,
+            matrix_mean[vi, :],
+            width=bar_width,
+            yerr=matrix_std[vi, :],
+            label=variant,
+            capsize=3,
+        )
+    ax.set_xticks(indices)
+    ax.set_xticklabels(workloads, rotation=0)
+    ax.set_xlabel("workload")
+    ax.set_ylabel("OOM count (mean, lower is better)")
+    tb_label = total_bytes_human(total_bytes_filter)
+    ax.set_title(f"OOM count by workload  (model_spec={model_spec_filter}, total_bytes={tb_label})")
+    ax.legend(loc="best", fontsize=9)
+    ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
     _add_watermark(fig, git_sha, run_date)
     fig.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -200,11 +285,11 @@ def _padding_waste_mib(row: AggregatedRow) -> float:
         kv = float(stats.get("pool_free_bytes_kv", 0.0))
         ssm = float(stats.get("pool_free_bytes_ssm", 0.0))
         return (kv + ssm) / _MIB
-    if row.allocator_name == "avmp_static":
+    if row.allocator_name in {"avmp_static", "avmp_dynamic"}:
         # Same rigidity-surface formula as fixed_dual: end-of-run free
-        # bytes across both pools quantify what the static partition
-        # stranded. v1 plots parity with fixed_dual_mr05; differentiation
-        # lands in v2 when cross-pool rebalancing reduces this surface.
+        # bytes across both pools quantify what the (still-static-at-rest)
+        # partition stranded. avmp_dynamic differentiates here when the
+        # auto-trigger has moved capacity at run end.
         return _avmp_total_free_mib(stats)
     return 0.0
 
@@ -251,6 +336,8 @@ def _add_watermark(fig: object, git_sha: str, run_date: str) -> None:
 
 
 __all__ = [
+    "LEGEND_ORDER",
     "plot_fragmentation_vs_workload",
+    "plot_oom_count_vs_workload",
     "plot_padding_waste_vs_state_size",
 ]
