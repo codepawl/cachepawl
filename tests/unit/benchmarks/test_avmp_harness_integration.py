@@ -34,10 +34,11 @@ _EXPECTED_V1_KEYS: frozenset[str] = frozenset(
     }
 )
 
-# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 adds the
-# thirteenth, ``bytes_wasted_to_alignment_total``. The avmp_static factory
-# constructs with rebalance_enabled=False AND calls no manual trigger, so
-# the migration counters and pressure-state code stay at their defaults.
+# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 added
+# ``bytes_wasted_to_alignment_total``; sub-PR 3 adds
+# ``auto_rebalance_skipped_throttle``. The avmp_static factory constructs
+# with rebalance_enabled=False AND calls no manual trigger, so the migration
+# counters, the throttle counter, and the pressure-state code stay at 0.
 _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
     {
         "rebalance_enabled",
@@ -53,6 +54,7 @@ _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
         "bytes_migrated_total",
         "time_spent_rebalancing_ns",
         "bytes_wasted_to_alignment_total",
+        "auto_rebalance_skipped_throttle",
     }
 )
 
@@ -101,6 +103,7 @@ def test_avmp_run_benchmark_uniform_short_cpu(tmp_path: Path) -> None:
     assert stats["bytes_migrated_total"] == 0.0
     assert stats["time_spent_rebalancing_ns"] == 0.0
     assert stats["bytes_wasted_to_alignment_total"] == 0.0
+    assert stats["auto_rebalance_skipped_throttle"] == 0.0
     assert stats["current_pressure_state_code"] == 0.0  # BALANCED
     assert 0.0 <= stats["kv_free_ratio"] <= 1.0
     assert 0.0 <= stats["ssm_free_ratio"] <= 1.0
