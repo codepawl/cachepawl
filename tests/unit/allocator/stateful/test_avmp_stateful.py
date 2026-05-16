@@ -114,5 +114,19 @@ class AvmpStateMachine(RuleBasedStateMachine):
             for entry in tracker._entries.values():
                 assert entry.page_ids, "tracker entry must never carry an empty page_ids list"
 
+    @invariant()
+    def v2_migration_counters_stay_zero_in_sub_pr_1(self) -> None:
+        """v2 sub-PR 1 contract: no migration runs, so the counters stay 0.
+
+        Pool is constructed with default ``rebalance_enabled=False``, so the
+        pressure monitor is absent and these keys default to 0.0 regardless.
+        Migration mechanics light them up in v2 sub-PR 2.
+        """
+
+        stats = self.pool.get_allocator_stats()
+        assert stats["rebalance_count"] == 0.0
+        assert stats["bytes_migrated_total"] == 0.0
+        assert stats["time_spent_rebalancing_ns"] == 0.0
+
 
 TestAvmpStateMachine = AvmpStateMachine.TestCase
