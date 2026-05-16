@@ -132,15 +132,11 @@ def test_transition_count_over_known_sequence() -> None:
     for ts, (prev, new) in enumerate(transitions):
         monitor.record_transition(prev, new, timestamp_ns=ts)
 
-    assert monitor.transition_count(
-        PoolPressureState.BALANCED, PoolPressureState.KV_PRESSURED
-    ) == 2
-    assert monitor.transition_count(
-        PoolPressureState.KV_PRESSURED, PoolPressureState.BALANCED
-    ) == 2
-    assert monitor.transition_count(
-        PoolPressureState.BALANCED, PoolPressureState.SSM_PRESSURED
-    ) == 1
-    assert monitor.transition_count(
-        PoolPressureState.SSM_PRESSURED, PoolPressureState.BALANCED
-    ) == 0
+    assert monitor.transition_count(PoolPressureState.BALANCED, PoolPressureState.KV_PRESSURED) == 2
+    assert monitor.transition_count(PoolPressureState.KV_PRESSURED, PoolPressureState.BALANCED) == 2
+    assert (
+        monitor.transition_count(PoolPressureState.BALANCED, PoolPressureState.SSM_PRESSURED) == 1
+    )
+    assert (
+        monitor.transition_count(PoolPressureState.SSM_PRESSURED, PoolPressureState.BALANCED) == 0
+    )
