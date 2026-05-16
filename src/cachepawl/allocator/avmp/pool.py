@@ -58,7 +58,12 @@ import torch
 from cachepawl.allocator.avmp.handle import HandleKind
 from cachepawl.allocator.avmp.page_table import VirtualPageTable
 from cachepawl.allocator.avmp.physical import KVPagesStore, SSMBlocksStore
-from cachepawl.allocator.avmp.state import PoolPressureMonitor, PoolPressureState
+from cachepawl.allocator.avmp.state import (
+    PoolPressureMonitor,
+    PoolPressureState,
+    RebalanceDirection,
+    RebalanceOutcome,
+)
 from cachepawl.allocator.base import Allocator, AllocatorStats
 from cachepawl.allocator.baselines.common import (
     AllocatorContext,
@@ -119,16 +124,24 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
                 f"computed per-pool size invalid: kv_bytes={kv_bytes} ssm_bytes={ssm_bytes}"
             )
 
+        # v2 sub-PR 2 (RFC 0002 section 4.3): pre-allocate each BackingStore
+        # at pool.total_bytes so that resize_capacity can grow without a
+        # torch tensor reallocation. The active capacity is capped to the
+        # per-store share via initial_capacity_bytes. Physical RAM footprint
+        # is 2 * total_bytes in the Python prototype; the future CUDA
+        # implementation will use cuMemMap (RFC 0002 section 4.5).
         self._kv_store = KVPagesStore(
             model_spec=model_spec,
             attention_page_tokens=attention_page_tokens,
-            total_bytes=kv_bytes,
+            total_bytes=total_bytes,
             device=device,
+            initial_capacity_bytes=kv_bytes,
         )
         self._ssm_store = SSMBlocksStore(
             model_spec=model_spec,
-            total_bytes=ssm_bytes,
+            total_bytes=total_bytes,
             device=device,
+            initial_capacity_bytes=ssm_bytes,
         )
         self._page_table = VirtualPageTable()
         self._kv_tracker = LRURequestTracker()
@@ -144,6 +157,12 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             else None
         )
         self._current_pressure_state: PoolPressureState = PoolPressureState.BALANCED
+
+        # v2 sub-PR 2 (RFC 0002 section 4.7) migration counters.
+        self._rebalance_count: int = 0
+        self._bytes_migrated_total: int = 0
+        self._bytes_wasted_to_alignment_total: int = 0
+        self._time_spent_rebalancing_ns: int = 0
 
     # ----- Allocator ABC -----
 
@@ -350,9 +369,10 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
     def _observe_pressure_state(self) -> None:
         """Read pressure state from the monitor and record any transition.
 
-        v2 sub-PR 1: no physical action is taken; migration lands in sub-PR 2
-        (RFC 0002 section 7). When ``rebalance_enabled=False`` the monitor is
-        ``None`` and this method returns immediately.
+        v2 sub-PR 1: no physical action is taken on observation. v2 sub-PR 2
+        adds the manual rebalance trigger; sub-PR 3 wires the automatic
+        trigger off this observation hook. When ``rebalance_enabled=False``
+        the monitor is ``None`` and this method returns immediately.
         """
 
         monitor = self._pressure_monitor
@@ -367,3 +387,142 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
                 time.monotonic_ns(),
             )
             self._current_pressure_state = new_state
+
+    # ----- v2 sub-PR 2: migration mechanics (RFC 0002 section 4.3) -----
+
+    def trigger_manual_rebalance(
+        self,
+        direction: RebalanceDirection,
+        batch_blocks: int,
+    ) -> RebalanceOutcome:
+        """Diagnostic / test-only manual rebalance trigger.
+
+        Sub-PR 3 wires the automatic trigger off the pressure monitor; this
+        method remains thereafter for diagnostic and test purposes.
+
+        Allowed regardless of ``rebalance_enabled``. When
+        ``rebalance_enabled=False`` the pressure monitor is absent, so
+        REBALANCING-state transitions are NOT recorded in the ring buffer;
+        the migration counters in ``get_allocator_stats`` still update.
+        """
+
+        if batch_blocks < 1:
+            raise ValueError(f"batch_blocks must be >= 1, got {batch_blocks}")
+        return self._apply_rebalance(direction, batch_blocks)
+
+    def _apply_rebalance(
+        self,
+        direction: RebalanceDirection,
+        batch_blocks: int,
+    ) -> RebalanceOutcome:
+        start_ns = time.monotonic_ns()
+        kv_page_size = self._kv_store.page_size_bytes
+        ssm_block_size = self._ssm_store.block_size_bytes
+        kv_bytes_before = self._kv_store.num_total * kv_page_size
+        ssm_bytes_before = self._ssm_store.num_total * ssm_block_size
+
+        if direction is RebalanceDirection.SSM_TO_KV:
+            donor_store: KVPagesStore | SSMBlocksStore = self._ssm_store
+            donor_unit = ssm_block_size
+            donor_bytes_before = ssm_bytes_before
+            recipient_store: KVPagesStore | SSMBlocksStore = self._kv_store
+            recipient_unit = kv_page_size
+            recipient_bytes_before = kv_bytes_before
+        else:
+            donor_store = self._kv_store
+            donor_unit = kv_page_size
+            donor_bytes_before = kv_bytes_before
+            recipient_store = self._ssm_store
+            recipient_unit = ssm_block_size
+            recipient_bytes_before = ssm_bytes_before
+
+        donor_bytes = batch_blocks * donor_unit
+        recipient_bytes = (donor_bytes // recipient_unit) * recipient_unit
+        bytes_wasted = donor_bytes - recipient_bytes
+
+        monitor = self._pressure_monitor
+        prev_state = self._current_pressure_state
+        if monitor is not None and prev_state is not PoolPressureState.REBALANCING:
+            monitor.record_transition(
+                prev_state,
+                PoolPressureState.REBALANCING,
+                time.monotonic_ns(),
+            )
+        self._current_pressure_state = PoolPressureState.REBALANCING
+
+        # Donor shrink leg.
+        try:
+            donor_store.resize_capacity(donor_bytes_before - donor_bytes)
+        except (CapacityError, ValueError) as exc:
+            self._current_pressure_state = prev_state
+            elapsed = time.monotonic_ns() - start_ns
+            return RebalanceOutcome(
+                direction=direction,
+                success=False,
+                failure_reason=f"donor shrink rejected: {exc}",
+                bytes_migrated=0,
+                bytes_wasted_to_alignment=0,
+                kv_pool_bytes_before=kv_bytes_before,
+                kv_pool_bytes_after=kv_bytes_before,
+                ssm_pool_bytes_before=ssm_bytes_before,
+                ssm_pool_bytes_after=ssm_bytes_before,
+                elapsed_ns=elapsed,
+            )
+
+        # Recipient grow leg.
+        try:
+            recipient_store.resize_capacity(recipient_bytes_before + recipient_bytes)
+        except (CapacityError, ValueError) as exc:
+            # Roll back the donor shrink. Restoring to donor_bytes_before is
+            # always safe: it is a grow back to a previously-valid state on a
+            # store whose backing tensor was pre-allocated to total_bytes.
+            donor_store.resize_capacity(donor_bytes_before)
+            self._current_pressure_state = prev_state
+            elapsed = time.monotonic_ns() - start_ns
+            return RebalanceOutcome(
+                direction=direction,
+                success=False,
+                failure_reason=f"recipient grow rejected: {exc}",
+                bytes_migrated=0,
+                bytes_wasted_to_alignment=0,
+                kv_pool_bytes_before=kv_bytes_before,
+                kv_pool_bytes_after=kv_bytes_before,
+                ssm_pool_bytes_before=ssm_bytes_before,
+                ssm_pool_bytes_after=ssm_bytes_before,
+                elapsed_ns=elapsed,
+            )
+
+        # Commit.
+        elapsed = time.monotonic_ns() - start_ns
+        self._rebalance_count += 1
+        self._bytes_migrated_total += donor_bytes
+        self._bytes_wasted_to_alignment_total += bytes_wasted
+        self._time_spent_rebalancing_ns += elapsed
+
+        kv_bytes_after = self._kv_store.num_total * kv_page_size
+        ssm_bytes_after = self._ssm_store.num_total * ssm_block_size
+
+        if monitor is not None:
+            kv_free, ssm_free = self._free_ratios()
+            new_state = monitor.compute_state(kv_free, ssm_free)
+            monitor.record_transition(
+                PoolPressureState.REBALANCING,
+                new_state,
+                time.monotonic_ns(),
+            )
+            self._current_pressure_state = new_state
+        else:
+            self._current_pressure_state = PoolPressureState.BALANCED
+
+        return RebalanceOutcome(
+            direction=direction,
+            success=True,
+            failure_reason=None,
+            bytes_migrated=donor_bytes,
+            bytes_wasted_to_alignment=bytes_wasted,
+            kv_pool_bytes_before=kv_bytes_before,
+            kv_pool_bytes_after=kv_bytes_after,
+            ssm_pool_bytes_before=ssm_bytes_before,
+            ssm_pool_bytes_after=ssm_bytes_after,
+            elapsed_ns=elapsed,
+        )
