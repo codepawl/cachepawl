@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import torch
 
+from cachepawl.allocator.avmp.state import ResizeResult
 from cachepawl.allocator.baselines.common import (
     BackingStore,
     BlockTable,
@@ -60,6 +61,7 @@ class KVPagesStore:
         attention_page_tokens: int,
         total_bytes: int,
         device: torch.device,
+        initial_capacity_bytes: int | None = None,
     ) -> None:
         if attention_page_tokens <= 0:
             raise ValueError(f"attention_page_tokens must be positive, got {attention_page_tokens}")
@@ -70,6 +72,18 @@ class KVPagesStore:
         raw_page_bytes = max(1, int(per_token * attention_page_tokens))
         self._store = BackingStore(total_bytes=total_bytes, device=device)
         self._table = PageTable(self._store, page_size_bytes=raw_page_bytes)
+        if initial_capacity_bytes is not None:
+            if initial_capacity_bytes < 0:
+                raise ValueError(
+                    f"initial_capacity_bytes must be non-negative, got {initial_capacity_bytes}"
+                )
+            if initial_capacity_bytes > total_bytes:
+                raise ValueError(
+                    f"initial_capacity_bytes {initial_capacity_bytes} exceeds total_bytes "
+                    f"{total_bytes}"
+                )
+            initial_pages = initial_capacity_bytes // self._table.page_size_bytes
+            self._table.set_num_pages_total(initial_pages)
 
     @property
     def page_size_bytes(self) -> int:
@@ -110,12 +124,33 @@ class KVPagesStore:
         page_id = physical_offset // page_size
         self._table.free([page_id])
 
-    def resize_capacity(self, new_capacity_bytes: int) -> None:
-        """Reserved for v2 sub-PR 2 (RFC 0002 section 4.4 migration mechanics)."""
+    def resize_capacity(self, new_capacity_bytes: int) -> ResizeResult:
+        """Grow or shrink the active capacity of this store, in place.
 
-        raise NotImplementedError(
-            "KVPagesStore.resize_capacity: migration mechanics land in v2 sub-PR 2 "
-            "(RFC 0002 section 8)"
+        ``new_capacity_bytes`` is rounded DOWN to the nearest multiple of
+        :attr:`page_size_bytes`. Underlying ``BackingStore`` storage is not
+        re-allocated; the active page count is adjusted via
+        :meth:`PageTable.set_num_pages_total` (tail-only).
+
+        Raises ``ValueError`` if ``new_capacity_bytes`` is negative or
+        exceeds the store's pre-allocated total bytes. Raises
+        ``CapacityError`` (from the underlying table) if a shrink would
+        leave a used page id past the new boundary.
+        """
+
+        if new_capacity_bytes < 0:
+            raise ValueError(f"new_capacity_bytes must be non-negative, got {new_capacity_bytes}")
+        page_size = self._table.page_size_bytes
+        old_total = self._table.num_pages_total
+        new_total = new_capacity_bytes // page_size
+        old_capacity = old_total * page_size
+        new_capacity_rounded = new_total * page_size
+        self._table.set_num_pages_total(new_total)
+        return ResizeResult(
+            old_capacity_bytes=old_capacity,
+            new_capacity_bytes=new_capacity_rounded,
+            pages_delta=new_total - old_total,
+            bytes_actually_moved=new_capacity_rounded - old_capacity,
         )
 
 
@@ -136,6 +171,7 @@ class SSMBlocksStore:
         model_spec: HybridModelSpec,
         total_bytes: int,
         device: torch.device,
+        initial_capacity_bytes: int | None = None,
     ) -> None:
         _reject_fp4(model_spec, type(self).__name__)
         dtype_bytes = bytes_per_element(model_spec.dtype)
@@ -143,6 +179,18 @@ class SSMBlocksStore:
         raw_block_bytes = max(1, int(prof.d_inner * prof.d_state * dtype_bytes))
         self._store = BackingStore(total_bytes=total_bytes, device=device)
         self._table = BlockTable(self._store, page_size_bytes=raw_block_bytes)
+        if initial_capacity_bytes is not None:
+            if initial_capacity_bytes < 0:
+                raise ValueError(
+                    f"initial_capacity_bytes must be non-negative, got {initial_capacity_bytes}"
+                )
+            if initial_capacity_bytes > total_bytes:
+                raise ValueError(
+                    f"initial_capacity_bytes {initial_capacity_bytes} exceeds total_bytes "
+                    f"{total_bytes}"
+                )
+            initial_blocks = initial_capacity_bytes // self._table.page_size_bytes
+            self._table.set_num_pages_total(initial_blocks)
 
     @property
     def block_size_bytes(self) -> int:
@@ -178,10 +226,31 @@ class SSMBlocksStore:
         block_id = physical_offset // block_size
         self._table.free([block_id])
 
-    def resize_capacity(self, new_capacity_bytes: int) -> None:
-        """Reserved for v2 sub-PR 2 (RFC 0002 section 4.4 migration mechanics)."""
+    def resize_capacity(self, new_capacity_bytes: int) -> ResizeResult:
+        """Grow or shrink the active capacity of this store, in place.
 
-        raise NotImplementedError(
-            "SSMBlocksStore.resize_capacity: migration mechanics land in v2 sub-PR 2 "
-            "(RFC 0002 section 8)"
+        ``new_capacity_bytes`` is rounded DOWN to the nearest multiple of
+        :attr:`block_size_bytes`. Underlying ``BackingStore`` storage is
+        not re-allocated; the active block count is adjusted via
+        :meth:`BlockTable.set_num_pages_total` (tail-only).
+
+        Raises ``ValueError`` if ``new_capacity_bytes`` is negative or
+        exceeds the store's pre-allocated total bytes. Raises
+        ``CapacityError`` (from the underlying table) if a shrink would
+        leave a used block id past the new boundary.
+        """
+
+        if new_capacity_bytes < 0:
+            raise ValueError(f"new_capacity_bytes must be non-negative, got {new_capacity_bytes}")
+        block_size = self._table.page_size_bytes
+        old_total = self._table.num_pages_total
+        new_total = new_capacity_bytes // block_size
+        old_capacity = old_total * block_size
+        new_capacity_rounded = new_total * block_size
+        self._table.set_num_pages_total(new_total)
+        return ResizeResult(
+            old_capacity_bytes=old_capacity,
+            new_capacity_bytes=new_capacity_rounded,
+            pages_delta=new_total - old_total,
+            bytes_actually_moved=new_capacity_rounded - old_capacity,
         )
