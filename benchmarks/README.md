@@ -305,9 +305,9 @@ In practice:
 
 The convention is locked by `test_mamba_ratio_09_assigns_90_percent_to_ssm_pool` in `tests/unit/allocator/baselines/test_fixed_dual.py`.
 
-### AVMP-specific invariants (avmp_static)
+### AVMP-specific invariants (avmp_static and avmp_dynamic)
 
-For `avmp_static` runs the twenty-three keys in `allocator_specific_stats` satisfy these invariants on top of the table above. The first four were the v1 contract; the rest land in v2 sub-PR 1 (RFC 0002 section 4.7) as observability-only.
+For `avmp_static` and `avmp_dynamic` runs the twenty-five keys in `allocator_specific_stats` satisfy these invariants on top of the table above. The first four were the v1 contract; the rest land across the three v2 sub-PRs (RFC 0002 sections 4.2, 4.7).
 
 v1 invariants:
 
@@ -335,9 +335,15 @@ v2 sub-PR 2 invariants (migration mechanics):
 
 Worked example: `block_size_bytes = 64 KiB`, `page_size_bytes = 24 KiB`, `migration_batch_size = 2`, direction `SSM_TO_KV`. Donor releases `2 * 64 = 128 KiB`. Recipient grows by `floor(128 / 24) * 24 = 120 KiB` (5 pages). Per-event waste `= 128 mod 24 = 8 KiB`. After this event, `bytes_wasted_to_alignment_total += 8 KiB`.
 
-These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py`, the v2 tests under `tests/unit/allocator/avmp/test_pool_v2_*.py`, the migration tests in `tests/unit/allocator/avmp/test_pool_migration.py`, and the stateful invariants in `tests/unit/allocator/stateful/test_avmp_stateful.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
+v2 sub-PR 3 invariants (auto-trigger):
 
-The AVMP report rows reuse the same `kv_free_MiB` / `ssm_free_MiB` columns as `fixed_dual`; per-pool free bytes are derived from `pages_free * (pool_bytes / pages_total)`. AVMP-specific stats (`virtual_handles_live`, `cross_pool_eviction_count`) stay in the per-cell JSON for drill-down. AVMP v2 will introduce dedicated report columns once the cross-pool rebalancing signal differentiates from the baselines.
+- `auto_rebalance_skipped_throttle >= 0.0`; monotonically non-decreasing. Counts pressure observations that the pool detected but skipped because the throttle window (`min_rebalance_interval_ns`, default 1 ms) had not elapsed since the previous auto-trigger.
+- Manual triggers via `trigger_manual_rebalance` bypass the throttle; only the observation-hook auto-trigger consults it. This keeps the diagnostic-use case from sub-PR 2 unchanged.
+- The auto-trigger is non-deterministic under repeated runs because the throttle reads `time.monotonic_ns`. Byte-level determinism on the deterministic JSON subset is guaranteed only when `rebalance_enabled=False`; with `rebalance_enabled=True`, treat aggregated counters as approximately reproducible but not byte-stable (RFC 0002 section 8 question 5).
+
+These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py`, the v2 tests under `tests/unit/allocator/avmp/test_pool_v2_*.py` and `tests/unit/allocator/avmp/test_avmp_v2_*.py`, the migration tests in `tests/unit/allocator/avmp/test_pool_migration.py`, the dynamic harness integration tests in `tests/unit/benchmarks/test_avmp_dynamic_harness_integration.py`, and the stateful invariants in `tests/unit/allocator/stateful/test_avmp_stateful.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
+
+The AVMP report rows reuse the same `kv_free_MiB` / `ssm_free_MiB` columns as `fixed_dual`; per-pool free bytes are derived from `pages_free * (pool_bytes / pages_total)`. v2 adds four extra columns (`rebalance_count`, `bytes_migrated_MiB`, `throttle_skips`, `waste_KiB`) shown for AVMP rows only; baselines render dashes there.
 
 ## Stub kept for compatibility
 

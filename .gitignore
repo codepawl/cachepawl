@@ -37,5 +37,7 @@ benchmarks/results/*
 # Keep the committed reference --quick artifacts as baseline snapshots.
 !benchmarks/results/baseline/
 !benchmarks/results/avmp-v1-preview/
+!benchmarks/results/avmp-v2/
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
+benchmarks/results/avmp-v2/full/runs/
