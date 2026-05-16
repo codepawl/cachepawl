@@ -15,22 +15,31 @@ from cachepawl.allocator.avmp import AsymmetricVirtualPool, RebalanceDirection
 from cachepawl.models.spec import HybridModelSpec, LayerKind
 
 _TOTAL_16_MIB = 16 * 1024 * 1024
-_NEVER_AUTO_TRIGGER_NS = 2**62
+_NEVER_AUTO_TRIGGER_OPS = 2**30
 
 
 def _make_pool(
     spec: HybridModelSpec,
     device: torch.device,
     *,
-    min_rebalance_interval_ns: int = 1_000_000,
+    min_rebalance_interval_ops: int = 0,
 ) -> AsymmetricVirtualPool:
+    """Pool fixture for auto-trigger tests.
+
+    Default ``min_rebalance_interval_ops=0`` so the very first compute_state
+    call that returns a pressured state can fire a rebalance. The production
+    default is 1000; this fixture uses 0 because the per-test workload is
+    too short to amortize a 1000-op cold start. The throttle-suppression
+    tests pass ``_NEVER_AUTO_TRIGGER_OPS`` explicitly to override.
+    """
+
     return AsymmetricVirtualPool(
         model_spec=spec,
         total_bytes=_TOTAL_16_MIB,
         device=device,
         mamba_ratio=0.5,
         rebalance_enabled=True,
-        min_rebalance_interval_ns=min_rebalance_interval_ns,
+        min_rebalance_interval_ops=min_rebalance_interval_ops,
     )
 
 
@@ -93,12 +102,12 @@ def test_throttle_skips_rapid_repeat_triggers(
     jamba_spec: HybridModelSpec,
     cpu_device: torch.device,
 ) -> None:
-    """With a huge ``min_rebalance_interval_ns`` no auto-trigger ever fires.
+    """With a huge ``min_rebalance_interval_ops`` no auto-trigger ever fires.
 
     Pressure is detected and skipped; the throttle counter increments.
     """
 
-    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ns=_NEVER_AUTO_TRIGGER_NS)
+    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ops=_NEVER_AUTO_TRIGGER_OPS)
     kv_total = int(pool.get_allocator_stats()["kv_pages_total"])
     pool.set_current_layer_kind(LayerKind.ATTENTION)
     pool.set_current_request_id(1)
@@ -117,7 +126,7 @@ def test_manual_trigger_bypasses_throttle(
     """Even when the throttle interval is large, a manual trigger fires
     immediately. Throttle only applies to the auto-trigger path."""
 
-    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ns=_NEVER_AUTO_TRIGGER_NS)
+    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ops=_NEVER_AUTO_TRIGGER_OPS)
     outcome = pool.trigger_manual_rebalance(RebalanceDirection.SSM_TO_KV, batch_blocks=1)
     assert outcome.success
     stats = pool.get_allocator_stats()
@@ -133,7 +142,7 @@ def test_throttle_window_lets_subsequent_trigger_through(
     auto-triggers over time."""
 
     # Throttle effectively off: 1 ns is shorter than any allocate/free wall.
-    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ns=1)
+    pool = _make_pool(jamba_spec, cpu_device, min_rebalance_interval_ops=1)
     kv_total = int(pool.get_allocator_stats()["kv_pages_total"])
 
     # Round 1: drain KV, free, drain KV again. Each "drain" pushes the pool

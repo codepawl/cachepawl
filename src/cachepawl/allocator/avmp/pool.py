@@ -89,7 +89,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         threshold_low: float = 0.05,
         threshold_high: float = 0.30,
         migration_batch_size: int = 1,
-        min_rebalance_interval_ns: int = 1_000_000,
+        min_rebalance_interval_ops: int = 1000,
     ) -> None:
         if eviction is not EvictionPolicy.LRU:
             raise NotImplementedError(
@@ -109,9 +109,9 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             )
         if migration_batch_size < 1:
             raise ValueError(f"migration_batch_size must be >= 1, got {migration_batch_size}")
-        if min_rebalance_interval_ns < 0:
+        if min_rebalance_interval_ops < 0:
             raise ValueError(
-                f"min_rebalance_interval_ns must be >= 0, got {min_rebalance_interval_ns}"
+                f"min_rebalance_interval_ops must be >= 0, got {min_rebalance_interval_ops}"
             )
 
         AllocatorContext.__init__(self)
@@ -121,7 +121,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         self._threshold_low = threshold_low
         self._threshold_high = threshold_high
         self._migration_batch_size = migration_batch_size
-        self._min_rebalance_interval_ns = min_rebalance_interval_ns
+        self._min_rebalance_interval_ops = min_rebalance_interval_ops
 
         ssm_bytes = int(total_bytes * mamba_ratio)
         kv_bytes = total_bytes - ssm_bytes
@@ -170,7 +170,10 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         self._bytes_wasted_to_alignment_total: int = 0
         self._time_spent_rebalancing_ns: int = 0
         # v2 sub-PR 3 (RFC 0002 section 4.2, section 8 question 3) auto-trigger throttle.
-        self._last_auto_rebalance_ns: int = 0
+        # Sub-PR 4 (section 8 question 5): the counter is logical (operation_count
+        # on the monitor) rather than wall-clock, so two identical runs produce
+        # identical throttle decisions and byte-identical aggregated stats.
+        self._last_auto_rebalance_op: int = 0
         self._auto_rebalance_skipped_throttle: int = 0
 
     # ----- Allocator ABC -----
@@ -423,12 +426,15 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
 
         - the monitor is absent (``rebalance_enabled=False``);
         - the current state is ``BALANCED`` or ``REBALANCING``;
-        - less than ``min_rebalance_interval_ns`` has elapsed since the
-          previous auto-trigger (increments ``auto_rebalance_skipped_throttle``).
+        - fewer than ``min_rebalance_interval_ops`` compute_state calls have
+          elapsed on the monitor since the previous auto-trigger (increments
+          ``auto_rebalance_skipped_throttle``).
 
         Manual triggers via ``trigger_manual_rebalance`` DO NOT consult the
         throttle; it exists only to bound the auto-trigger rate under fast-
-        alternating workloads (RFC 0002 section 8 question 3).
+        alternating workloads (RFC 0002 section 8 question 3). The counter is
+        logical (operation_count on the monitor), so the decision is
+        deterministic across runs (RFC 0002 section 8 question 5).
         """
 
         monitor = self._pressure_monitor
@@ -437,8 +443,8 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         state = self._current_pressure_state
         if state is PoolPressureState.BALANCED or state is PoolPressureState.REBALANCING:
             return None
-        now_ns = time.monotonic_ns()
-        if now_ns - self._last_auto_rebalance_ns < self._min_rebalance_interval_ns:
+        op_count = monitor.operation_count
+        if op_count - self._last_auto_rebalance_op < self._min_rebalance_interval_ops:
             self._auto_rebalance_skipped_throttle += 1
             return None
         direction = (
@@ -446,7 +452,7 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             if state is PoolPressureState.KV_PRESSURED
             else RebalanceDirection.KV_TO_SSM
         )
-        self._last_auto_rebalance_ns = now_ns
+        self._last_auto_rebalance_op = op_count
         return self._apply_rebalance(direction, self._migration_batch_size)
 
     # ----- v2 sub-PR 2: migration mechanics (RFC 0002 section 4.3) -----
