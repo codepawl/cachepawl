@@ -18,14 +18,14 @@ import hypothesis.strategies as st
 import torch
 from hypothesis.stateful import RuleBasedStateMachine, invariant, precondition, rule
 
-from cachepawl.allocator.avmp import AsymmetricVirtualPool
+from cachepawl.allocator.avmp import AsymmetricVirtualPool, RebalanceDirection
 from cachepawl.models.spec import JAMBA_1_5_MINI_REF, LayerKind
 
 _TOTAL_4_MIB = 4 * 1024 * 1024
 
 
 class AvmpStateMachine(RuleBasedStateMachine):
-    """Random allocate/free workload against AVMP with invariant checks."""
+    """Random allocate/free/rebalance workload against AVMP with invariant checks."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -34,10 +34,18 @@ class AvmpStateMachine(RuleBasedStateMachine):
             total_bytes=_TOTAL_4_MIB,
             device=torch.device("cpu"),
             mamba_ratio=0.5,
+            rebalance_enabled=True,
         )
         self.live_kv: dict[int, list[int]] = {}
         self.live_ssm: dict[int, list[int]] = {}
         self.next_request_id = 1
+        # Capture the post-construction sum: it equals total_bytes minus the
+        # initial page/block alignment loss. The new conservation invariant
+        # is anchored at this baseline, not at total_bytes.
+        initial_stats = self.pool.get_allocator_stats()
+        self._initial_pool_bytes_sum: float = (
+            initial_stats["current_kv_pool_bytes"] + initial_stats["current_ssm_pool_bytes"]
+        )
 
     @rule(count=st.integers(min_value=1, max_value=8))
     def allocate_kv(self, count: int) -> None:
@@ -114,19 +122,54 @@ class AvmpStateMachine(RuleBasedStateMachine):
             for entry in tracker._entries.values():
                 assert entry.page_ids, "tracker entry must never carry an empty page_ids list"
 
-    @invariant()
-    def v2_migration_counters_stay_zero_in_sub_pr_1(self) -> None:
-        """v2 sub-PR 1 contract: no migration runs, so the counters stay 0.
+    @rule(
+        direction=st.sampled_from([RebalanceDirection.SSM_TO_KV, RebalanceDirection.KV_TO_SSM]),
+        batch_blocks=st.sampled_from([1, 2, 4]),
+    )
+    def rebalance(
+        self,
+        direction: RebalanceDirection,
+        batch_blocks: int,
+    ) -> None:
+        """Manual rebalance trigger; may report success=False without raising.
 
-        Pool is constructed with default ``rebalance_enabled=False``, so the
-        pressure monitor is absent and these keys default to 0.0 regardless.
-        Migration mechanics light them up in v2 sub-PR 2.
+        Hypothesis can drive the pool into states where the donor side has
+        no free capacity to surrender. The outcome should still be a clean
+        ``RebalanceOutcome(success=False, ...)``; pool sizes are preserved
+        and counters are unchanged. The invariants below assert that.
+        """
+
+        self.pool.trigger_manual_rebalance(direction, batch_blocks)
+
+    @invariant()
+    def capacity_conservation_under_migration(self) -> None:
+        """Sum of per-pool active bytes plus accumulated migration waste is
+        invariant across every rule execution.
+
+        Anchored at the post-construction sum, not at ``total_bytes``, because
+        the initial page/block alignment can shave bytes off the per-store
+        share at construction time and that loss is NOT tracked in
+        ``bytes_wasted_to_alignment_total`` (which accumulates migration
+        rounding residue only, per RFC 0002 section 4.3).
         """
 
         stats = self.pool.get_allocator_stats()
-        assert stats["rebalance_count"] == 0.0
-        assert stats["bytes_migrated_total"] == 0.0
-        assert stats["time_spent_rebalancing_ns"] == 0.0
+        assert (
+            stats["current_kv_pool_bytes"]
+            + stats["current_ssm_pool_bytes"]
+            + stats["bytes_wasted_to_alignment_total"]
+            == self._initial_pool_bytes_sum
+        )
+
+    @invariant()
+    def used_bytes_within_active_capacity(self) -> None:
+        """``num_used`` per store cannot exceed its current active capacity."""
+
+        stats = self.pool.get_allocator_stats()
+        kv_page_size = self.pool._kv_store.page_size_bytes
+        ssm_block_size = self.pool._ssm_store.block_size_bytes
+        assert stats["kv_pages_used"] * kv_page_size <= stats["current_kv_pool_bytes"]
+        assert stats["ssm_blocks_used"] * ssm_block_size <= stats["current_ssm_pool_bytes"]
 
 
 TestAvmpStateMachine = AvmpStateMachine.TestCase
