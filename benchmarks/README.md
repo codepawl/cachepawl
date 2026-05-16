@@ -307,14 +307,28 @@ The convention is locked by `test_mamba_ratio_09_assigns_90_percent_to_ssm_pool`
 
 ### AVMP-specific invariants (avmp_static)
 
-For `avmp_static` runs the eleven keys in `allocator_specific_stats` satisfy four extra invariants on top of the table above:
+For `avmp_static` runs the twenty-three keys in `allocator_specific_stats` satisfy these invariants on top of the table above. The first four were the v1 contract; the rest land in v2 sub-PR 1 (RFC 0002 section 4.7) as observability-only.
+
+v1 invariants:
 
 - `kv_pages_used + kv_pages_free == kv_pages_total` at every recorded sample.
 - `ssm_blocks_used + ssm_blocks_free == ssm_blocks_total` at every recorded sample.
 - `virtual_handles_live == kv_pages_used + ssm_blocks_used`.
 - `cross_pool_eviction_count == 0.0` in v1. The field exists in the stats dict so the v2 cross-pool rebalancing path can light it up without a schema bump.
 
-These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
+v2 sub-PR 1 invariants (observability only, no migration yet):
+
+- `0.0 <= kv_free_ratio <= 1.0`; `0.0 <= ssm_free_ratio <= 1.0`.
+- `rebalance_enabled` in `{0.0, 1.0}`.
+- `threshold_low < threshold_high`, both in `(0.0, 1.0)`.
+- `migration_batch_size >= 1.0`.
+- `current_pressure_state_code` in `{0.0, 1.0, 2.0, 3.0}` encoding `PoolPressureState`: `BALANCED`, `KV_PRESSURED`, `SSM_PRESSURED`, `REBALANCING`. In v2 sub-PR 1, `compute_state` never returns `REBALANCING`, so the value 3.0 should not appear; sub-PR 2 lights it up when migration starts.
+- `rebalance_count >= 0.0`; in v2 sub-PR 1 always `0.0`.
+- `bytes_migrated_total >= 0.0`; in v2 sub-PR 1 always `0.0`.
+- `time_spent_rebalancing_ns >= 0.0`; in v2 sub-PR 1 always `0.0`.
+- `current_kv_pool_bytes + current_ssm_pool_bytes` is conserved in sub-PR 1 (both mirror their v1 counterparts). The sum becomes eventually-consistent inside the `REBALANCING` state in sub-PR 2 (RFC 0002 section 8 question 4).
+
+These invariants are pinned by `test_avmp_run_benchmark_uniform_short_cpu` in `tests/unit/benchmarks/test_avmp_harness_integration.py` and by the v2 tests under `tests/unit/allocator/avmp/test_pool_v2_*.py`. A failure on the committed `--quick` preview means the sweep regenerated against a buggy build; treat the table as the reviewer's checklist for future allocator PRs.
 
 The AVMP report rows reuse the same `kv_free_MiB` / `ssm_free_MiB` columns as `fixed_dual`; per-pool free bytes are derived from `pages_free * (pool_bytes / pages_total)`. AVMP-specific stats (`virtual_handles_live`, `cross_pool_eviction_count`) stay in the per-cell JSON for drill-down. AVMP v2 will introduce dedicated report columns once the cross-pool rebalancing signal differentiates from the baselines.
 
