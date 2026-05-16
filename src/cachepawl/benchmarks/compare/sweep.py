@@ -224,6 +224,11 @@ DEFAULT_VARIANTS: tuple[AllocatorVariant, ...] = (
         allocator_name="avmp_static",
         kwargs=(("mamba_ratio", 0.5),),
     ),
+    AllocatorVariant(
+        label="avmp_dynamic_mr05",
+        allocator_name="avmp_dynamic",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
 )
 
 DEFAULT_WORKLOAD_NAMES: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
@@ -454,9 +459,23 @@ def _build_allocator(
             device=device,
             mamba_ratio=mamba_ratio,
         )
+    if variant.allocator_name == "avmp_dynamic":
+        mamba_ratio = float(kwargs.pop("mamba_ratio", 0.5))
+        if kwargs:
+            raise ValueError(
+                f"avmp_dynamic: unsupported kwargs {sorted(kwargs)}; "
+                "only 'mamba_ratio' is recognized"
+            )
+        return AsymmetricVirtualPool(
+            model_spec=model_spec,
+            total_bytes=total_bytes,
+            device=device,
+            mamba_ratio=mamba_ratio,
+            rebalance_enabled=True,
+        )
     raise ValueError(
         f"unknown allocator_name {variant.allocator_name!r}; "
-        "supported: 'padded_unified', 'fixed_dual', 'avmp_static'"
+        "supported: 'padded_unified', 'fixed_dual', 'avmp_static', 'avmp_dynamic'"
     )
 
 
@@ -514,7 +533,12 @@ def _validate_config(config: SweepConfig) -> None:
         if total_bytes < _MIN_TOTAL_BYTES:
             raise ValueError(f"total_bytes {total_bytes} below the {_MIN_TOTAL_BYTES}-byte floor")
     for variant in config.variants:
-        if variant.allocator_name not in {"padded_unified", "fixed_dual", "avmp_static"}:
+        if variant.allocator_name not in {
+            "padded_unified",
+            "fixed_dual",
+            "avmp_static",
+            "avmp_dynamic",
+        }:
             raise ValueError(
                 f"variant {variant.label!r}: unknown allocator_name {variant.allocator_name!r}"
             )
@@ -698,6 +722,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     from cachepawl.benchmarks.compare.aggregate import aggregate_runs
     from cachepawl.benchmarks.compare.plots import (
         plot_fragmentation_vs_workload,
+        plot_oom_count_vs_workload,
         plot_padding_waste_vs_state_size,
     )
     from cachepawl.benchmarks.compare.report import (
@@ -761,6 +786,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             aggregated,
             figures_dir / "padding_waste_vs_state_size.png",
             workload_filter=config.workload_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+        plot_oom_count_vs_workload(
+            aggregated,
+            figures_dir / "oom_count_vs_workload.png",
+            model_spec_filter=config.model_spec_names[0],
             git_sha=result.metadata.git_sha,
             run_date=run_date,
         )

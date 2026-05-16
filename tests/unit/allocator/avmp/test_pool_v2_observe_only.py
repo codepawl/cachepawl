@@ -1,10 +1,14 @@
-"""Observe-only behavior tests for AVMP v2 sub-PR 1.
+"""Observe-only contract tests for AVMP v2.
 
-When ``rebalance_enabled=True`` the pool's ``PoolPressureMonitor`` records
-state transitions, but physical pool sizes never change and migration
-counters stay at zero. When ``rebalance_enabled=False`` all twelve new
-stats keys are still present, defaulting to neutral values, and the live
-ratios still update on allocate / free.
+When ``rebalance_enabled=False`` the pool reproduces v1 behavior: all 14
+v2 stats keys are present at their default values, ``kv_free_ratio`` and
+``ssm_free_ratio`` track live allocation, and no migration runs.
+
+When ``rebalance_enabled=True`` AND the pool comes under pressure, sub-PR
+3's auto-trigger fires off the observation hook. The "state observed but
+not acted upon" assertions from sub-PR 1 are obsolete in this PR; the
+new "auto-trigger fires under pressure" contract is tested in
+``test_avmp_v2_auto_trigger.py``.
 """
 
 from __future__ import annotations
@@ -12,7 +16,6 @@ from __future__ import annotations
 import torch
 
 from cachepawl.allocator.avmp import AsymmetricVirtualPool
-from cachepawl.allocator.avmp.state import PoolPressureState
 from cachepawl.models.spec import HybridModelSpec, LayerKind
 
 _TOTAL_16_MIB = 16 * 1024 * 1024
@@ -30,75 +33,6 @@ def _make_pool(
         device=device,
         mamba_ratio=0.5,
         rebalance_enabled=rebalance_enabled,
-    )
-
-
-def test_kv_pressure_drives_state_code_to_kv_pressured(
-    jamba_spec: HybridModelSpec,
-    cpu_device: torch.device,
-) -> None:
-    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=True)
-    baseline = pool.get_allocator_stats()
-    kv_total = int(baseline["kv_pages_total"])
-
-    pool.set_current_layer_kind(LayerKind.ATTENTION)
-    pool.set_current_request_id(1)
-    pool.allocate(kv_total, dtype_bytes=2)
-
-    stats = pool.get_allocator_stats()
-    assert stats["current_pressure_state_code"] == float(PoolPressureState.KV_PRESSURED.value)
-    assert stats["kv_free_ratio"] == 0.0
-    assert stats["ssm_free_ratio"] == 1.0
-    # Pool sizes are still static in sub-PR 1.
-    assert stats["current_kv_pool_bytes"] == baseline["kv_pool_bytes"]
-    assert stats["current_ssm_pool_bytes"] == baseline["ssm_pool_bytes"]
-    # Migration counters stay zero in this PR.
-    assert stats["rebalance_count"] == 0.0
-    assert stats["bytes_migrated_total"] == 0.0
-    assert stats["time_spent_rebalancing_ns"] == 0.0
-
-
-def test_ssm_pressure_drives_state_code_to_ssm_pressured(
-    jamba_spec: HybridModelSpec,
-    cpu_device: torch.device,
-) -> None:
-    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=True)
-    baseline = pool.get_allocator_stats()
-    ssm_total = int(baseline["ssm_blocks_total"])
-
-    pool.set_current_layer_kind(LayerKind.MAMBA2)
-    pool.set_current_request_id(1)
-    pool.allocate(ssm_total, dtype_bytes=2)
-
-    stats = pool.get_allocator_stats()
-    assert stats["current_pressure_state_code"] == float(PoolPressureState.SSM_PRESSURED.value)
-    assert stats["ssm_free_ratio"] == 0.0
-    assert stats["kv_free_ratio"] == 1.0
-    assert stats["current_kv_pool_bytes"] == baseline["kv_pool_bytes"]
-    assert stats["current_ssm_pool_bytes"] == baseline["ssm_pool_bytes"]
-    assert stats["rebalance_count"] == 0.0
-    assert stats["bytes_migrated_total"] == 0.0
-    assert stats["time_spent_rebalancing_ns"] == 0.0
-
-
-def test_free_returns_state_to_balanced(
-    jamba_spec: HybridModelSpec,
-    cpu_device: torch.device,
-) -> None:
-    """A KV-pressured state must clear when the holding request is freed."""
-
-    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=True)
-    kv_total = int(pool.get_allocator_stats()["kv_pages_total"])
-    pool.set_current_layer_kind(LayerKind.ATTENTION)
-    pool.set_current_request_id(1)
-    ids = pool.allocate(kv_total, dtype_bytes=2)
-    assert pool.get_allocator_stats()["current_pressure_state_code"] == float(
-        PoolPressureState.KV_PRESSURED.value
-    )
-
-    pool.free(ids)
-    assert pool.get_allocator_stats()["current_pressure_state_code"] == float(
-        PoolPressureState.BALANCED.value
     )
 
 
@@ -120,6 +54,10 @@ def test_rebalance_disabled_keeps_state_code_at_balanced(
     # Ratios still update even when the monitor is off.
     assert stats["kv_free_ratio"] == 0.0
     assert stats["ssm_free_ratio"] == 1.0
+    # No migration runs without an explicit trigger.
+    assert stats["rebalance_count"] == 0.0
+    assert stats["bytes_migrated_total"] == 0.0
+    assert stats["auto_rebalance_skipped_throttle"] == 0.0
 
 
 def test_rebalance_disabled_surfaces_all_v2_keys_at_defaults(
@@ -137,6 +75,7 @@ def test_rebalance_disabled_surfaces_all_v2_keys_at_defaults(
     assert stats["bytes_migrated_total"] == 0.0
     assert stats["time_spent_rebalancing_ns"] == 0.0
     assert stats["bytes_wasted_to_alignment_total"] == 0.0
+    assert stats["auto_rebalance_skipped_throttle"] == 0.0
     # Empty pool: full free ratios.
     assert stats["kv_free_ratio"] == 1.0
     assert stats["ssm_free_ratio"] == 1.0
@@ -144,23 +83,32 @@ def test_rebalance_disabled_surfaces_all_v2_keys_at_defaults(
     assert stats["current_ssm_pool_bytes"] == stats["ssm_pool_bytes"]
 
 
-def test_kv_pressure_does_not_auto_trigger_migration(
+def test_rebalance_disabled_remains_byte_silent_under_load(
     jamba_spec: HybridModelSpec,
     cpu_device: torch.device,
 ) -> None:
-    """v2 sub-PR 2: even with rebalance_enabled=True and a KV-pressured pool,
-    the migration counters stay at 0 because the automatic trigger is not
-    wired yet. Sub-PR 3 wires it.
-    """
+    """With ``rebalance_enabled=False``, draining one side leaves capacity
+    unchanged: no auto-trigger, no manual trigger, no surprises."""
 
-    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=True)
-    kv_total = int(pool.get_allocator_stats()["kv_pages_total"])
+    pool = _make_pool(jamba_spec, cpu_device, rebalance_enabled=False)
+    baseline = pool.get_allocator_stats()
+    kv_total = int(baseline["kv_pages_total"])
+    ssm_total = int(baseline["ssm_blocks_total"])
+
     pool.set_current_layer_kind(LayerKind.ATTENTION)
     pool.set_current_request_id(1)
     pool.allocate(kv_total, dtype_bytes=2)
+    pool.set_current_layer_kind(LayerKind.MAMBA2)
+    pool.set_current_request_id(2)
+    pool.allocate(ssm_total // 2, dtype_bytes=2)
 
     stats = pool.get_allocator_stats()
-    assert stats["current_pressure_state_code"] == float(PoolPressureState.KV_PRESSURED.value)
+    # Capacity unchanged.
+    assert stats["current_kv_pool_bytes"] == baseline["kv_pool_bytes"]
+    assert stats["current_ssm_pool_bytes"] == baseline["ssm_pool_bytes"]
+    # Migration counters all zero.
     assert stats["rebalance_count"] == 0.0
     assert stats["bytes_migrated_total"] == 0.0
+    assert stats["time_spent_rebalancing_ns"] == 0.0
     assert stats["bytes_wasted_to_alignment_total"] == 0.0
+    assert stats["auto_rebalance_skipped_throttle"] == 0.0

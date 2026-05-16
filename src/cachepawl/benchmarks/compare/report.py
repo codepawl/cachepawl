@@ -28,8 +28,10 @@ from cachepawl.benchmarks.compare.aggregate import (
 from cachepawl.benchmarks.compare.sweep import total_bytes_human
 
 _MIB: int = 1024 * 1024
+_KIB: int = 1024
 _NS_PER_US: int = 1000
 _BASELINE_VARIANT: str = "padded_unified"
+_AVMP_ALLOCATOR_NAMES: frozenset[str] = frozenset({"avmp_static", "avmp_dynamic"})
 
 
 def render_markdown_report(
@@ -138,9 +140,11 @@ def _render_workload_table(workload_name: str, rows: Sequence[AggregatedRow]) ->
         "| variant | model_spec | total_bytes | peak_reserved_MiB | "
         "fragmentation_during_load | fragmentation_peak | "
         "alloc_p50_us | alloc_p99_us | oom_count | padding_waste_MiB | "
-        "kv_free_MiB | ssm_free_MiB |"
+        "kv_free_MiB | ssm_free_MiB | "
+        "rebalance_count | bytes_migrated_MiB | "
+        "throttle_skips | waste_KiB |"
     )
-    divider = "| " + " | ".join(["---"] * 12) + " |"
+    divider = "| " + " | ".join(["---"] * 16) + " |"
     body = [_render_row(row) for row in cells]
     lines = [f"## Workload: {workload_name}", "", header, divider, *body]
     return "\n".join(lines)
@@ -162,14 +166,10 @@ def _render_row(row: AggregatedRow) -> str:
         padding_waste_mib_text = "-"
         kv_free_text = _format_mib(stats_map.get("pool_free_bytes_kv", 0.0))
         ssm_free_text = _format_mib(stats_map.get("pool_free_bytes_ssm", 0.0))
-    elif row.allocator_name == "avmp_static":
-        # v1 uses the same columns as fixed_dual because the contribution
-        # is API surface, not new metrics. v2 will add columns when
-        # cross_pool_eviction_count and rebalancing-frequency metrics
-        # become meaningful. AVMP-specific stats (virtual_handles_live,
-        # cross_pool_eviction_count) live in the per-cell JSON for
-        # drill-down. Per-pool free bytes are derived from
-        # pages_free * (pool_bytes / pages_total).
+    elif row.allocator_name in _AVMP_ALLOCATOR_NAMES:
+        # avmp_static (v1) and avmp_dynamic (v2) share the per-pool free
+        # bytes formula. Per-pool free bytes are derived from
+        # pages_free * (pool_bytes / pages_total) for the live capacity.
         padding_waste_mib_text = "-"
         kv_free_text = _format_mib(_avmp_pool_free_bytes(stats_map, kind="kv"))
         ssm_free_text = _format_mib(_avmp_pool_free_bytes(stats_map, kind="ssm"))
@@ -178,6 +178,19 @@ def _render_row(row: AggregatedRow) -> str:
         kv_free_text = "-"
         ssm_free_text = "-"
 
+    # v2 sub-PR 3 (RFC 0002 section 4.7) columns. Only AVMP variants
+    # surface rebalance metrics. Baselines render '-'.
+    if row.allocator_name in _AVMP_ALLOCATOR_NAMES:
+        rebalance_text = f"{stats_map.get('rebalance_count', 0.0):.0f}"
+        migrated_text = f"{stats_map.get('bytes_migrated_total', 0.0) / _MIB:.2f}"
+        throttle_text = f"{stats_map.get('auto_rebalance_skipped_throttle', 0.0):.0f}"
+        waste_text = f"{stats_map.get('bytes_wasted_to_alignment_total', 0.0) / _KIB:.2f}"
+    else:
+        rebalance_text = "-"
+        migrated_text = "-"
+        throttle_text = "-"
+        waste_text = "-"
+
     return (
         f"| {row.variant_label} | {row.model_spec_name} | {tb_label} | "
         f"{peak_mib_mean:.2f} +- {peak_mib_std:.2f} | "
@@ -185,7 +198,8 @@ def _render_row(row: AggregatedRow) -> str:
         f"{row.fragmentation_during_load_std:.3f} | "
         f"{row.fragmentation_peak:.3f} | "
         f"{p50_us:.2f} | {p99_us:.2f} | {row.oom_count_mean:.1f} | "
-        f"{padding_waste_mib_text} | {kv_free_text} | {ssm_free_text} |"
+        f"{padding_waste_mib_text} | {kv_free_text} | {ssm_free_text} | "
+        f"{rebalance_text} | {migrated_text} | {throttle_text} | {waste_text} |"
     )
 
 
@@ -230,7 +244,7 @@ def _row_kv_ssm_free_bytes(row: AggregatedRow) -> tuple[float, float]:
             stats_map.get("pool_free_bytes_kv", 0.0),
             stats_map.get("pool_free_bytes_ssm", 0.0),
         )
-    if row.allocator_name == "avmp_static":
+    if row.allocator_name in _AVMP_ALLOCATOR_NAMES:
         return (
             _avmp_pool_free_bytes(stats_map, kind="kv"),
             _avmp_pool_free_bytes(stats_map, kind="ssm"),

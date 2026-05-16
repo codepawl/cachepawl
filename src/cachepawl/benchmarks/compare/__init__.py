@@ -15,6 +15,7 @@ from cachepawl.benchmarks.compare.aggregate import (
 )
 from cachepawl.benchmarks.compare.plots import (
     plot_fragmentation_vs_workload,
+    plot_oom_count_vs_workload,
     plot_padding_waste_vs_state_size,
 )
 from cachepawl.benchmarks.compare.report import (
@@ -75,6 +76,7 @@ __all__ = [
     "make_quick_config",
     "make_smoke_config",
     "plot_fragmentation_vs_workload",
+    "plot_oom_count_vs_workload",
     "plot_padding_waste_vs_state_size",
     "render_deterministic_summary",
     "render_json_summary",

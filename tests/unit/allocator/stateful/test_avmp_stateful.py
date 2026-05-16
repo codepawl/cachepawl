@@ -29,12 +29,22 @@ class AvmpStateMachine(RuleBasedStateMachine):
 
     def __init__(self) -> None:
         super().__init__()
+        # min_rebalance_interval_ns set to an effectively-infinite value
+        # so the auto-trigger never fires under Hypothesis's exploration.
+        # Auto-trigger uses time.monotonic_ns which is non-deterministic
+        # across hypothesis re-runs; that would surface as a
+        # FlakyStrategyDefinition. RFC 0002 section 8 question 5 covers
+        # this: determinism is guaranteed only when the auto-trigger is
+        # suppressed. The explicit ``rebalance`` rule below still
+        # exercises migration through ``trigger_manual_rebalance`` which
+        # bypasses the throttle.
         self.pool = AsymmetricVirtualPool(
             model_spec=JAMBA_1_5_MINI_REF,
             total_bytes=_TOTAL_4_MIB,
             device=torch.device("cpu"),
             mamba_ratio=0.5,
             rebalance_enabled=True,
+            min_rebalance_interval_ns=2**62,
         )
         self.live_kv: dict[int, list[int]] = {}
         self.live_ssm: dict[int, list[int]] = {}
@@ -46,6 +56,9 @@ class AvmpStateMachine(RuleBasedStateMachine):
         self._initial_pool_bytes_sum: float = (
             initial_stats["current_kv_pool_bytes"] + initial_stats["current_ssm_pool_bytes"]
         )
+        # v2 sub-PR 3: track that auto_rebalance_skipped_throttle is
+        # monotonically non-decreasing across rule executions.
+        self._max_throttle_skips_seen: float = 0.0
 
     @rule(count=st.integers(min_value=1, max_value=8))
     def allocate_kv(self, count: int) -> None:
@@ -170,6 +183,19 @@ class AvmpStateMachine(RuleBasedStateMachine):
         ssm_block_size = self.pool._ssm_store.block_size_bytes
         assert stats["kv_pages_used"] * kv_page_size <= stats["current_kv_pool_bytes"]
         assert stats["ssm_blocks_used"] * ssm_block_size <= stats["current_ssm_pool_bytes"]
+
+    @invariant()
+    def throttle_skip_count_is_monotonically_non_decreasing(self) -> None:
+        """v2 sub-PR 3: ``auto_rebalance_skipped_throttle`` only ever grows.
+
+        The pool increments the counter when the auto-trigger detects pressure
+        but the throttle window has not elapsed. Once incremented it stays
+        incremented; nothing in the public API decrements it.
+        """
+
+        skips = self.pool.get_allocator_stats()["auto_rebalance_skipped_throttle"]
+        assert skips >= self._max_throttle_skips_seen
+        self._max_throttle_skips_seen = skips
 
 
 TestAvmpStateMachine = AvmpStateMachine.TestCase

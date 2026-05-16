@@ -113,9 +113,22 @@ def _avmp_static_factory(spec: WorkloadSpec, device: torch.device) -> Asymmetric
     )
 
 
+def _avmp_dynamic_factory(spec: WorkloadSpec, device: torch.device) -> AsymmetricVirtualPool:
+    """Default AVMP v2 dynamic variant: rebalance_enabled=True, all other
+    knobs at the RFC 0002 section 4.2 defaults."""
+
+    return AsymmetricVirtualPool(
+        model_spec=_hybrid_spec_from_workload(spec),
+        total_bytes=_DEFAULT_TOTAL_BYTES,
+        device=device,
+        rebalance_enabled=True,
+    )
+
+
 register_allocator("padded_unified", _padded_unified_factory)
 register_allocator("fixed_dual", _fixed_dual_factory)
 register_allocator("avmp_static", _avmp_static_factory)
+register_allocator("avmp_dynamic", _avmp_dynamic_factory)
 
 
 __all__ = [

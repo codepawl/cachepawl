@@ -40,9 +40,10 @@ _EXPECTED_V1_KEYS: frozenset[str] = frozenset(
     }
 )
 
-# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 adds the
-# thirteenth, ``bytes_wasted_to_alignment_total``, which accumulates the
-# page-size rounding residue across successful migrations.
+# v2 sub-PR 1 introduced twelve observability keys; sub-PR 2 added
+# ``bytes_wasted_to_alignment_total``; sub-PR 3 adds
+# ``auto_rebalance_skipped_throttle`` (counts pressure observations that
+# were skipped because the throttle window had not elapsed).
 _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
     {
         "rebalance_enabled",
@@ -58,6 +59,7 @@ _EXPECTED_V2_KEYS: frozenset[str] = frozenset(
         "bytes_migrated_total",
         "time_spent_rebalancing_ns",
         "bytes_wasted_to_alignment_total",
+        "auto_rebalance_skipped_throttle",
     }
 )
 

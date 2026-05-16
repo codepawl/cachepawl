@@ -5,6 +5,11 @@ happy paths in both directions, page-size-rounding waste accounting,
 rejection on insufficient source capacity, rollback on recipient grow
 failure, the diagnostic-use case when ``rebalance_enabled=False``, and
 determinism of ``RebalanceOutcome`` across identical starting states.
+
+Tests in this module exercise manual-trigger semantics in isolation,
+so the pool is constructed with a huge ``min_rebalance_interval_ns``
+to suppress sub-PR 3's auto-trigger. Auto-trigger behavior is covered
+in ``test_avmp_v2_auto_trigger.py``.
 """
 
 from __future__ import annotations
@@ -24,6 +29,9 @@ from cachepawl.allocator.baselines.common import CapacityError
 from cachepawl.models.spec import HybridModelSpec, LayerKind
 
 _TOTAL_64_MIB = 64 * 1024 * 1024
+# Effectively-infinite throttle suppresses sub-PR 3's auto-trigger so these
+# manual-trigger tests stay focused on their original sub-PR 2 contracts.
+_NEVER_AUTO_TRIGGER_NS = 2**62
 
 
 def _make_pool(
@@ -38,6 +46,7 @@ def _make_pool(
         device=device,
         mamba_ratio=0.5,
         rebalance_enabled=rebalance_enabled,
+        min_rebalance_interval_ns=_NEVER_AUTO_TRIGGER_NS,
     )
 
 
