@@ -49,8 +49,13 @@ def render_markdown_report(
     sections: list[str] = []
     sections.append(_render_title())
     sections.append(_render_how_to_read())
-    for workload_name in _workloads_in_order(aggregated.rows):
+    workloads = _workloads_in_order(aggregated.rows)
+    for workload_name in workloads:
         sections.append(_render_workload_table(workload_name, aggregated.rows))
+    if len(workloads) > 1:
+        cross_section = _render_cross_workload_summary(aggregated.rows)
+        if cross_section:
+            sections.append(cross_section)
     rel_section = _render_relative_improvement(aggregated.rows)
     if rel_section:
         sections.append(rel_section)
@@ -206,6 +211,87 @@ def _avmp_pool_free_bytes(stats_map: dict[str, float], *, kind: str) -> float:
         return 0.0
     page_size = pool_bytes / pages_total
     return pages_free * page_size
+
+
+def _row_kv_ssm_free_bytes(row: AggregatedRow) -> tuple[float, float]:
+    """Per-row (kv_free_bytes, ssm_free_bytes) for any allocator kind.
+
+    Returns ``(0.0, 0.0)`` for ``padded_unified`` because its rigidity
+    signal is ``padding_waste_bytes`` rather than per-pool free bytes.
+    For ``fixed_dual`` the bytes come straight from
+    ``pool_free_bytes_{kv,ssm}``; for ``avmp_static`` they are derived
+    from pages_free and the pool sizes the same way :meth:`_render_row`
+    does it inline.
+    """
+
+    stats_map = dict(row.allocator_specific_median)
+    if row.allocator_name == "fixed_dual":
+        return (
+            stats_map.get("pool_free_bytes_kv", 0.0),
+            stats_map.get("pool_free_bytes_ssm", 0.0),
+        )
+    if row.allocator_name == "avmp_static":
+        return (
+            _avmp_pool_free_bytes(stats_map, kind="kv"),
+            _avmp_pool_free_bytes(stats_map, kind="ssm"),
+        )
+    return (0.0, 0.0)
+
+
+def _render_cross_workload_summary(rows: Sequence[AggregatedRow]) -> str:
+    """Aggregate each variant across all workloads in the sweep.
+
+    Emitted only by :func:`render_markdown_report` when the sweep covers
+    more than one workload, so the quick preview report stays focused
+    on a single workload's table. Useful as the at-a-glance comparison
+    the v2 review will diff against: AVMP must match
+    ``fixed_dual_mr05`` here; the v2 target is the ``fixed_dual_mr09``
+    ``total_oom`` column on the workloads where it strands KV.
+    """
+
+    if not rows:
+        return ""
+    by_variant: dict[str, list[AggregatedRow]] = defaultdict(list)
+    for row in rows:
+        by_variant[row.variant_label].append(row)
+    if not by_variant:
+        return ""
+
+    header = (
+        "| variant | mean_frag_during_load | mean_frag_peak | total_oom | "
+        "total_kv_free_MiB | total_ssm_free_MiB |"
+    )
+    divider = "| " + " | ".join(["---"] * 6) + " |"
+    body: list[str] = []
+    for variant_label in sorted(by_variant):
+        cells = by_variant[variant_label]
+        n = len(cells)
+        mean_frag_load = sum(r.fragmentation_during_load_mean for r in cells) / n
+        mean_frag_peak = sum(r.fragmentation_peak for r in cells) / n
+        total_oom = sum(r.oom_count_mean for r in cells)
+        total_kv_bytes = 0.0
+        total_ssm_bytes = 0.0
+        for r in cells:
+            kv_b, ssm_b = _row_kv_ssm_free_bytes(r)
+            total_kv_bytes += kv_b
+            total_ssm_bytes += ssm_b
+        body.append(
+            f"| {variant_label} | {mean_frag_load:.3f} | {mean_frag_peak:.3f} | "
+            f"{total_oom:.1f} | {total_kv_bytes / _MIB:.3f} | "
+            f"{total_ssm_bytes / _MIB:.3f} |"
+        )
+    lines = [
+        "## Cross-workload summary",
+        "",
+        "Per-variant aggregate across every workload in this sweep. The v1 baseline AVMP must "
+        "match is `fixed_dual_mr05`; the v2 target is reducing `total_oom` on the workloads "
+        "where `fixed_dual_mr09` strands the KV pool, without introducing AVMP-specific OOMs.",
+        "",
+        header,
+        divider,
+        *body,
+    ]
+    return "\n".join(lines)
 
 
 def _render_relative_improvement(rows: Sequence[AggregatedRow]) -> str:

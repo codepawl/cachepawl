@@ -216,12 +216,32 @@ specs, three pool sizes, and three seed replicates.
 
 ## Committed reference artifacts
 
-`benchmarks/results/baseline/quick/` carries the committed `--quick`
-output as a reference snapshot. It is NOT a fixture the tests pin on;
-it exists so anyone can see what the report and figures look like
-without running the sweep. Regenerate with the command above. The
-`aggregated_deterministic.json` sibling is bit-stable across reruns at
-the same seed on CPU; the rest is provenance and visualization.
+Two snapshots are committed, both produced from the same compare CLI:
+
+- `benchmarks/results/avmp-v1-preview/quick/` is the 4-cell `--quick`
+  output (`uniform_short` x `jamba_1_5_mini` x 1 GiB x 1 seed,
+  4 variants). Used for CI smoke and PR previews. Regenerate:
+  `python -m cachepawl.benchmarks.compare --quick --device cpu
+  --output benchmarks/results/avmp-v1-preview/quick/`.
+- `benchmarks/results/avmp-v1-preview/full/` is the 216-cell full
+  sweep (3 workloads x 2 model specs x 3 total_bytes x 3 seeds x 4
+  variants). Used as the v1 production reference. The committed
+  artifact ships `aggregated.json`, `aggregated_deterministic.json`,
+  `report.md` (including the cross-workload summary section),
+  `figures/`, and `SWEEP_METADATA.json`. The `runs/` subdirectory is
+  NOT committed; regenerate to inspect per-cell JSONs. Regenerate
+  command: `python -m cachepawl.benchmarks.compare --device cpu
+  --output benchmarks/results/avmp-v1-preview/full/`.
+
+`benchmarks/results/baseline/quick/` is the legacy 3-variant baseline
+snapshot from the pre-AVMP phase. Kept as historical reference; the
+AVMP preview directory supersedes it for any current review.
+
+The `aggregated_deterministic.json` sibling is bit-stable across
+reruns at the same seed on CPU; the rest is provenance and
+visualization. Latency stats in `aggregated.json` are
+machine-dependent; the hardware that produced the committed data is
+named in `SWEEP_METADATA.json`.
 
 ## Known limitations of this baseline data
 

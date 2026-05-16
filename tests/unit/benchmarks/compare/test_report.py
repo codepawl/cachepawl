@@ -155,3 +155,81 @@ def test_deterministic_summary_omits_latency(tmp_path: Path) -> None:
         assert "fragmentation_during_load_mean" in row
         assert "fragmentation_peak" in row
         assert "allocator_specific_median" in row
+
+
+def test_cross_workload_summary_appears_when_multiple_workloads(tmp_path: Path) -> None:
+    """The summary section emits only when the sweep covers > 1 workload."""
+
+    config = _build_two_variant_two_workload_sweep(tmp_path)
+    runs, stems = _build_runs()
+    result = make_sweep_result(config=config, runs=runs, cell_stems=stems)
+    aggregated = aggregate_runs(result)
+    output = tmp_path / "report.md"
+    render_markdown_report(
+        aggregated,
+        output,
+        git_sha="abcdef" * 7,
+        run_date="2026-05-14",
+        hardware_label="cpu (test)",
+    )
+    text = output.read_text()
+    assert "## Cross-workload summary" in text
+    assert "mean_frag_during_load" in text
+    assert "total_oom" in text
+    # Every variant from the sweep must appear in the summary.
+    summary_start = text.index("## Cross-workload summary")
+    summary_block = text[summary_start:]
+    # The relative-improvement section comes after; look only inside summary.
+    next_section = summary_block.find("##", 5)
+    summary_only = summary_block if next_section == -1 else summary_block[:next_section]
+    assert "padded_unified" in summary_only
+    assert "fixed_dual_mr05" in summary_only
+
+
+def test_cross_workload_summary_absent_for_single_workload(tmp_path: Path) -> None:
+    """Single-workload sweeps (the quick preview) keep the report focused."""
+
+    config = SweepConfig(
+        variants=(
+            AllocatorVariant("padded_unified", "padded_unified", ()),
+            AllocatorVariant("fixed_dual_mr05", "fixed_dual", (("mamba_ratio", 0.5),)),
+        ),
+        workload_names=("uniform_short",),
+        model_spec_names=("jamba_1_5_mini",),
+        total_bytes_options=(1 * 1024**3,),
+        device="cpu",
+        output_dir=tmp_path,
+        seed_replicates=1,
+    )
+    runs: list[BenchmarkRun] = []
+    stems: list[str] = []
+    for variant_label in ("padded_unified", "fixed_dual_mr05"):
+        specific: dict[str, float]
+        if variant_label == "padded_unified":
+            specific = {"padding_waste_bytes": 0.0}
+        else:
+            specific = {"pool_free_bytes_kv": 0.0, "pool_free_bytes_ssm": 0.0}
+        runs.append(
+            make_run(
+                allocator_label=variant_label,
+                workload_name="uniform_short",
+                seed=1,
+                peak_reserved_bytes=100_000,
+                final_fragmentation=0.05,
+                oom_count=0,
+                allocator_specific_stats=specific,
+            )
+        )
+        stems.append("jamba_1_5_mini__tb1gib__seed1")
+    result = make_sweep_result(config=config, runs=runs, cell_stems=stems)
+    aggregated = aggregate_runs(result)
+    output = tmp_path / "report.md"
+    render_markdown_report(
+        aggregated,
+        output,
+        git_sha="abcdef" * 7,
+        run_date="2026-05-14",
+        hardware_label="cpu (test)",
+    )
+    text = output.read_text()
+    assert "## Cross-workload summary" not in text

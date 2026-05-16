@@ -461,6 +461,15 @@ def _build_allocator(
 
 
 def _enumerate_cells(config: SweepConfig) -> list[_Cell]:
+    # TODO(avmp-v2): swap the outer loops so seed is outermost and
+    # variant innermost. The current order finishes every cell of one
+    # allocator before starting the next, so a sweep that crashes mid-run
+    # loses the trailing allocators entirely. With seed-outermost the
+    # crash leaves partial data for every variant, which keeps the
+    # comparison report renderable from the partial output. Not fixed in
+    # this PR because changing the order shifts cell stems and would
+    # noisily diff the committed reference artifacts; do it as part of v2
+    # work alongside other determinism-and-resilience hardening.
     cells: list[_Cell] = []
     for variant in config.variants:
         for workload_name in config.workload_names:
