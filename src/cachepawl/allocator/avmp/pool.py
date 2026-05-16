@@ -50,6 +50,7 @@ Primitives reused, with file paths:
 
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping, Sequence
 
 import torch
@@ -57,6 +58,7 @@ import torch
 from cachepawl.allocator.avmp.handle import HandleKind
 from cachepawl.allocator.avmp.page_table import VirtualPageTable
 from cachepawl.allocator.avmp.physical import KVPagesStore, SSMBlocksStore
+from cachepawl.allocator.avmp.state import PoolPressureMonitor, PoolPressureState
 from cachepawl.allocator.base import Allocator, AllocatorStats
 from cachepawl.allocator.baselines.common import (
     AllocatorContext,
@@ -78,6 +80,10 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         mamba_ratio: float = 0.5,
         attention_page_tokens: int = 16,
         eviction: EvictionPolicy = EvictionPolicy.LRU,
+        rebalance_enabled: bool = False,
+        threshold_low: float = 0.05,
+        threshold_high: float = 0.30,
+        migration_batch_size: int = 1,
     ) -> None:
         if eviction is not EvictionPolicy.LRU:
             raise NotImplementedError(
@@ -90,10 +96,21 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             raise ValueError(f"mamba_ratio must lie in the open interval (0, 1), got {mamba_ratio}")
         if attention_page_tokens <= 0:
             raise ValueError(f"attention_page_tokens must be positive, got {attention_page_tokens}")
+        if not 0.0 < threshold_low < threshold_high < 1.0:
+            raise ValueError(
+                "thresholds must satisfy 0.0 < threshold_low < threshold_high < 1.0, got "
+                f"threshold_low={threshold_low}, threshold_high={threshold_high}"
+            )
+        if migration_batch_size < 1:
+            raise ValueError(f"migration_batch_size must be >= 1, got {migration_batch_size}")
 
         AllocatorContext.__init__(self)
         self._model_spec = model_spec
         self._mamba_ratio = mamba_ratio
+        self._rebalance_enabled = rebalance_enabled
+        self._threshold_low = threshold_low
+        self._threshold_high = threshold_high
+        self._migration_batch_size = migration_batch_size
 
         ssm_bytes = int(total_bytes * mamba_ratio)
         kv_bytes = total_bytes - ssm_bytes
@@ -118,6 +135,16 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         self._ssm_tracker = LRURequestTracker()
         self._cross_pool_eviction_count: int = 0
 
+        self._pressure_monitor: PoolPressureMonitor | None = (
+            PoolPressureMonitor(
+                threshold_low=threshold_low,
+                threshold_high=threshold_high,
+            )
+            if rebalance_enabled
+            else None
+        )
+        self._current_pressure_state: PoolPressureState = PoolPressureState.BALANCED
+
     # ----- Allocator ABC -----
 
     def allocate(self, num_blocks: int, *, dtype_bytes: int) -> list[int]:
@@ -126,7 +153,11 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         if dtype_bytes <= 0:
             raise ValueError(f"dtype_bytes must be positive, got {dtype_bytes}")
         kind = self._kind_from_context()
-        return self._allocate_into(kind=kind, num_blocks=num_blocks)
+        result = self._allocate_into(kind=kind, num_blocks=num_blocks)
+        # v2 sub-PR 1: state is observed but not acted upon. Migration lands in
+        # sub-PR 2 (RFC 0002 section 7).
+        self._observe_pressure_state()
+        return result
 
     def free(self, block_ids: Sequence[int]) -> None:
         seen: set[int] = set()
@@ -150,6 +181,9 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
             self._kv_tracker.remove_pages(kv_freed)
         if ssm_freed:
             self._ssm_tracker.remove_pages(ssm_freed)
+        # v2 sub-PR 1: state is observed but not acted upon. Migration lands in
+        # sub-PR 2 (RFC 0002 section 7).
+        self._observe_pressure_state()
 
     def stats(self) -> AllocatorStats:
         kv_total = self._kv_store.num_total
@@ -270,3 +304,33 @@ class AsymmetricVirtualPool(Allocator, AllocatorContext):
         if kind is HandleKind.KV_PAGE:
             return self._kv_store.page_size_bytes
         return self._ssm_store.block_size_bytes
+
+    def _free_ratios(self) -> tuple[float, float]:
+        """Per-pool free fractions used by the pressure monitor and v2 stats."""
+
+        kv_total = self._kv_store.num_total
+        ssm_total = self._ssm_store.num_total
+        kv_free_ratio = self._kv_store.num_free / kv_total if kv_total > 0 else 0.0
+        ssm_free_ratio = self._ssm_store.num_free / ssm_total if ssm_total > 0 else 0.0
+        return kv_free_ratio, ssm_free_ratio
+
+    def _observe_pressure_state(self) -> None:
+        """Read pressure state from the monitor and record any transition.
+
+        v2 sub-PR 1: no physical action is taken; migration lands in sub-PR 2
+        (RFC 0002 section 7). When ``rebalance_enabled=False`` the monitor is
+        ``None`` and this method returns immediately.
+        """
+
+        monitor = self._pressure_monitor
+        if monitor is None:
+            return
+        kv_free_ratio, ssm_free_ratio = self._free_ratios()
+        new_state = monitor.compute_state(kv_free_ratio, ssm_free_ratio)
+        if new_state is not self._current_pressure_state:
+            monitor.record_transition(
+                self._current_pressure_state,
+                new_state,
+                time.monotonic_ns(),
+            )
+            self._current_pressure_state = new_state
