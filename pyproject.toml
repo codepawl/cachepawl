@@ -73,6 +73,7 @@ disallow_any_generics = true
 warn_unreachable = true
 warn_unused_ignores = true
 files = ["src/cachepawl", "tests", "research/avmp/scripts"]
+mypy_path = ["src", "research/avmp"]
 
 [[tool.mypy.overrides]]
 module = ["triton", "triton.*"]

@@ -48,7 +48,7 @@ jobs:
       - name: Install project (CPU torch)
         run: uv sync --extra-index-url https://download.pytorch.org/whl/cpu
       - name: mypy
-        run: uv run mypy src/cachepawl tests
+        run: uv run mypy src/cachepawl tests research/avmp/scripts
 
   test:
     name: pytest (py${{ matrix.python-version }})
