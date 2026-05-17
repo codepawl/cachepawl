@@ -1,0 +1,34 @@
+\section{Background}
+\label{sec:background}
+
+% CONTENT GUIDANCE (delete before submission):
+% - Subsection 2.1: KV cache in Transformer serving. PagedAttention is
+%   the obvious citation (\cite{kwon2023pagedattention}); vLLM-style
+%   block-based allocation. Optional: FlashAttention's IO-awareness
+%   framing (\cite{dao2023flashattention2}, \cite{shah2024flashattention3}).
+% - Subsection 2.2: SSM state caching. The d_state alignment and
+%   per-layer constant-size cache shape, contrasted with the KV cache's
+%   per-token shape. Cite Mamba (\cite{gu2023mamba}, \cite{dao2024mamba2}).
+% - Subsection 2.3: hybrid architectures. Jamba (\cite{lieber2024jamba}),
+%   Zamba2 (\cite{glorioso2024zamba2}), Samba (\cite{ren2024samba}),
+%   Hymba (\cite{dong2024hymba}), RecurrentGemma
+%   (\cite{botev2024recurrentgemma}). Note that none of them prescribe a
+%   serving-time memory-layout strategy.
+% - Source: RFC 0001 sections 2 and 3.1.
+
+\subsection{KV Cache in Transformer Serving}
+\label{sec:background:kv}
+
+% TODO author: paged KV cache, fragmentation, block size choice.
+
+\subsection{SSM State Caching}
+\label{sec:background:ssm}
+
+% TODO author: SSM constant per-layer state shape, d_state alignment,
+% per-token cost characterization.
+
+\subsection{Hybrid Architectures}
+\label{sec:background:hybrid}
+
+% TODO author: family overview, why memory layout is harder than for
+% pure-Transformer serving.

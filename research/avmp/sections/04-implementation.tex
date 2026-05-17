@@ -1,0 +1,33 @@
+\section{Implementation}
+\label{sec:implementation}
+
+% CONTENT GUIDANCE (delete before submission):
+% - Subsection 4.1: source-tree summary. Reference the cachepawl
+%   allocator module path (src/cachepawl/allocator/) and the comparison
+%   sweep harness (src/cachepawl/benchmarks/compare/).
+% - Subsection 4.2: deterministic-replay testing. Explain the
+%   counter-vs-float split for CUDA caching non-determinism; this is the
+%   protocol described in PR #14 and validated in PR #15.
+% - Subsection 4.3: backing-store backend. Document Approach 1 (Python
+%   bytearray prototype) vs Approach 2 (torch tensor pool) and the
+%   future cuMemMap roadmap (cuMemAddressReserve + cuMemMap, RFC 0001
+%   section 5.4).
+% - Source: RFC 0001 section 5, RFC 0002 section 4.
+
+\subsection{Prototype Architecture}
+\label{sec:implementation:proto}
+
+% TODO author: source-tree summary and the four allocator surfaces
+% (padded_unified, fixed_dual, avmp_static, avmp_dynamic).
+
+\subsection{Deterministic Replay}
+\label{sec:implementation:determinism}
+
+% TODO author: counter vs float metric split, allocator_specific_stats
+% determinism, CUDA caching impact on derived fragmentation metrics.
+
+\subsection{Backing-Store Backend}
+\label{sec:implementation:backing}
+
+% TODO author: prototype backing store choices, alignment, future
+% cuMemMap path.

@@ -1,0 +1,63 @@
+\section{Evaluation}
+\label{sec:evaluation}
+
+% CONTENT GUIDANCE (delete before submission):
+% - Subsection 5.1: experimental setup. Hardware (RTX 3060, CUDA 13,
+%   torch 2.12.0+cu130 - confirm versions in
+%   benchmarks/results/avmp-v2-batchsize-sweep/SWEEP_METADATA.json),
+%   model specs (jamba_1_5_mini, mamba2_1b3), workloads
+%   (uniform_short, mixed_long, agentic_burst), pool sizes (1 GiB and
+%   4 GiB after the GPU VRAM cap).
+% - Subsection 5.2: headline cross-allocator comparison. Use
+%   figures/generated/fig_oom_comparison_final.pdf and
+%   tables/generated/table_baseline_comparison.tex.
+% - Subsection 5.3: stage 1 - migration_batch_size sweep. Use
+%   figures/generated/fig_oom_vs_batch_size.pdf and
+%   tables/generated/table_stage1_batchsize.tex and
+%   tables/generated/table_per_workload_winner.tex. Cite
+%   benchmarks/results/avmp-v2-batchsize-sweep/stage1_analysis.md.
+% - Subsection 5.4: stage 2 - threshold sensitivity. Use
+%   figures/generated/fig_threshold_sensitivity.pdf and
+%   tables/generated/table_stage2_threshold.tex. Cite
+%   benchmarks/results/avmp-v2-threshold-sweep/stage2_analysis.md.
+% - Subsection 5.5: peak-reserved trade-off. Use
+%   figures/generated/fig_peak_reserved_tradeoff.pdf. Explain the AVMP
+%   2x physical-footprint cost honestly; reference RFC 0002 section 4.3.
+% - Source: benchmarks/results/avmp-v2-batchsize-sweep/,
+%   benchmarks/results/avmp-v2-threshold-sweep/, and
+%   benchmarks/results/baseline/full/ for cross-platform CPU context.
+
+\subsection{Experimental Setup}
+\label{sec:evaluation:setup}
+
+% TODO author: hardware, model specs, workloads, pool sizes, seeds,
+% sweep methodology.
+
+\subsection{Headline Comparison}
+\label{sec:evaluation:headline}
+
+% TODO author: present fig_oom_comparison_final and
+% table_baseline_comparison. Lead with the cross-workload total OOM
+% number for avmp_dynamic_b128 versus the strongest static baseline.
+
+\subsection{Stage 1: Migration Batch Size}
+\label{sec:evaluation:stage1}
+
+% TODO author: present fig_oom_vs_batch_size and table_stage1_batchsize
+% and table_per_workload_winner. State the hypothesis pre-registered
+% in PR #16 and report the verdict.
+
+\subsection{Stage 2: Threshold Sensitivity}
+\label{sec:evaluation:stage2}
+
+% TODO author: present fig_threshold_sensitivity and
+% table_stage2_threshold. State Hypotheses A and B verbatim from
+% benchmarks/results/avmp-v2-threshold-sweep/stage2_analysis.md and
+% report that both were falsified.
+
+\subsection{Peak Reserved Memory Trade-off}
+\label{sec:evaluation:peak}
+
+% TODO author: present fig_peak_reserved_tradeoff. Honestly state the
+% 2x physical-footprint cost of AVMP versus padded_unified and
+% fixed_dual.

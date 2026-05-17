@@ -1,0 +1,35 @@
+\section{Method}
+\label{sec:method}
+
+% CONTENT GUIDANCE (delete before submission):
+% - Subsection 3.1: paraphrase RFC 0001 sections 3-4 (AVMP core design).
+%   Source: docs/designs/0001-asymmetric-virtual-memory-paging.md.
+% - Subsection 3.2: paraphrase RFC 0002 sections 3-5 (dynamic rebalancing).
+%   Source: docs/designs/0002-dynamic-pool-rebalancing.md.
+% - Subsection 3.3: state machine and trigger placement.
+%   Source: docs/designs/0002-dynamic-pool-rebalancing.md section 4.2.
+% - Figures: state-machine diagram lives at figures/static/state-machine.pdf
+%   and must be hand-drawn by the author; this PR does NOT auto-generate it.
+% - Tables: the constructor-defaults table is auto-generated and lives at
+%   tables/generated/table_parameter_defaults.tex. Include it via
+%   \input once the section is wired up.
+
+\subsection{Asymmetric Virtual Page Table}
+\label{sec:method:avpt}
+
+% TODO author: explain virtual handle abstraction, physical store split,
+% alignment, why pages stay opaque to kernels.
+
+\subsection{Dynamic Pool Rebalancing}
+\label{sec:method:rebalance}
+
+% TODO author: explain trigger conditions, migration mechanics,
+% rollback semantics, and why migration_batch_size is the dominant
+% tuning knob (forward-reference Section \ref{sec:evaluation}).
+
+\subsection{Implementation Choices}
+\label{sec:method:choices}
+
+% TODO author: pure Python prototype constraints, Approach 1 vs
+% Approach 2 backing store, future cuMemMap path. Cite vTensor
+% (\cite{xu2024vtensor}) as the closest related serving-time work.
