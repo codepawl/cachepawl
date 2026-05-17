@@ -1,0 +1,35 @@
+\section{Discussion}
+\label{sec:discussion}
+
+% CONTENT GUIDANCE (delete before submission):
+% - Subsection 7.1: paper config. Recommend
+%   migration_batch_size=128 with constructor-default thresholds, per
+%   the stage 1 / stage 2 evidence. Source:
+%   benchmarks/results/avmp-v2-batchsize-sweep/stage1_analysis.md and
+%   benchmarks/results/avmp-v2-threshold-sweep/stage2_analysis.md.
+% - Subsection 7.2: limitations. The 2x physical-footprint cost; the
+%   pure-Python prototype's allocate-call latency; the absence of a 2D
+%   threshold-batch_size interaction sweep; the lack of mr09 in the
+%   headline comparison (no committed sweep covers both mr09 and
+%   avmp_dynamic_b128 on the same cells).
+% - Subsection 7.3: future work. Native cuMemMap backing store (RFC
+%   0001 section 5.4); per-workload migration_batch_size selection;
+%   joint optimization over the rebalance trigger placement.
+
+\subsection{Paper Configuration}
+\label{sec:discussion:config}
+
+% TODO author: state the recommended defaults and the evidence each
+% one rests on.
+
+\subsection{Limitations}
+\label{sec:discussion:limits}
+
+% TODO author: physical footprint cost, prototype latency, scope of
+% the sweep.
+
+\subsection{Future Work}
+\label{sec:discussion:future}
+
+% TODO author: native backing store, per-workload tuning, trigger
+% placement study.

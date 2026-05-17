@@ -57,7 +57,7 @@ include = ["src/cachepawl", "README.md", "LICENSE", "pyproject.toml"]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
-src = ["src", "tests"]
+src = ["src", "tests", "research/avmp/scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
@@ -72,7 +72,8 @@ disallow_any_explicit = true
 disallow_any_generics = true
 warn_unreachable = true
 warn_unused_ignores = true
-files = ["src/cachepawl", "tests"]
+files = ["src/cachepawl", "tests", "research/avmp/scripts"]
+mypy_path = ["src", "research/avmp"]
 
 [[tool.mypy.overrides]]
 module = ["triton", "triton.*"]
@@ -92,6 +93,7 @@ disallow_any_explicit = false
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests"]
+pythonpath = ["src", "research/avmp"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 markers = [
     "gpu: requires a CUDA-capable GPU",
