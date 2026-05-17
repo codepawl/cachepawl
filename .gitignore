@@ -51,3 +51,21 @@ benchmarks/results/avmp-v2-batchsize-sweep/runs/
 benchmarks/results/avmp-v2-batchsize-sweep/sweep.log
 benchmarks/results/avmp-v2-threshold-sweep/runs/
 benchmarks/results/avmp-v2-threshold-sweep/sweep.log
+
+# Paper build artifacts (scoped to research/avmp/)
+research/avmp/figures/generated/
+research/avmp/tables/generated/
+research/avmp/*.aux
+research/avmp/*.log
+research/avmp/*.out
+research/avmp/*.toc
+research/avmp/*.bbl
+research/avmp/*.blg
+research/avmp/*.synctex.gz
+research/avmp/*.fdb_latexmk
+research/avmp/*.fls
+research/avmp/paper.pdf
+# acmart.cls and helper files are generated from acmart.ins on first build.
+research/avmp/acmart.cls
+research/avmp/acmart.cfg
+research/avmp/arxiv-submission.tar.gz
