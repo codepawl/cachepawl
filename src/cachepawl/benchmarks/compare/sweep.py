@@ -383,6 +383,20 @@ def run_sweep(config: SweepConfig) -> SweepResult:
     with tempfile.TemporaryDirectory(prefix="cp_compare_scratch_") as scratch:
         scratch_dir = Path(scratch)
         for idx, cell in enumerate(cells, start=1):
+            # v2 stage 1 (resume from disk): if a canonical per-cell JSON
+            # already exists under runs/, load it instead of re-running. The
+            # path and stem grammar are stable across sweeps, so a sweep
+            # that was killed midway can be restarted into the same output
+            # directory and pick up where it left off. Corrupt or schema-
+            # mismatched files are treated as missing and re-run.
+            stem = _cell_stem(cell)
+            canonical = output_runs_root / cell.variant.label / cell.workload_name / f"{stem}.json"
+            existing = _load_existing_cell(canonical)
+            if existing is not None:
+                cell_stems[len(runs)] = stem
+                runs.append(existing)
+                _print_progress_resumed(idx, total_cells, cell)
+                continue
             cell_start = time.perf_counter()
             try:
                 run = _execute_cell(cell, scratch_dir, config, device)
@@ -402,8 +416,6 @@ def run_sweep(config: SweepConfig) -> SweepResult:
                 _print_progress_fail(idx, total_cells, cell, elapsed, exc)
                 continue
             elapsed = time.perf_counter() - cell_start
-            stem = _cell_stem(cell)
-            canonical = output_runs_root / cell.variant.label / cell.workload_name / f"{stem}.json"
             canonical.parent.mkdir(parents=True, exist_ok=True)
             canonical.write_text(run.to_json())
             cell_stems[len(runs)] = stem
@@ -676,6 +688,26 @@ def _print_progress_fail(
 ) -> None:
     line = _progress_prefix(idx, total, cell, elapsed_s) + f" | FAILED: {repr(exc)[:60]}"
     print(line, file=sys.stderr, flush=True)
+
+
+def _print_progress_resumed(idx: int, total: int, cell: _Cell) -> None:
+    line = _progress_prefix(idx, total, cell, 0.0) + " | RESUMED"
+    print(line, file=sys.stdout, flush=True)
+
+
+def _load_existing_cell(canonical_path: Path) -> BenchmarkRun | None:
+    """Load a previously-written per-cell JSON for the resume hook.
+
+    Returns ``None`` when the file does not exist, is unparseable, or fails
+    schema-version validation; the caller re-runs the cell in that case.
+    """
+
+    if not canonical_path.exists():
+        return None
+    try:
+        return BenchmarkRun.from_json(canonical_path.read_text())
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
 
 
 def _progress_prefix(idx: int, total: int, cell: _Cell, elapsed_s: float) -> str:
