@@ -24,6 +24,7 @@ from cachepawl.benchmarks.compare.report import (
     render_markdown_report,
 )
 from cachepawl.benchmarks.compare.sweep import (
+    BATCHSIZE_SWEEP_VARIANTS,
     DEFAULT_MODEL_SPEC_NAMES,
     DEFAULT_SEED_REPLICATES,
     DEFAULT_TOTAL_BYTES_OPTIONS,
@@ -39,6 +40,7 @@ from cachepawl.benchmarks.compare.sweep import (
     SweepConfig,
     SweepMetadata,
     SweepResult,
+    generate_batch_size_variants,
     get_model_spec,
     known_model_spec_names,
     main,
@@ -50,6 +52,7 @@ from cachepawl.benchmarks.compare.sweep import (
 )
 
 __all__ = [
+    "BATCHSIZE_SWEEP_VARIANTS",
     "DEFAULT_MODEL_SPEC_NAMES",
     "DEFAULT_SEED_REPLICATES",
     "DEFAULT_TOTAL_BYTES_OPTIONS",
@@ -69,6 +72,7 @@ __all__ = [
     "SweepResult",
     "aggregate_runs",
     "compute_relative_improvement",
+    "generate_batch_size_variants",
     "get_model_spec",
     "known_model_spec_names",
     "main",

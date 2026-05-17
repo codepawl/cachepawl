@@ -231,6 +231,45 @@ DEFAULT_VARIANTS: tuple[AllocatorVariant, ...] = (
     ),
 )
 
+
+def generate_batch_size_variants(
+    batch_sizes: Sequence[int] = (1, 2, 4, 8, 16, 32, 64, 128, 256),
+    mamba_ratio: float = 0.5,
+) -> tuple[AllocatorVariant, ...]:
+    """v2 stage 1 batch_size sweep: one avmp_dynamic variant per batch size.
+
+    Each variant fixes ``mamba_ratio`` and ``migration_batch_size``; all other
+    AVMP knobs stay at the RFC 0002 section 4.2 defaults (threshold_low=0.05,
+    threshold_high=0.30, min_rebalance_interval_ops=1000). The labels look
+    like ``avmp_dynamic_b1``, ``avmp_dynamic_b2``, etc.
+    """
+
+    return tuple(
+        AllocatorVariant(
+            label=f"avmp_dynamic_b{b}",
+            allocator_name="avmp_dynamic",
+            kwargs=(("mamba_ratio", mamba_ratio), ("migration_batch_size", float(b))),
+        )
+        for b in batch_sizes
+    )
+
+
+BATCHSIZE_SWEEP_VARIANTS: tuple[AllocatorVariant, ...] = (
+    AllocatorVariant(label="padded_unified", allocator_name="padded_unified", kwargs=()),
+    AllocatorVariant(
+        label="fixed_dual_mr05",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="avmp_static_mr05",
+        allocator_name="avmp_static",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    *generate_batch_size_variants(),
+)
+
+
 DEFAULT_WORKLOAD_NAMES: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
 DEFAULT_MODEL_SPEC_NAMES: tuple[str, ...] = ("jamba_1_5_mini", "mamba2_1b3")
 DEFAULT_TOTAL_BYTES_OPTIONS: tuple[int, ...] = (
@@ -461,10 +500,11 @@ def _build_allocator(
         )
     if variant.allocator_name == "avmp_dynamic":
         mamba_ratio = float(kwargs.pop("mamba_ratio", 0.5))
+        migration_batch_size = int(kwargs.pop("migration_batch_size", 1))
         if kwargs:
             raise ValueError(
                 f"avmp_dynamic: unsupported kwargs {sorted(kwargs)}; "
-                "only 'mamba_ratio' is recognized"
+                "recognized: 'mamba_ratio', 'migration_batch_size'"
             )
         return AsymmetricVirtualPool(
             model_spec=model_spec,
@@ -472,6 +512,7 @@ def _build_allocator(
             device=device,
             mamba_ratio=mamba_ratio,
             rebalance_enabled=True,
+            migration_batch_size=migration_batch_size,
         )
     raise ValueError(
         f"unknown allocator_name {variant.allocator_name!r}; "
@@ -747,6 +788,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.seed_replicates is not None:
         config = dataclasses.replace(config, seed_replicates=args.seed_replicates)
 
+    if args.variant_set == "batch_size_sweep":
+        config = dataclasses.replace(config, variants=BATCHSIZE_SWEEP_VARIANTS)
+
     if args.max_total_bytes is not None:
         if args.max_total_bytes <= 0:
             raise ValueError(f"--max-total-bytes must be positive, got {args.max_total_bytes}")
@@ -868,6 +912,17 @@ def _build_parser() -> argparse.ArgumentParser:
             "section 4.3) pushes the 8 GiB default cell over VRAM. The clamped "
             "set is deduplicated; passing 6442450944 (6 GiB) on the default "
             "options (1 GiB, 4 GiB, 8 GiB) yields (1 GiB, 4 GiB, 6 GiB)."
+        ),
+    )
+    parser.add_argument(
+        "--variant-set",
+        choices=["baseline", "batch_size_sweep"],
+        default="baseline",
+        help=(
+            "Select the variant tuple: 'baseline' is the 5-variant DEFAULT_VARIANTS, "
+            "'batch_size_sweep' is the 12-variant stage 1 sweep "
+            "(3 baselines + 9 avmp_dynamic variants over migration_batch_size in "
+            "{1, 2, 4, 8, 16, 32, 64, 128, 256})."
         ),
     )
     return parser
