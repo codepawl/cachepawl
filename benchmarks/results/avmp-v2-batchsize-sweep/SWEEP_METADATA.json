@@ -1,0 +1,245 @@
+{
+  "cachepawl_version": "0.1.0",
+  "cell_count_actual": 432,
+  "config": {
+    "device": "cuda",
+    "model_spec_names": [
+      "jamba_1_5_mini",
+      "mamba2_1b3"
+    ],
+    "output_dir": "benchmarks/results/avmp-v2-batchsize-sweep",
+    "seed_replicates": 3,
+    "smoke_num_requests": null,
+    "total_bytes_options": [
+      1073741824,
+      4294967296
+    ],
+    "variants": [
+      {
+        "allocator_name": "padded_unified",
+        "kwargs": [],
+        "label": "padded_unified"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "fixed_dual_mr05"
+      },
+      {
+        "allocator_name": "avmp_static",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_static_mr05"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            1.0
+          ]
+        ],
+        "label": "avmp_dynamic_b1"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            2.0
+          ]
+        ],
+        "label": "avmp_dynamic_b2"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            4.0
+          ]
+        ],
+        "label": "avmp_dynamic_b4"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            8.0
+          ]
+        ],
+        "label": "avmp_dynamic_b8"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            16.0
+          ]
+        ],
+        "label": "avmp_dynamic_b16"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            32.0
+          ]
+        ],
+        "label": "avmp_dynamic_b32"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            64.0
+          ]
+        ],
+        "label": "avmp_dynamic_b64"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            128.0
+          ]
+        ],
+        "label": "avmp_dynamic_b128"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            256.0
+          ]
+        ],
+        "label": "avmp_dynamic_b256"
+      }
+    ],
+    "workload_names": [
+      "uniform_short",
+      "mixed_long",
+      "agentic_burst"
+    ]
+  },
+  "cuda_version": "13.0",
+  "determinism_check": {
+    "caveat": "GPU determinism limited by CUDA allocator caching across cells (same pattern as PR #15). The strict per-cell aggregate SHA-256 differs, but every must-match counter (oom_count_mean, rebalance_count, bytes_migrated_total, current_kv_pool_bytes, current_ssm_pool_bytes, auto_rebalance_skipped_throttle, bytes_wasted_to_alignment_total) is byte-identical between primary and rerun.",
+    "cells_rerun": 36,
+    "method": "Independent rerun (avmp_dynamic_b256 variant, 4 GiB capped), counter-equality check on all must-match fields. SHA-256 strict comparison records the expected GPU drift on float metrics.",
+    "result_counters": "byte-identical (all must-match counter fields match across all 12 rows)",
+    "result_strict_sha_primary": "92cbf2f7a2b9ff319ce0d92db887e9ad3c6dfee8ef695097313cd1a011e976ef",
+    "result_strict_sha_rerun": "1e4f009bf65c97f8ac52cc5147ee20fa5a8dea62210e0b096cc328b04bce2eb0",
+    "scope": "avmp_dynamic_b256 only (best variant per the lexicographic ranking)"
+  },
+  "device": "cuda",
+  "failures": [],
+  "git_sha": "7d3b8eb13fbb48f4cd738c594cb9cc3f8528bff4",
+  "gpu": {
+    "cuda_runtime_version": "13.0",
+    "driver_version": "591.86",
+    "name": "NVIDIA GeForce RTX 3060",
+    "nvidia_smi_post_sweep_mib": 861,
+    "nvidia_smi_total_mib": 12288,
+    "torch_version": "2.12.0+cu130",
+    "vram_total_bytes": 12884377600
+  },
+  "gpu_name": "NVIDIA GeForce RTX 3060",
+  "hardware_label": "cuda (linux x86_64)",
+  "hypothesis_tested": "Increasing migration_batch_size from default 1 to larger values reduces the mixed_long regression diagnosed in PR #14 (rebalance attempts fire but cannot find enough donor capacity; success=False returns add overhead without recovery).",
+  "hypothesis_verdict": "CONFIRMED. Monotonic improvement on mixed_long from b16 onward; b128 closes the regression by 23.0 OOMs below the fixed_dual_mr05 baseline.",
+  "max_total_bytes_cap": 4294967296,
+  "n_cells_failed": 0,
+  "n_cells_planned": 432,
+  "n_cells_succeeded": 432,
+  "numpy_version": "2.2.6",
+  "python_version": "3.10.19",
+  "success_criterion": {
+    "c1_passed": "all three workloads at their best per-variant batch_size",
+    "c2_observed_improvement_pct_vs_pr13": 35.5,
+    "c2_passed": true,
+    "c3_note": "peak_reserved unchanged by batch_size; 2x footprint design dominates.",
+    "c3_passed": false,
+    "cross_workload_total_oom_best": {
+      "total_oom": 509.3,
+      "variant": "avmp_dynamic_b256"
+    },
+    "per_workload_best": {
+      "agentic_burst": {
+        "best_batch_size": 256,
+        "best_oom": 136.0,
+        "delta_vs_fd05": -21.3,
+        "fd05": 157.3
+      },
+      "mixed_long": {
+        "best_batch_size": 128,
+        "best_oom": 364.3,
+        "delta_vs_fd05": -23.0,
+        "fd05": 387.3
+      },
+      "uniform_short": {
+        "best_batch_size": 4,
+        "best_oom": 6.7,
+        "delta_vs_fd05": -0.7,
+        "fd05": 7.3
+      }
+    },
+    "verdict": "CONTINUE. Hypothesis confirmed. migration_batch_size is the right knob."
+  },
+  "sweep_finished_at": "2026-05-17T04:42:58Z",
+  "sweep_started_at": "2026-05-17T04:10:23Z",
+  "torch_version": "2.12.0+cu130",
+  "total_wall_seconds": 1761.5089712610002,
+  "variant_set": "batch_size_sweep"
+}
