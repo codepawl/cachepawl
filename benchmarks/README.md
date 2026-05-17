@@ -305,6 +305,17 @@ In practice:
 
 The convention is locked by `test_mamba_ratio_09_assigns_90_percent_to_ssm_pool` in `tests/unit/allocator/baselines/test_fixed_dual.py`.
 
+### Sweep variant sets and resume
+
+The compare CLI supports two variant sets via `--variant-set`:
+
+- `baseline` (default): the 5-variant `DEFAULT_VARIANTS` (padded_unified, fixed_dual_mr05, fixed_dual_mr09, avmp_static_mr05, avmp_dynamic_mr05). Used for every sub-PR baseline and the `--quick` / `--smoke` paths.
+- `batch_size_sweep`: the 12-variant stage 1 set (3 baselines + 9 `avmp_dynamic_b{N}` variants over `migration_batch_size` in `{1, 2, 4, 8, 16, 32, 64, 128, 256}`). Used by `benchmarks/results/avmp-v2-batchsize-sweep/`.
+
+Long-running parameter sweeps (multi-hour on GPU) support resume from disk: per-cell JSONs land at `{output_dir}/runs/{variant_label}/{workload_name}/{stem}.json` immediately after each cell completes. Re-invoking the sweep against the same `--output` directory reads any existing JSONs back and skips those cells. Corrupt or schema-mismatched files are treated as missing and re-run. The "RESUMED" label in the progress output identifies skipped cells.
+
+Resume is keyed by cell stem under the variant directory; switching `--variant-set` in the same output directory is undefined behavior (use a fresh `--output` for each variant set).
+
 ### AVMP-specific invariants (avmp_static and avmp_dynamic)
 
 For `avmp_static` and `avmp_dynamic` runs the twenty-five keys in `allocator_specific_stats` satisfy these invariants on top of the table above. The first four were the v1 contract; the rest land across the three v2 sub-PRs (RFC 0002 sections 4.2, 4.7).
