@@ -41,6 +41,7 @@ benchmarks/results/*
 !benchmarks/results/avmp-v2-r2/
 !benchmarks/results/avmp-v2-gpu/
 !benchmarks/results/avmp-v2-batchsize-sweep/
+!benchmarks/results/avmp-v2-threshold-sweep/
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
 benchmarks/results/avmp-v2/full/runs/
@@ -48,3 +49,5 @@ benchmarks/results/avmp-v2-r2/full/runs/
 benchmarks/results/avmp-v2-gpu/full/runs/
 benchmarks/results/avmp-v2-batchsize-sweep/runs/
 benchmarks/results/avmp-v2-batchsize-sweep/sweep.log
+benchmarks/results/avmp-v2-threshold-sweep/runs/
+benchmarks/results/avmp-v2-threshold-sweep/sweep.log
