@@ -39,6 +39,22 @@
 % TODO author: present fig_oom_comparison_final and
 % table_baseline_comparison. Lead with the cross-workload total OOM
 % number for avmp_dynamic_b128 versus the strongest static baseline.
+%
+% TODO author (reviewer-anticipation, Tier 1 PR B): justify per-workload
+% ratios over cross-workload mean for goodput. Reviewers will ask why we
+% do not report a single aggregate number. Suggested framing:
+%
+%   "We report per-workload goodput ratios rather than cross-workload
+%   aggregates because static baselines exhibit high variance across
+%   workloads (e.g., \texttt{fixed\_dual\_mr05} achieves 32.65 req/s on
+%   \texttt{uniform\_short} but only 25.69 req/s on
+%   \texttt{agentic\_burst}), while AVMP dynamic rebalancing maintains
+%   consistent goodput. A cross-workload mean obscures this variance
+%   and can mislead under workload-imbalanced sampling."
+%
+% Source numbers: benchmarks/results/avmp-v2-throughput/full/throughput_analysis.md
+% (goodput baseline column: 32.65 / 27.25 / 25.69 for uniform_short /
+% mixed_long / agentic_burst respectively).
 
 \subsection{Stage 1: Migration Batch Size}
 \label{sec:evaluation:stage1}

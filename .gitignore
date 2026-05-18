@@ -69,5 +69,6 @@ research/avmp/*.fls
 research/avmp/paper.pdf
 # acmart.cls and helper files are generated from acmart.ins on first build.
 research/avmp/acmart.cls
+research/avmp/acmart-tagged.cls
 research/avmp/acmart.cfg
 research/avmp/arxiv-submission.tar.gz
