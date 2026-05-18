@@ -17,6 +17,7 @@ def _row(
     oom: float = 0.0,
     frag: float = 0.0,
     peak_bytes: float = 0.0,
+    eff_batch_p50: float = 0.0,
 ) -> AggregatedRow:
     return AggregatedRow(
         variant_label=variant,
@@ -36,6 +37,13 @@ def _row(
         fragmentation_peak=frag,
         oom_count_mean=oom,
         oom_count_std=0.0,
+        effective_batch_size_mean_median=eff_batch_p50,
+        effective_batch_size_p50_median=eff_batch_p50,
+        effective_batch_size_p95_median=eff_batch_p50,
+        effective_batch_size_p99_median=eff_batch_p50,
+        goodput_requests_per_second_median=0.0,
+        completion_ratio_median=1.0,
+        time_to_first_oom_seconds_median=None,
         allocate_p50_ns_median=0,
         allocate_p95_ns_median=0,
         allocate_p99_ns_median=0,

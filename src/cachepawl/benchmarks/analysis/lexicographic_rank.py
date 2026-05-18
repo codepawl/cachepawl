@@ -117,6 +117,12 @@ def _aggregated_from_json_path(path: Path) -> AggregatedMetrics:
 def _row_from_dict(row: object) -> AggregatedRow:
     if not isinstance(row, dict):
         raise ValueError(f"each row must be a dict, got {type(row).__name__}")
+    # Throughput Tier 1 PR B: the seven *_median throughput fields were
+    # added alongside schema 1.2.0. Older aggregated.json files lack
+    # them; the lex-rank loader fills defaults so historical sweeps
+    # keep ranking on (total_oom, fragmentation) without crashing.
+    ttfo_raw = row.get("time_to_first_oom_seconds_median")
+    ttfo: float | None = None if ttfo_raw is None else float(ttfo_raw)
     return AggregatedRow(
         variant_label=str(row["variant_label"]),
         allocator_name=str(row["allocator_name"]),
@@ -135,6 +141,15 @@ def _row_from_dict(row: object) -> AggregatedRow:
         fragmentation_peak=float(row["fragmentation_peak"]),
         oom_count_mean=float(row["oom_count_mean"]),
         oom_count_std=float(row["oom_count_std"]),
+        effective_batch_size_mean_median=float(row.get("effective_batch_size_mean_median", 0.0)),
+        effective_batch_size_p50_median=float(row.get("effective_batch_size_p50_median", 0.0)),
+        effective_batch_size_p95_median=float(row.get("effective_batch_size_p95_median", 0.0)),
+        effective_batch_size_p99_median=float(row.get("effective_batch_size_p99_median", 0.0)),
+        goodput_requests_per_second_median=float(
+            row.get("goodput_requests_per_second_median", 0.0)
+        ),
+        completion_ratio_median=float(row.get("completion_ratio_median", 0.0)),
+        time_to_first_oom_seconds_median=ttfo,
         allocate_p50_ns_median=int(row["allocate_p50_ns_median"]),
         allocate_p95_ns_median=int(row["allocate_p95_ns_median"]),
         allocate_p99_ns_median=int(row["allocate_p99_ns_median"]),
