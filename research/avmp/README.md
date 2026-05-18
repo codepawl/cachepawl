@@ -110,7 +110,7 @@ files (verify before `make class` if you suspect tampering):
 Document class options used in `paper.tex`:
 
 ```latex
-\documentclass[sigconf, nonacm=true, anonymous=false, screen=true]{acmart}
+\documentclass[sigconf, nonacm, screen]{acmart}
 ```
 
 - `sigconf`: ACM proceedings two-column layout (also used for arXiv
