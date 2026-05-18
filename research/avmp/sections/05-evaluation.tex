@@ -65,6 +65,13 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \label{fig:oom-vs-batch-size}
 \end{figure}
 
+\begin{table}[h]
+\centering
+\input{tables/generated/table_stage1_batchsize.tex}
+\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes.}
+\label{tab:stage1-batchsize}
+\end{table}
+
 In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The empirical data falsifies both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
 
 \begin{figure}[h]
@@ -75,6 +82,13 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 \end{figure}
 
 We systematically explored the parameter space; thresholds have a marginal effect within the sampled ranges (Figure~\ref{fig:threshold-sensitivity}). Table~\ref{tab:stage2-threshold} confirms the performance invariance across threshold bounds. This negative result narrows the design space: future work on AVMP should focus on migration batch size rather than threshold tuning.
+
+\begin{table}[h]
+\centering
+\input{tables/generated/table_stage2_threshold.tex}
+\caption{Stage 2 threshold sweep at b128: all four variants yield byte-identical OOM, rebalance count, and migration totals.}
+\label{tab:stage2-threshold}
+\end{table}
 
 \subsection{Limitations}
 \label{sec:eval:limitations}
