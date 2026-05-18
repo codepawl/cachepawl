@@ -32,6 +32,7 @@ class VariantRanking:
 
     variant_label: str
     cross_workload_total_oom: float
+    cross_workload_mean_effective_batch_size_p50: float
     cross_workload_mean_frag_during_load: float
     cross_workload_mean_peak_reserved_mib: float
 
@@ -41,14 +42,18 @@ def rank_variants(
     *,
     oom_tie_tolerance: float = 1.0,
 ) -> list[VariantRanking]:
-    """Rank variants best-first by ``(total_oom asc, mean_fragmentation asc)``.
+    """Rank variants best-first by 3-level lex order.
 
-    Within ``oom_tie_tolerance`` of the lowest OOM count, ties break on
-    lower mean fragmentation_during_load. Empty input raises ``ValueError``.
+    Sort key: ``(total_oom asc, effective_batch_size_p50 desc, fragmentation asc)``.
+    Within ``oom_tie_tolerance`` of the lowest OOM count, ties break first
+    on higher effective batch size (sustained concurrency, Tier 1 PR B
+    headline), then on lower mean fragmentation. Empty input raises
+    ``ValueError``.
 
     The cross-workload aggregation here mirrors the report.md cross-workload
     summary: total_oom is the sum of per-cell oom_count_mean, fragmentation
-    is the arithmetic mean of per-cell fragmentation_during_load_mean.
+    is the arithmetic mean of per-cell fragmentation_during_load_mean,
+    effective_batch_size_p50 is the arithmetic mean of per-cell medians.
     """
 
     if not aggregated.rows:
@@ -62,6 +67,9 @@ def rank_variants(
         VariantRanking(
             variant_label=label,
             cross_workload_total_oom=sum(r.oom_count_mean for r in rows),
+            cross_workload_mean_effective_batch_size_p50=statistics.mean(
+                r.effective_batch_size_p50_median for r in rows
+            ),
             cross_workload_mean_frag_during_load=statistics.mean(
                 r.fragmentation_during_load_mean for r in rows
             ),
@@ -72,10 +80,13 @@ def rank_variants(
         for label, rows in by_variant.items()
     ]
 
-    # Sort by (oom, frag) with tie-tolerance bucket on oom.
+    # 3-level lex with tie-tolerance bucket on OOM. The second key is
+    # negated so a higher effective_batch_size_p50 ranks earlier under
+    # the ascending sort.
     rankings.sort(
         key=lambda r: (
             round(r.cross_workload_total_oom / max(oom_tie_tolerance, 1e-9)),
+            -r.cross_workload_mean_effective_batch_size_p50,
             r.cross_workload_mean_frag_during_load,
         )
     )
@@ -91,12 +102,15 @@ def render_table(rankings: Iterable[VariantRanking], top: int | None = None) -> 
     if not rows:
         return "(no rankings to display)"
     lines = [
-        f"{'rank':>4}  {'variant_label':<24}  {'total_oom':>10}  {'mean_frag':>9}  {'peak_MiB':>9}",
-        f"{'-' * 4}  {'-' * 24}  {'-' * 10}  {'-' * 9}  {'-' * 9}",
+        f"{'rank':>4}  {'variant_label':<24}  {'total_oom':>10}  "
+        f"{'eff_batch_p50':>13}  {'mean_frag':>9}  {'peak_MiB':>9}",
+        f"{'-' * 4}  {'-' * 24}  {'-' * 10}  "
+        f"{'-' * 13}  {'-' * 9}  {'-' * 9}",
     ]
     for i, r in enumerate(rows, start=1):
         lines.append(
             f"{i:>4}  {r.variant_label:<24}  {r.cross_workload_total_oom:>10.1f}  "
+            f"{r.cross_workload_mean_effective_batch_size_p50:>13.2f}  "
             f"{r.cross_workload_mean_frag_during_load:>9.3f}  "
             f"{r.cross_workload_mean_peak_reserved_mib:>9.0f}"
         )

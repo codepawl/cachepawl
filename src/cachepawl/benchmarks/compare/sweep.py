@@ -347,6 +347,36 @@ THRESHOLD_SWEEP_STAGE2_VARIANTS: tuple[AllocatorVariant, ...] = (
 )
 
 
+# Tier 1 PR B: 5-variant grid used to validate the throughput-metric
+# headline. Substitutes ``avmp_dynamic_b128`` (stage-1 best) for the
+# ``avmp_dynamic_mr05`` in DEFAULT_VARIANTS. Kept as a separate preset
+# so existing baseline reports and reproducibility fixtures stay
+# untouched.
+THROUGHPUT_V2_VARIANTS: tuple[AllocatorVariant, ...] = (
+    AllocatorVariant(label="padded_unified", allocator_name="padded_unified", kwargs=()),
+    AllocatorVariant(
+        label="fixed_dual_mr05",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="fixed_dual_mr09",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.9),),
+    ),
+    AllocatorVariant(
+        label="avmp_static_mr05",
+        allocator_name="avmp_static",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="avmp_dynamic_b128",
+        allocator_name="avmp_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("migration_batch_size", 128.0)),
+    ),
+)
+
+
 DEFAULT_WORKLOAD_NAMES: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
 DEFAULT_MODEL_SPEC_NAMES: tuple[str, ...] = ("jamba_1_5_mini", "mamba2_1b3")
 DEFAULT_TOTAL_BYTES_OPTIONS: tuple[int, ...] = (
@@ -876,7 +906,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     # import time. Sites that only need run_sweep do not pull plots.
     from cachepawl.benchmarks.compare.aggregate import aggregate_runs
     from cachepawl.benchmarks.compare.plots import (
+        plot_effective_batch_size_vs_workload,
         plot_fragmentation_vs_workload,
+        plot_goodput_comparison,
         plot_oom_count_vs_workload,
         plot_padding_waste_vs_state_size,
     )
@@ -906,6 +938,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         config = dataclasses.replace(config, variants=BATCHSIZE_SWEEP_VARIANTS)
     elif args.variant_set == "threshold_sweep_stage2":
         config = dataclasses.replace(config, variants=THRESHOLD_SWEEP_STAGE2_VARIANTS)
+    elif args.variant_set == "throughput_v2":
+        config = dataclasses.replace(config, variants=THROUGHPUT_V2_VARIANTS)
 
     if args.max_total_bytes is not None:
         if args.max_total_bytes <= 0:
@@ -964,6 +998,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         plot_oom_count_vs_workload(
             aggregated,
             figures_dir / "oom_count_vs_workload.png",
+            model_spec_filter=config.model_spec_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+        # Tier 1 PR B throughput plots. Stems (no suffix) so the
+        # function emits both .png (review) and .pdf (paper builds).
+        plot_effective_batch_size_vs_workload(
+            aggregated,
+            figures_dir / "fig_effective_batch_size_vs_workload",
+            model_spec_filter=config.model_spec_names[0],
+            git_sha=result.metadata.git_sha,
+            run_date=run_date,
+        )
+        plot_goodput_comparison(
+            aggregated,
+            figures_dir / "fig_goodput_comparison",
             model_spec_filter=config.model_spec_names[0],
             git_sha=result.metadata.git_sha,
             run_date=run_date,
@@ -1032,7 +1082,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--variant-set",
-        choices=["baseline", "batch_size_sweep", "threshold_sweep_stage2"],
+        choices=["baseline", "batch_size_sweep", "threshold_sweep_stage2", "throughput_v2"],
         default="baseline",
         help=(
             "Select the variant tuple: 'baseline' is the 5-variant DEFAULT_VARIANTS, "
@@ -1040,7 +1090,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "(3 baselines + 9 avmp_dynamic variants over migration_batch_size in "
             "{1, 2, 4, 8, 16, 32, 64, 128, 256}), 'threshold_sweep_stage2' is the "
             "7-variant stage 2 sweep at fixed batch_size=128 "
-            "(3 baselines + 2 threshold_high + 2 threshold_low variants)."
+            "(3 baselines + 2 threshold_high + 2 threshold_low variants), "
+            "'throughput_v2' is the Tier 1 PR B 5-variant grid "
+            "(padded_unified, fixed_dual_mr05, fixed_dual_mr09, avmp_static_mr05, "
+            "avmp_dynamic_b128)."
         ),
     )
     return parser
@@ -1058,6 +1111,7 @@ __all__ = [
     "QUICK_TOTAL_BYTES_OPTIONS",
     "QUICK_WORKLOAD_NAMES",
     "SMOKE_NUM_REQUESTS",
+    "THROUGHPUT_V2_VARIANTS",
     "AllocatorVariant",
     "CellFailure",
     "SweepConfig",
