@@ -102,9 +102,7 @@ def evaluate_stop_rule(
     batch_pass = tuple(
         c.workload_name for c in comparisons if c.eff_batch_ratio >= batch_size_ratio
     )
-    goodput_pass = tuple(
-        c.workload_name for c in comparisons if c.goodput_ratio >= goodput_ratio
-    )
+    goodput_pass = tuple(c.workload_name for c in comparisons if c.goodput_ratio >= goodput_ratio)
     if len(batch_pass) >= batch_size_min_workloads:
         verdict: StopRuleVerdictKind = "PASS_BATCH_SIZE"
     elif len(goodput_pass) >= goodput_min_workloads:
@@ -189,8 +187,7 @@ def render_analysis_markdown(
     lines.append("# Tier 1 PR B throughput analysis")
     lines.append("")
     lines.append(
-        f"Target variant: `{verdict.target}`. "
-        f"Baseline for ratio comparison: `{verdict.baseline}`."
+        f"Target variant: `{verdict.target}`. Baseline for ratio comparison: `{verdict.baseline}`."
     )
     lines.append("")
     lines.append("## Pre-registered stop rule")

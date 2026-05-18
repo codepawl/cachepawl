@@ -206,5 +206,5 @@ def test_padded_unified_uniform_short_on_cuda(tmp_path: object) -> None:
         output_dir=tmp_path,
         device="cuda",
     )
-    assert run.schema_version == "1.1.0"
+    assert run.schema_version == "1.2.0"
     assert math.isfinite(run.metrics.allocator_specific_stats["padding_waste_bytes"])

@@ -377,10 +377,7 @@ def plot_goodput_comparison(
     ax.set_xlabel("workload")
     ax.set_ylabel("goodput (requests / second, higher is better)")
     tb_label = total_bytes_human(total_bytes_filter)
-    ax.set_title(
-        f"Goodput by workload  "
-        f"(model_spec={model_spec_filter}, total_bytes={tb_label})"
-    )
+    ax.set_title(f"Goodput by workload  (model_spec={model_spec_filter}, total_bytes={tb_label})")
     ax.legend(loc="best", fontsize=9)
     ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
     _add_watermark(fig, git_sha, run_date)

@@ -377,7 +377,7 @@ def test_fixed_dual_uniform_short_on_cuda(tmp_path: object) -> None:
         output_dir=tmp_path,
         device="cuda",
     )
-    assert run.schema_version == "1.1.0"
+    assert run.schema_version == "1.2.0"
     stats = run.metrics.allocator_specific_stats
     assert math.isfinite(stats["pool_free_bytes_kv"])
     assert math.isfinite(stats["pool_free_bytes_ssm"])

@@ -104,8 +104,7 @@ def render_table(rankings: Iterable[VariantRanking], top: int | None = None) -> 
     lines = [
         f"{'rank':>4}  {'variant_label':<24}  {'total_oom':>10}  "
         f"{'eff_batch_p50':>13}  {'mean_frag':>9}  {'peak_MiB':>9}",
-        f"{'-' * 4}  {'-' * 24}  {'-' * 10}  "
-        f"{'-' * 13}  {'-' * 9}  {'-' * 9}",
+        f"{'-' * 4}  {'-' * 24}  {'-' * 10}  {'-' * 13}  {'-' * 9}  {'-' * 9}",
     ]
     for i, r in enumerate(rows, start=1):
         lines.append(
