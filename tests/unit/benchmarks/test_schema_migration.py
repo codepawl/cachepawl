@@ -1,4 +1,4 @@
-"""Schema 1.0.0 to 1.1.0 backward-compat tests."""
+"""Schema 1.0.0 / 1.1.0 / 1.2.0 backward-compat tests."""
 
 from __future__ import annotations
 
@@ -105,8 +105,8 @@ def test_unknown_major_version_is_rejected() -> None:
         BenchmarkRun.from_json(json.dumps(payload))
 
 
-def test_schema_version_constant_is_1_1_0() -> None:
-    assert SCHEMA_VERSION == "1.1.0"
+def test_schema_version_constant_is_1_2_0() -> None:
+    assert SCHEMA_VERSION == "1.2.0"
 
 
 def test_allocator_metrics_default_factory_yields_empty_mapping() -> None:
@@ -114,3 +114,77 @@ def test_allocator_metrics_default_factory_yields_empty_mapping() -> None:
     assert metrics.allocator_specific_stats == {}
     metrics.allocator_specific_stats["padding_waste_bytes"] = 42.0
     assert metrics.allocator_specific_stats == {"padding_waste_bytes": 42.0}
+
+
+def test_load_1_1_0_json_defaults_throughput_fields() -> None:
+    """A 1.1.0 artifact must deserialize with new 1.2.0 fields defaulted.
+
+    The strict completion semantic and the wall-clock-derived
+    metrics did not exist at 1.1.0, so loading an older JSON yields
+    a metrics record with zeros for the six new floats and ``None``
+    for ``time_to_first_oom_seconds``. This is the contract that
+    keeps committed reference artifacts under
+    ``benchmarks/results/`` loadable across schema bumps.
+    """
+
+    payload = _v1_0_0_payload()
+    payload["schema_version"] = "1.1.0"
+    metrics_dict = payload["metrics"]
+    assert isinstance(metrics_dict, dict)
+    metrics_dict["allocator_specific_stats"] = {"padding_waste_bytes": 1.0}
+
+    decoded = BenchmarkRun.from_json(json.dumps(payload))
+
+    assert decoded.schema_version == "1.1.0"
+    assert decoded.metrics.effective_batch_size_mean == 0.0
+    assert decoded.metrics.effective_batch_size_p50 == 0.0
+    assert decoded.metrics.effective_batch_size_p95 == 0.0
+    assert decoded.metrics.effective_batch_size_p99 == 0.0
+    assert decoded.metrics.goodput_requests_per_second == 0.0
+    assert decoded.metrics.completion_ratio == 0.0
+    assert decoded.metrics.time_to_first_oom_seconds is None
+
+
+def test_round_trip_1_2_0_preserves_throughput_fields() -> None:
+    payload = _v1_0_0_payload()
+    payload["schema_version"] = "1.2.0"
+    metrics_dict = payload["metrics"]
+    assert isinstance(metrics_dict, dict)
+    metrics_dict["allocator_specific_stats"] = {}
+    metrics_dict["effective_batch_size_mean"] = 4.5
+    metrics_dict["effective_batch_size_p50"] = 4.0
+    metrics_dict["effective_batch_size_p95"] = 7.0
+    metrics_dict["effective_batch_size_p99"] = 8.0
+    metrics_dict["goodput_requests_per_second"] = 50.0
+    metrics_dict["completion_ratio"] = 0.95
+    metrics_dict["time_to_first_oom_seconds"] = 1.25
+
+    decoded = BenchmarkRun.from_json(json.dumps(payload))
+    reencoded = BenchmarkRun.from_json(decoded.to_json())
+
+    assert reencoded.metrics.effective_batch_size_mean == 4.5
+    assert reencoded.metrics.effective_batch_size_p50 == 4.0
+    assert reencoded.metrics.effective_batch_size_p95 == 7.0
+    assert reencoded.metrics.effective_batch_size_p99 == 8.0
+    assert reencoded.metrics.goodput_requests_per_second == 50.0
+    assert reencoded.metrics.completion_ratio == 0.95
+    assert reencoded.metrics.time_to_first_oom_seconds == 1.25
+
+
+def test_1_2_0_load_with_null_time_to_first_oom() -> None:
+    payload = _v1_0_0_payload()
+    payload["schema_version"] = "1.2.0"
+    metrics_dict = payload["metrics"]
+    assert isinstance(metrics_dict, dict)
+    metrics_dict["allocator_specific_stats"] = {}
+    metrics_dict["effective_batch_size_mean"] = 1.0
+    metrics_dict["effective_batch_size_p50"] = 1.0
+    metrics_dict["effective_batch_size_p95"] = 1.0
+    metrics_dict["effective_batch_size_p99"] = 1.0
+    metrics_dict["goodput_requests_per_second"] = 10.0
+    metrics_dict["completion_ratio"] = 1.0
+    metrics_dict["time_to_first_oom_seconds"] = None
+
+    decoded = BenchmarkRun.from_json(json.dumps(payload))
+
+    assert decoded.metrics.time_to_first_oom_seconds is None

@@ -17,6 +17,7 @@ def _row(
     oom: float = 0.0,
     frag: float = 0.0,
     peak_bytes: float = 0.0,
+    eff_batch_p50: float = 0.0,
 ) -> AggregatedRow:
     return AggregatedRow(
         variant_label=variant,
@@ -36,6 +37,13 @@ def _row(
         fragmentation_peak=frag,
         oom_count_mean=oom,
         oom_count_std=0.0,
+        effective_batch_size_mean_median=eff_batch_p50,
+        effective_batch_size_p50_median=eff_batch_p50,
+        effective_batch_size_p95_median=eff_batch_p50,
+        effective_batch_size_p99_median=eff_batch_p50,
+        goodput_requests_per_second_median=0.0,
+        completion_ratio_median=1.0,
+        time_to_first_oom_seconds_median=None,
         allocate_p50_ns_median=0,
         allocate_p95_ns_median=0,
         allocate_p99_ns_median=0,
@@ -117,3 +125,53 @@ def test_render_table_top_n() -> None:
     assert "v0" in table
     assert "v2" in table
     assert "v5" not in table
+
+
+def test_ranking_breaks_ties_on_effective_batch_size() -> None:
+    """Two variants tied on OOM and within tolerance break on higher eff_batch.
+
+    Tier 1 PR B: the new 3-level sort key inserts eff_batch_p50 (desc)
+    between OOM (asc) and fragmentation (asc). A variant with the same
+    OOM count but higher sustained batch size should win.
+    """
+
+    rows = (
+        _row(variant="low_eff", oom=5.0, frag=0.3, eff_batch_p50=4.0),
+        _row(variant="high_eff", oom=5.0, frag=0.3, eff_batch_p50=8.0),
+    )
+    rankings = rank_variants(AggregatedMetrics(rows=rows), oom_tie_tolerance=1.0)
+
+    assert [r.variant_label for r in rankings] == ["high_eff", "low_eff"]
+
+
+def test_ranking_three_level_falls_back_to_fragmentation() -> None:
+    """When OOM and eff_batch tie, fragmentation tiebreaks (third key).
+
+    Models the deeply-tied case: lower fragmentation still wins, but
+    only after the higher-priority criteria are exhausted.
+    """
+
+    rows = (
+        _row(variant="hi_frag", oom=5.0, frag=0.5, eff_batch_p50=4.0),
+        _row(variant="lo_frag", oom=5.0, frag=0.1, eff_batch_p50=4.0),
+    )
+    rankings = rank_variants(AggregatedMetrics(rows=rows), oom_tie_tolerance=1.0)
+
+    assert [r.variant_label for r in rankings] == ["lo_frag", "hi_frag"]
+
+
+def test_ranking_oom_dominates_even_with_high_eff_batch() -> None:
+    """A variant with many more OOMs cannot win on eff_batch alone.
+
+    The OOM tie-tolerance keeps the first criterion strict outside
+    its bucket: outside tolerance, the lower-OOM variant always wins
+    regardless of how strong its throughput numbers are.
+    """
+
+    rows = (
+        _row(variant="oom_heavy", oom=200.0, frag=0.1, eff_batch_p50=1000.0),
+        _row(variant="clean", oom=2.0, frag=0.3, eff_batch_p50=4.0),
+    )
+    rankings = rank_variants(AggregatedMetrics(rows=rows), oom_tie_tolerance=1.0)
+
+    assert rankings[0].variant_label == "clean"

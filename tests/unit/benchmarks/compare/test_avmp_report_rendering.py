@@ -124,12 +124,15 @@ def test_avmp_row_populates_kv_and_ssm_free_columns(tmp_path: Path) -> None:
     text = output.read_text()
     row = _avmp_row(text)
     cells = _split_cells(row)
-    # Column order from _render_workload_table:
-    # variant | model_spec | total_bytes | peak_reserved_MiB |
-    # frag_load | frag_peak | p50 | p99 | oom | padding_waste | kv_free | ssm_free
-    padding_waste_text = cells[9]
-    kv_free_text = cells[10]
-    ssm_free_text = cells[11]
+    # Column order from _render_workload_table (schema 1.2.0 / Tier 1 PR B):
+    # 0: variant | 1: model_spec | 2: total_bytes | 3: peak_reserved_MiB |
+    # 4: frag_load | 5: frag_peak | 6: p50 | 7: p99 | 8: oom |
+    # 9: effective_batch_p50 | 10: goodput_req_per_s | 11: completion_ratio |
+    # 12: padding_waste | 13: kv_free | 14: ssm_free | 15: rebalance_count |
+    # 16: bytes_migrated_MiB | 17: throttle_skips | 18: waste_KiB
+    padding_waste_text = cells[12]
+    kv_free_text = cells[13]
+    ssm_free_text = cells[14]
 
     assert padding_waste_text == "-"
     assert kv_free_text != "-"
@@ -158,10 +161,10 @@ def test_avmp_row_kv_free_matches_derived_formula(tmp_path: Path) -> None:
 
     # 100 pages_free * 4096 bytes_per_page = 409600 bytes ≈ 0.391 MiB.
     expected_kv_mib = (100.0 * 4096.0) / _MIB
-    assert cells[10] == f"{expected_kv_mib:.3f}"
+    assert cells[13] == f"{expected_kv_mib:.3f}"
 
     # 4 blocks_free * 1 MiB per block = 4 MiB.
-    assert cells[11] == "4.000"
+    assert cells[14] == "4.000"
 
 
 def test_avmp_row_handles_zero_pages_total_gracefully(tmp_path: Path) -> None:
@@ -216,5 +219,5 @@ def test_avmp_row_handles_zero_pages_total_gracefully(tmp_path: Path) -> None:
     text = output.read_text()
     row = _avmp_row(text)
     cells = _split_cells(row)
-    assert cells[10] == "0.000"
-    assert cells[11] == "0.000"
+    assert cells[13] == "0.000"
+    assert cells[14] == "0.000"

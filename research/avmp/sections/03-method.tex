@@ -17,19 +17,26 @@
 \subsection{Asymmetric Virtual Page Table}
 \label{sec:method:avpt}
 
-% TODO author: explain virtual handle abstraction, physical store split,
-% alignment, why pages stay opaque to kernels.
+Hybrid models mixing Mamba and Transformer architectures require two distinct memory types: variable-size Key-Value (KV) blocks that scale with sequence length, and fixed-size State Space Model (SSM) state that remains independent of sequence length \cite{dao2024mamba2, lieber2024jamba}. Existing unified pools pad SSM state to match attention page sizes, causing capacity overestimation, which leads to over-admission of requests, triggering OOM at runtime. As reported in vLLM issue \#37121, this padding results in a 7.3$\times$ KV cache overestimation on Qwen3.5-4B-AWQ, leaving 13.7\% effective VRAM utilization at peak memory. We introduce the Asymmetric Virtual Page Table (AVMP) to reduce this waste by decoupling the virtual address space from heterogeneous physical backing slabs.
+
+The AVMP design provisions two distinct physical regions: a \texttt{KVPagesStore} and an \texttt{SSMBlocksStore}, managed by a unified multi-resolution page table. Memory allocations return an opaque 32-bit \texttt{VirtualHandle}. This handle contains a tag indicating the target pool identifier (KV or SSM). The \texttt{VirtualPageTable} resolves the handle to a physical offset within the respective backing store.
+
+We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\_tokens} multiplied by \texttt{per\_token\_bytes}, defaulting to 16 tokens per page. SSM blocks match the exact \texttt{state\_dim} multiplied by \texttt{bytes\_per\_element}. We enforce strict alignment rules: 128-byte slab alignment globally and 16-byte page alignment within slabs (Figure~\ref{fig:page-table-structure}). Unlike PagedAttention~\cite{kwon2023pagedattention}, which uses uniform page sizes, this multi-resolution approach extends GPU virtual memory concepts \cite{xu2024vtensor} to support hybrid cache abstractions.
 
 \subsection{Dynamic Pool Rebalancing}
 \label{sec:method:rebalance}
 
-% TODO author: explain trigger conditions, migration mechanics,
-% rollback semantics, and why migration_batch_size is the dominant
-% tuning knob (forward-reference Section \ref{sec:evaluation}).
+Static dual pools \cite{zheng2024sglang} pre-allocate physical regions using a fixed ratio, such as a \texttt{--mamba-full-memory-ratio} default of 0.9, which cannot change without a system restart. We demonstrate in Table~\ref{tab:baseline-comparison} that fixed allocations fail to generalize across diverse prompt distributions. \texttt{fixed\_dual\_mr05} records 552 cross-workload OOMs versus \texttt{fixed\_dual\_mr09}'s 1507.3 OOMs, but neither wins on all workload mixes. We design a dynamic rebalancing mechanism to migrate capacity between the KV and SSM pools at runtime.
+
+The system tracks pool pressure using a state machine with three states: \texttt{BALANCED}, \texttt{KV\_PRESSURED} / \texttt{SSM\_PRESSURED}, and \texttt{REBALANCING} (Figure~\ref{fig:state-machine}). We evaluate state transitions strictly within the \texttt{CapacityError} exception handler of the \texttt{allocate()} path. If an allocation triggers a \texttt{CapacityError} in one pool, and the other pool maintains a free fraction greater than \texttt{threshold\_high} (0.30), the allocator initiates capacity migration. We place the trigger in the \texttt{CapacityError} handler rather than as a pre-emptive sampling hook, because pre-emptive triggers fire on transient pressure that resolves without migration, while \texttt{CapacityError} fires only when allocation would otherwise fail.
+
+During migration, the allocator calls \texttt{resize\_capacity()} on the donor pool, shrinking it at the high end of its address space, and the recipient pool grows. The wasted bytes per migration equal the donor bytes freed modulo the recipient page size. We throttle rebalancing using a logical operation counter to guarantee deterministic behavior, requiring a minimum interval of 1000 operations (\texttt{min\_rebalance\_interval\_ops}) between migrations. In partial failure scenarios, the allocator executes a rollback of the migration state. This dynamic rebalancing yields a 7.6\% Out-of-Memory (OOM) reduction (510 OOMs versus 552) and a 13.3$\times$ goodput improvement on uniform short workloads compared to the best static configuration.
 
 \subsection{Implementation Choices}
 \label{sec:method:choices}
 
-% TODO author: pure Python prototype constraints, Approach 1 vs
-% Approach 2 backing store, future cuMemMap path. Cite vTensor
-% (\cite{xu2024vtensor}) as the closest related serving-time work.
+Our prototype is pure Python, focused on allocator semantics rather than kernel-level performance; Triton kernel integration is future work. We evaluate the allocator's response to workload-driven memory pressure using synthetic trace generation rather than direct model integration.
+
+Our experiments reveal AVMP wins primarily via faster recovery from OOM events rather than sustained concurrency. \texttt{effective\_batch\_size\_p50} matches across all five variants within each workload (129, 132, and 284 for \texttt{agentic\_burst}, \texttt{mixed\_long}, and \texttt{uniform\_short} respectively), indicating that the metric is workload-dominated rather than allocator-dependent. The performance gain comes from reduced cumulative time in OOM-rejected states. Parameter sweeps also show that the migration batch size (\texttt{migration\_batch\_size} = 128) acts as the dominant performance axis, while specific low and high threshold tuning yields marginal differences.
+
+Our implementation incurs a 2$\times$ VRAM footprint trade-off, peaking at 9 GiB on a 4 GiB pool, compared to 5 GiB for static baselines. We size the backing store to the maximum possible capacity of both pools combined to enable dynamic migration without reallocating the underlying tensors. Integrating \texttt{cuMemMap} would address this overhead by mapping virtual addresses to physical pages dynamically, removing the need for oversized backing tensors.

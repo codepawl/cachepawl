@@ -109,6 +109,15 @@ def _render_how_to_read() -> str:
         "- `alloc_p50_us` / `alloc_p99_us`: allocate-call latency in microseconds "
         "(latency varies across reruns; not deterministic).",
         "- `oom_count`: number of `OutOfMemoryError` raised during the run (lower is better).",
+        "- `effective_batch_p50`: median number of concurrent in-flight requests across "
+        "ticks with at least one active request (higher is better; more parallelism per "
+        "pool dollar). Derived from `active_requests_samples` filtered to positive entries.",
+        "- `goodput_req_per_s`: requests that completed cleanly per wall-clock second "
+        "(higher is better). Smoke runs with sub-millisecond walls are noisy; treat as "
+        "illustrative below ~10 ms wall time.",
+        "- `completion_ratio`: fraction of submitted requests that completed without ANY "
+        "OOM during their lifetime AND with a clean free at departure (higher is better; "
+        "1.000 means no OOM rejections).",
         "- `padding_waste_MiB` (padded_unified) and `kv_free_MiB`, `ssm_free_MiB` "
         "(fixed_dual) are END-OF-RUN snapshots. On a workload where every request "
         "departs cleanly, padding_waste drops to 0 and pool_free returns to the pool "
@@ -139,12 +148,13 @@ def _render_workload_table(workload_name: str, rows: Sequence[AggregatedRow]) ->
     header = (
         "| variant | model_spec | total_bytes | peak_reserved_MiB | "
         "fragmentation_during_load | fragmentation_peak | "
-        "alloc_p50_us | alloc_p99_us | oom_count | padding_waste_MiB | "
-        "kv_free_MiB | ssm_free_MiB | "
+        "alloc_p50_us | alloc_p99_us | oom_count | "
+        "effective_batch_p50 | goodput_req_per_s | completion_ratio | "
+        "padding_waste_MiB | kv_free_MiB | ssm_free_MiB | "
         "rebalance_count | bytes_migrated_MiB | "
         "throttle_skips | waste_KiB |"
     )
-    divider = "| " + " | ".join(["---"] * 16) + " |"
+    divider = "| " + " | ".join(["---"] * 19) + " |"
     body = [_render_row(row) for row in cells]
     lines = [f"## Workload: {workload_name}", "", header, divider, *body]
     return "\n".join(lines)
@@ -198,6 +208,9 @@ def _render_row(row: AggregatedRow) -> str:
         f"{row.fragmentation_during_load_std:.3f} | "
         f"{row.fragmentation_peak:.3f} | "
         f"{p50_us:.2f} | {p99_us:.2f} | {row.oom_count_mean:.1f} | "
+        f"{row.effective_batch_size_p50_median:.1f} | "
+        f"{row.goodput_requests_per_second_median:.1f} | "
+        f"{row.completion_ratio_median:.3f} | "
         f"{padding_waste_mib_text} | {kv_free_text} | {ssm_free_text} | "
         f"{rebalance_text} | {migrated_text} | {throttle_text} | {waste_text} |"
     )
@@ -273,9 +286,10 @@ def _render_cross_workload_summary(rows: Sequence[AggregatedRow]) -> str:
 
     header = (
         "| variant | mean_frag_during_load | mean_frag_peak | total_oom | "
+        "mean_effective_batch_p50 | mean_goodput_req_per_s | "
         "total_kv_free_MiB | total_ssm_free_MiB |"
     )
-    divider = "| " + " | ".join(["---"] * 6) + " |"
+    divider = "| " + " | ".join(["---"] * 8) + " |"
     body: list[str] = []
     for variant_label in sorted(by_variant):
         cells = by_variant[variant_label]
@@ -283,6 +297,8 @@ def _render_cross_workload_summary(rows: Sequence[AggregatedRow]) -> str:
         mean_frag_load = sum(r.fragmentation_during_load_mean for r in cells) / n
         mean_frag_peak = sum(r.fragmentation_peak for r in cells) / n
         total_oom = sum(r.oom_count_mean for r in cells)
+        mean_eff_batch = sum(r.effective_batch_size_p50_median for r in cells) / n
+        mean_goodput = sum(r.goodput_requests_per_second_median for r in cells) / n
         total_kv_bytes = 0.0
         total_ssm_bytes = 0.0
         for r in cells:
@@ -291,7 +307,8 @@ def _render_cross_workload_summary(rows: Sequence[AggregatedRow]) -> str:
             total_ssm_bytes += ssm_b
         body.append(
             f"| {variant_label} | {mean_frag_load:.3f} | {mean_frag_peak:.3f} | "
-            f"{total_oom:.1f} | {total_kv_bytes / _MIB:.3f} | "
+            f"{total_oom:.1f} | {mean_eff_batch:.1f} | {mean_goodput:.1f} | "
+            f"{total_kv_bytes / _MIB:.3f} | "
             f"{total_ssm_bytes / _MIB:.3f} |"
         )
     lines = [

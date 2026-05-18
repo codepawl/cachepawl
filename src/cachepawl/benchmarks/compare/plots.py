@@ -57,6 +57,7 @@ LEGEND_ORDER: tuple[str, ...] = (
     "fixed_dual_mr09",
     "avmp_static_mr05",
     "avmp_dynamic_mr05",
+    "avmp_dynamic_b128",
 )
 
 
@@ -254,6 +255,155 @@ def plot_oom_count_vs_workload(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=_FIG_DPI, metadata=_SAVEFIG_METADATA)
     plt.close(fig)
+
+
+def plot_effective_batch_size_vs_workload(
+    aggregated: AggregatedMetrics,
+    output_stem: Path,
+    *,
+    model_spec_filter: str = "jamba_1_5_mini",
+    total_bytes_filter: int | None = None,
+    git_sha: str = "",
+    run_date: str = "",
+) -> None:
+    """Bar chart of effective_batch_size_p50 per workload, color=variant.
+
+    Saves PDF and PNG side-by-side (``<stem>.pdf`` and ``<stem>.png``)
+    so the paper build can pick up vector output without a separate
+    render. ``output_stem`` is the path WITHOUT a file extension.
+
+    The headline a passing throughput-PR variant must produce: AVMP
+    dynamic sustains a higher p50 batch size than fixed_dual_mr05 on
+    the workloads where the static partition starved.
+    """
+
+    matching = [r for r in aggregated.rows if r.model_spec_name == model_spec_filter]
+    if not matching:
+        raise ValueError(f"no aggregated rows matched model_spec_filter={model_spec_filter!r}")
+    if total_bytes_filter is None:
+        total_bytes_filter = max(r.total_bytes for r in matching)
+    cells = [r for r in matching if r.total_bytes == total_bytes_filter]
+    if not cells:
+        raise ValueError(f"no aggregated rows matched total_bytes_filter={total_bytes_filter}")
+
+    workloads = sorted({r.workload_name for r in cells})
+    variants = sorted({r.variant_label for r in cells}, key=_legend_position)
+
+    matrix = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        for wi, workload in enumerate(workloads):
+            row = _find_row(cells, variant=variant, workload=workload)
+            if row is None:
+                continue
+            matrix[vi, wi] = row.effective_batch_size_p50_median
+
+    fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=_FIG_DPI)
+    bar_width = 0.8 / max(1, len(variants))
+    indices = numpy.arange(len(workloads), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        offset = (vi - (len(variants) - 1) / 2.0) * bar_width
+        ax.bar(
+            indices + offset,
+            matrix[vi, :],
+            width=bar_width,
+            label=variant,
+        )
+    ax.set_xticks(indices)
+    ax.set_xticklabels(workloads, rotation=0)
+    ax.set_xlabel("workload")
+    ax.set_ylabel("effective_batch_size p50 (median, higher is better)")
+    tb_label = total_bytes_human(total_bytes_filter)
+    ax.set_title(
+        f"Effective batch size (p50) by workload  "
+        f"(model_spec={model_spec_filter}, total_bytes={tb_label})"
+    )
+    ax.legend(loc="best", fontsize=9)
+    ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
+    _add_watermark(fig, git_sha, run_date)
+    fig.tight_layout()
+    _save_dual_format(fig, output_stem)
+    plt.close(fig)
+
+
+def plot_goodput_comparison(
+    aggregated: AggregatedMetrics,
+    output_stem: Path,
+    *,
+    model_spec_filter: str = "jamba_1_5_mini",
+    total_bytes_filter: int | None = None,
+    git_sha: str = "",
+    run_date: str = "",
+) -> None:
+    """Bar chart of goodput_requests_per_second per workload, color=variant.
+
+    Saves PDF and PNG. Wall-clock-derived metric, so values are
+    machine-dependent. The point of the plot is the per-variant
+    SHAPE, not the absolute number.
+    """
+
+    matching = [r for r in aggregated.rows if r.model_spec_name == model_spec_filter]
+    if not matching:
+        raise ValueError(f"no aggregated rows matched model_spec_filter={model_spec_filter!r}")
+    if total_bytes_filter is None:
+        total_bytes_filter = max(r.total_bytes for r in matching)
+    cells = [r for r in matching if r.total_bytes == total_bytes_filter]
+    if not cells:
+        raise ValueError(f"no aggregated rows matched total_bytes_filter={total_bytes_filter}")
+
+    workloads = sorted({r.workload_name for r in cells})
+    variants = sorted({r.variant_label for r in cells}, key=_legend_position)
+
+    matrix = numpy.zeros((len(variants), len(workloads)), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        for wi, workload in enumerate(workloads):
+            row = _find_row(cells, variant=variant, workload=workload)
+            if row is None:
+                continue
+            matrix[vi, wi] = row.goodput_requests_per_second_median
+
+    fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=_FIG_DPI)
+    bar_width = 0.8 / max(1, len(variants))
+    indices = numpy.arange(len(workloads), dtype=numpy.float64)
+    for vi, variant in enumerate(variants):
+        offset = (vi - (len(variants) - 1) / 2.0) * bar_width
+        ax.bar(
+            indices + offset,
+            matrix[vi, :],
+            width=bar_width,
+            label=variant,
+        )
+    ax.set_xticks(indices)
+    ax.set_xticklabels(workloads, rotation=0)
+    ax.set_xlabel("workload")
+    ax.set_ylabel("goodput (requests / second, higher is better)")
+    tb_label = total_bytes_human(total_bytes_filter)
+    ax.set_title(f"Goodput by workload  (model_spec={model_spec_filter}, total_bytes={tb_label})")
+    ax.legend(loc="best", fontsize=9)
+    ax.grid(axis="y", linestyle="--", linewidth=0.5, alpha=0.5)
+    _add_watermark(fig, git_sha, run_date)
+    fig.tight_layout()
+    _save_dual_format(fig, output_stem)
+    plt.close(fig)
+
+
+def _save_dual_format(fig: object, output_stem: Path) -> None:
+    """Save ``fig`` as both ``stem.png`` and ``stem.pdf``.
+
+    The PDF backend is included with matplotlib (no extra dependency
+    on headless CI). Metadata is stripped in both formats so reruns at
+    the same matplotlib version produce byte-identical files; across
+    versions the test asserts only the magic header, not byte
+    equality.
+    """
+
+    output_stem.parent.mkdir(parents=True, exist_ok=True)
+    fig_obj = fig  # mypy: matplotlib has no public Figure stub here
+    fig_obj.savefig(  # type: ignore[attr-defined]
+        output_stem.with_suffix(".png"), dpi=_FIG_DPI, metadata=_SAVEFIG_METADATA
+    )
+    fig_obj.savefig(  # type: ignore[attr-defined]
+        output_stem.with_suffix(".pdf"), metadata=_SAVEFIG_METADATA
+    )
 
 
 def _find_row(rows: list[AggregatedRow], *, variant: str, workload: str) -> AggregatedRow | None:
