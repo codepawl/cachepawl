@@ -1,0 +1,88 @@
+{
+  "cachepawl_version": "0.1.0",
+  "config": {
+    "device": "cuda",
+    "model_spec_names": [
+      "jamba_1_5_mini",
+      "mamba2_1b3"
+    ],
+    "output_dir": "benchmarks/results/avmp-v2-throughput/full",
+    "seed_replicates": 3,
+    "smoke_num_requests": null,
+    "total_bytes_options": [
+      1073741824,
+      4294967296
+    ],
+    "variants": [
+      {
+        "allocator_name": "padded_unified",
+        "kwargs": [],
+        "label": "padded_unified"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "fixed_dual_mr05"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.9
+          ]
+        ],
+        "label": "fixed_dual_mr09"
+      },
+      {
+        "allocator_name": "avmp_static",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_static_mr05"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            128.0
+          ]
+        ],
+        "label": "avmp_dynamic_b128"
+      }
+    ],
+    "workload_names": [
+      "uniform_short",
+      "mixed_long",
+      "agentic_burst"
+    ]
+  },
+  "cuda_version": "13.0",
+  "device": "cuda",
+  "failures": [],
+  "git_sha": "ecf3d8255509d77b8beffdcffe89d917bfac4ea9",
+  "gpu_name": "NVIDIA GeForce RTX 3060",
+  "hardware_label": "cuda (linux x86_64)",
+  "n_cells_failed": 0,
+  "n_cells_planned": 180,
+  "n_cells_succeeded": 180,
+  "numpy_version": "2.2.6",
+  "python_version": "3.10.19",
+  "sweep_finished_at": "2026-05-18T10:50:49Z",
+  "sweep_started_at": "2026-05-18T10:32:48Z",
+  "torch_version": "2.12.0+cu130",
+  "total_wall_seconds": 974.0859959190002
+}

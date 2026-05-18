@@ -73,6 +73,14 @@ class AggregatedRow:
     oom_count_mean: float
     oom_count_std: float
 
+    effective_batch_size_mean_median: float
+    effective_batch_size_p50_median: float
+    effective_batch_size_p95_median: float
+    effective_batch_size_p99_median: float
+    goodput_requests_per_second_median: float
+    completion_ratio_median: float
+    time_to_first_oom_seconds_median: float | None
+
     allocator_specific_median: tuple[tuple[str, float], ...]
     allocator_specific_iqr: tuple[tuple[str, float], ...]
 
@@ -99,6 +107,13 @@ class AggregatedRow:
             "fragmentation_peak": self.fragmentation_peak,
             "oom_count_mean": self.oom_count_mean,
             "oom_count_std": self.oom_count_std,
+            "effective_batch_size_mean_median": self.effective_batch_size_mean_median,
+            "effective_batch_size_p50_median": self.effective_batch_size_p50_median,
+            "effective_batch_size_p95_median": self.effective_batch_size_p95_median,
+            "effective_batch_size_p99_median": self.effective_batch_size_p99_median,
+            "goodput_requests_per_second_median": self.goodput_requests_per_second_median,
+            "completion_ratio_median": self.completion_ratio_median,
+            "time_to_first_oom_seconds_median": self.time_to_first_oom_seconds_median,
             "allocator_specific_median": dict(self.allocator_specific_median),
             "allocator_specific_iqr": dict(self.allocator_specific_iqr),
             "allocate_p50_ns_median": self.allocate_p50_ns_median,
@@ -116,6 +131,13 @@ class AggregatedRow:
         ``min_rebalance_interval_ops`` was meant to remove. The field is
         stripped here so the deterministic JSON subset stays byte-stable
         when ``rebalance_enabled=True``.
+
+        Throughput Tier 1 PR B: the four ``effective_batch_size_*_median``
+        fields ARE event-deterministic — they derive from
+        ``active_requests_samples``, which the runner samples at fixed
+        event counts. They join the subset. ``goodput_requests_per_second``
+        and ``time_to_first_oom_seconds`` are wall-clock-derived and stay
+        out of the subset.
         """
 
         return {
@@ -136,6 +158,11 @@ class AggregatedRow:
             "fragmentation_peak": self.fragmentation_peak,
             "oom_count_mean": self.oom_count_mean,
             "oom_count_std": self.oom_count_std,
+            "effective_batch_size_mean_median": self.effective_batch_size_mean_median,
+            "effective_batch_size_p50_median": self.effective_batch_size_p50_median,
+            "effective_batch_size_p95_median": self.effective_batch_size_p95_median,
+            "effective_batch_size_p99_median": self.effective_batch_size_p99_median,
+            "completion_ratio_median": self.completion_ratio_median,
             "allocator_specific_median": {
                 k: v for k, v in self.allocator_specific_median if k != "time_spent_rebalancing_ns"
             },
@@ -219,6 +246,14 @@ def _aggregate_one_cell(
     p95s = [compute_percentiles(r.metrics.allocate_latency_ns).p95_ns for r in runs]
     p99s = [compute_percentiles(r.metrics.allocate_latency_ns).p99_ns for r in runs]
 
+    eff_means = [r.metrics.effective_batch_size_mean for r in runs]
+    eff_p50s = [r.metrics.effective_batch_size_p50 for r in runs]
+    eff_p95s = [r.metrics.effective_batch_size_p95 for r in runs]
+    eff_p99s = [r.metrics.effective_batch_size_p99 for r in runs]
+    goodputs = [r.metrics.goodput_requests_per_second for r in runs]
+    completion_ratios = [r.metrics.completion_ratio for r in runs]
+    ttfo_values = [r.metrics.time_to_first_oom_seconds for r in runs]
+
     per_run_stats = [r.metrics.allocator_specific_stats for r in runs]
     allocator_specific = _aggregate_allocator_specific(per_run_stats)
 
@@ -240,12 +275,34 @@ def _aggregate_one_cell(
         fragmentation_peak=max(per_run_peak_frag) if per_run_peak_frag else 0.0,
         oom_count_mean=_mean(ooms),
         oom_count_std=_std(ooms),
+        effective_batch_size_mean_median=float(statistics.median(eff_means)),
+        effective_batch_size_p50_median=float(statistics.median(eff_p50s)),
+        effective_batch_size_p95_median=float(statistics.median(eff_p95s)),
+        effective_batch_size_p99_median=float(statistics.median(eff_p99s)),
+        goodput_requests_per_second_median=float(statistics.median(goodputs)),
+        completion_ratio_median=float(statistics.median(completion_ratios)),
+        time_to_first_oom_seconds_median=_optional_median(ttfo_values),
         allocator_specific_median=allocator_specific[0],
         allocator_specific_iqr=allocator_specific[1],
         allocate_p50_ns_median=int(statistics.median(p50s)),
         allocate_p95_ns_median=int(statistics.median(p95s)),
         allocate_p99_ns_median=int(statistics.median(p99s)),
     )
+
+
+def _optional_median(values: Sequence[float | None]) -> float | None:
+    """Median of ``values`` after dropping ``None`` entries; all-None -> None.
+
+    Used for ``time_to_first_oom_seconds`` where a replicate with zero
+    OOMs reports ``None``. The convention is: median across replicates
+    that actually observed an OOM; if no replicate observed any OOM in
+    the cell, the row reports ``None``.
+    """
+
+    present = [v for v in values if v is not None]
+    if not present:
+        return None
+    return float(statistics.median(present))
 
 
 def _fragmentation_during_load(run: BenchmarkRun) -> list[float]:

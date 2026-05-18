@@ -78,11 +78,11 @@ Each run emits one `BenchmarkRun` JSON file at:
 <output_dir>/<allocator_name>/<workload_name>/<UTC-timestamp>.json
 ```
 
-Top-level shape (schema version `1.0.0`):
+Top-level shape (schema version `1.2.0`):
 
 ```jsonc
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "spec": { "name": "uniform_short", "num_requests": 50, "dtype": "bf16", ... },
   "allocator_name": "mock",
   "hardware": { "device": "cpu", "gpu_name": null, ... },
@@ -100,6 +100,13 @@ Top-level shape (schema version `1.0.0`):
     "oom_count": 0,
     "preemption_count": 0,
     "active_requests_samples": [0, 1, 2, ...],
+    "effective_batch_size_mean": 4.3,
+    "effective_batch_size_p50": 4.0,
+    "effective_batch_size_p95": 7.0,
+    "effective_batch_size_p99": 8.0,
+    "goodput_requests_per_second": 52.7,
+    "completion_ratio": 1.0,
+    "time_to_first_oom_seconds": null,
     "allocator_specific_stats": {"padding_waste_bytes": 12345.0, "num_pages_total": 64.0, "num_pages_used": 16.0}
   },
   "notes": "growth_events=120"
@@ -110,13 +117,15 @@ Round-trip via `BenchmarkRun.from_json(path.read_text())`.
 
 ## Schema version
 
-The current schema is `1.1.0`. Build behavior across versions:
+The current schema is `1.2.0`. Build behavior across versions:
 
-| Reading | 1.0.0 artifact | 1.1.0 artifact | 2.x artifact |
-|---|---|---|---|
-| `BenchmarkRun.from_json` | accepted; `allocator_specific_stats` defaults to `{}` | accepted | rejected with `ValueError` naming the version |
+| Reading | 1.0.0 artifact | 1.1.0 artifact | 1.2.0 artifact | 2.x artifact |
+|---|---|---|---|---|
+| `BenchmarkRun.from_json` | accepted; `allocator_specific_stats` defaults to `{}` and 1.2.0 throughput fields default to zero/`None` | accepted; 1.2.0 throughput fields default to zero/`None` | accepted | rejected with `ValueError` naming the version |
 
 `1.0.0 -> 1.1.0` change: `AllocatorMetrics.allocator_specific_stats: dict[str, float]` is the only new field. Convention is documented in the dataclass docstring: keys are strings, values are float. Counts and bytes convert to float at record time. Non-numeric tags go in `BenchmarkRun.notes`.
+
+`1.1.0 -> 1.2.0` change: seven new fields on `AllocatorMetrics` capture throughput proxies. Six are floats with default `0.0` (`effective_batch_size_mean`, `effective_batch_size_p50`, `effective_batch_size_p95`, `effective_batch_size_p99`, `goodput_requests_per_second`, `completion_ratio`) and one is `float | None` with default `None` (`time_to_first_oom_seconds`). The four `effective_batch_size_*` fields are computed from `active_requests_samples` filtered to ticks with at least one in-flight request. `completion_ratio` uses a strict definition: a request counts as completed iff no OOM event occurred during its lifetime AND every block it held was freed cleanly. `time_to_first_oom_seconds` is `None` on runs with zero OOMs. See `AllocatorMetrics` docstring for the full convention.
 
 ## Registered allocators
 

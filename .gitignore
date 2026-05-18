@@ -42,6 +42,7 @@ benchmarks/results/*
 !benchmarks/results/avmp-v2-gpu/
 !benchmarks/results/avmp-v2-batchsize-sweep/
 !benchmarks/results/avmp-v2-threshold-sweep/
+!benchmarks/results/avmp-v2-throughput/
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
 benchmarks/results/avmp-v2/full/runs/
@@ -51,6 +52,7 @@ benchmarks/results/avmp-v2-batchsize-sweep/runs/
 benchmarks/results/avmp-v2-batchsize-sweep/sweep.log
 benchmarks/results/avmp-v2-threshold-sweep/runs/
 benchmarks/results/avmp-v2-threshold-sweep/sweep.log
+benchmarks/results/avmp-v2-throughput/full/runs/
 
 # Paper build artifacts (scoped to research/avmp/)
 research/avmp/figures/generated/
@@ -67,5 +69,6 @@ research/avmp/*.fls
 research/avmp/paper.pdf
 # acmart.cls and helper files are generated from acmart.ins on first build.
 research/avmp/acmart.cls
+research/avmp/acmart-tagged.cls
 research/avmp/acmart.cfg
 research/avmp/arxiv-submission.tar.gz
