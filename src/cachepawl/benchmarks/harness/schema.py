@@ -20,7 +20,7 @@ from cachepawl.benchmarks.harness.workloads import WorkloadSpec
 from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 from cachepawl.quant.dtypes import DType
 
-SCHEMA_VERSION: Final[str] = "1.1.0"
+SCHEMA_VERSION: Final[str] = "1.2.0"
 SUPPORTED_SCHEMA_MAJOR: Final[str] = "1"
 
 
@@ -205,11 +205,21 @@ def _metrics_to_dict(m: AllocatorMetrics) -> dict[str, object]:
         "oom_count": m.oom_count,
         "preemption_count": m.preemption_count,
         "active_requests_samples": list(m.active_requests_samples),
+        "effective_batch_size_mean": m.effective_batch_size_mean,
+        "effective_batch_size_p50": m.effective_batch_size_p50,
+        "effective_batch_size_p95": m.effective_batch_size_p95,
+        "effective_batch_size_p99": m.effective_batch_size_p99,
+        "goodput_requests_per_second": m.goodput_requests_per_second,
+        "completion_ratio": m.completion_ratio,
+        "time_to_first_oom_seconds": m.time_to_first_oom_seconds,
         "allocator_specific_stats": dict(m.allocator_specific_stats),
     }
 
 
 def _metrics_from_dict(data: dict[str, object]) -> AllocatorMetrics:
+    # Throughput fields were added in schema 1.2.0; 1.1.0 artifacts
+    # lack them and must deserialize with default values
+    # (0.0 for the six floats, None for time_to_first_oom_seconds).
     return AllocatorMetrics(
         peak_reserved_bytes=_pop_int(data, "peak_reserved_bytes"),
         peak_allocated_bytes=_pop_int(data, "peak_allocated_bytes"),
@@ -219,6 +229,13 @@ def _metrics_from_dict(data: dict[str, object]) -> AllocatorMetrics:
         oom_count=_pop_int(data, "oom_count"),
         preemption_count=_pop_int(data, "preemption_count"),
         active_requests_samples=_pop_int_list(data, "active_requests_samples"),
+        effective_batch_size_mean=_pop_float_with_default(data, "effective_batch_size_mean"),
+        effective_batch_size_p50=_pop_float_with_default(data, "effective_batch_size_p50"),
+        effective_batch_size_p95=_pop_float_with_default(data, "effective_batch_size_p95"),
+        effective_batch_size_p99=_pop_float_with_default(data, "effective_batch_size_p99"),
+        goodput_requests_per_second=_pop_float_with_default(data, "goodput_requests_per_second"),
+        completion_ratio=_pop_float_with_default(data, "completion_ratio"),
+        time_to_first_oom_seconds=_pop_optional_float(data, "time_to_first_oom_seconds"),
         allocator_specific_stats=_pop_float_mapping_optional(data, "allocator_specific_stats"),
     )
 
@@ -319,6 +336,40 @@ def _pop_float_mapping_optional(data: dict[str, object], key: str) -> dict[str, 
             raise ValueError(f"expected numeric value in {key!r}, got {type(raw_value).__name__}")
         out[raw_key] = float(raw_value)
     return out
+
+
+def _pop_float_with_default(data: dict[str, object], key: str, default: float = 0.0) -> float:
+    """Return ``data[key]`` as float; missing key yields ``default``.
+
+    Used for 1.2.0 throughput fields so 1.1.0 artifacts deserialize
+    without raising.
+    """
+
+    value = data.get(key)
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        raise ValueError(f"expected numeric at key {key!r}, got bool")
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"expected numeric at key {key!r}, got {type(value).__name__}")
+    return float(value)
+
+
+def _pop_optional_float(data: dict[str, object], key: str) -> float | None:
+    """Return ``data[key]`` as float, or ``None`` if missing/null.
+
+    Used for ``time_to_first_oom_seconds`` whose meaningful value is
+    ``None`` when a run had zero OOMs.
+    """
+
+    value = data.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"expected numeric or null at key {key!r}, got bool")
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"expected numeric or null at key {key!r}, got {type(value).__name__}")
+    return float(value)
 
 
 __all__ = [
