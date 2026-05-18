@@ -105,6 +105,11 @@ def run_benchmark(
     snapshot_path = _snapshot_path(output_dir, allocator_name, spec, started_at)
 
     active_blocks: dict[int, list[int]] = {}
+    # Per-request OOM flag — True iff any allocate or free for the
+    # request raised OutOfMemoryError. Used to enforce the strict
+    # completion semantic: a request only counts as completed when no
+    # OOM occurred at any point in its lifetime.
+    request_had_oom: dict[int, bool] = {}
     requests_by_id = {req.request_id: req for req in requests}
     event_count = 0
 
@@ -127,6 +132,7 @@ def run_benchmark(
                     kv_block_tokens=kv_block_tokens,
                     dtype_bytes=dtype_bytes,
                     active_blocks=active_blocks,
+                    request_had_oom=request_had_oom,
                 )
             elif event.priority == _EVENT_GROWTH:
                 _process_growth(
@@ -136,6 +142,7 @@ def run_benchmark(
                     spec=spec,
                     dtype_bytes=dtype_bytes,
                     active_blocks=active_blocks,
+                    request_had_oom=request_had_oom,
                 )
             else:
                 _process_departure(
@@ -143,12 +150,15 @@ def run_benchmark(
                     collector=collector,
                     request_id=request.request_id,
                     active_blocks=active_blocks,
+                    request_had_oom=request_had_oom,
                 )
             if event_count % sample_every_n_events == 0:
                 collector.sample(num_active_requests=len(active_blocks))
         collector.sample(num_active_requests=len(active_blocks))
         if isinstance(allocator, _AllocatorStatsExporter):
             collector.metrics.allocator_specific_stats = dict(allocator.get_allocator_stats())
+
+    collector.finalize_throughput_metrics()
 
     finished_at = _utc_now_iso()
     run = BenchmarkRun(
@@ -208,9 +218,12 @@ def _process_arrival(
     kv_block_tokens: int,
     dtype_bytes: int,
     active_blocks: dict[int, list[int]],
+    request_had_oom: dict[int, bool],
 ) -> None:
     initial_kv_blocks_per_layer = max(1, math.ceil(request.prompt_len / kv_block_tokens))
     ids: list[int] = []
+    collector.record_submitted()
+    request_had_oom[request.request_id] = False
     _set_request_id(allocator, request.request_id)
     _set_layer_kind(allocator, LayerKind.ATTENTION)
     for _layer_idx in range(spec.attention_layers):
@@ -220,11 +233,22 @@ def _process_arrival(
                 collector,
                 initial_kv_blocks_per_layer,
                 dtype_bytes,
+                request_id=request.request_id,
+                request_had_oom=request_had_oom,
             )
         )
     _set_layer_kind(allocator, LayerKind.MAMBA2)
     for _layer_idx in range(spec.ssm_layers):
-        ids.extend(_timed_allocate(allocator, collector, 1, dtype_bytes))
+        ids.extend(
+            _timed_allocate(
+                allocator,
+                collector,
+                1,
+                dtype_bytes,
+                request_id=request.request_id,
+                request_had_oom=request_had_oom,
+            )
+        )
     active_blocks[request.request_id] = ids
 
 
@@ -236,6 +260,7 @@ def _process_growth(
     spec: WorkloadSpec,
     dtype_bytes: int,
     active_blocks: dict[int, list[int]],
+    request_had_oom: dict[int, bool],
 ) -> None:
     held = active_blocks.get(request_id)
     if held is None:
@@ -243,7 +268,16 @@ def _process_growth(
     _set_request_id(allocator, request_id)
     _set_layer_kind(allocator, LayerKind.ATTENTION)
     for _layer_idx in range(spec.attention_layers):
-        held.extend(_timed_allocate(allocator, collector, 1, dtype_bytes))
+        held.extend(
+            _timed_allocate(
+                allocator,
+                collector,
+                1,
+                dtype_bytes,
+                request_id=request_id,
+                request_had_oom=request_had_oom,
+            )
+        )
 
 
 def _set_layer_kind(allocator: Allocator, kind: LayerKind) -> None:
@@ -262,17 +296,29 @@ def _process_departure(
     collector: MetricsCollector,
     request_id: int,
     active_blocks: dict[int, list[int]],
+    request_had_oom: dict[int, bool],
 ) -> None:
     held = active_blocks.pop(request_id, None)
     if held is None:
+        # Arrival never registered (e.g. fully-OOM'd) — no resource to free
+        # and the request cannot count as completed under strict semantics.
+        request_had_oom.pop(request_id, None)
         return
     start = time.perf_counter_ns()
+    free_ooms = False
     try:
         allocator.free(held)
     except torch.cuda.OutOfMemoryError:
         collector.record_oom()
+        free_ooms = True
     elapsed = time.perf_counter_ns() - start
     collector.record_free(elapsed)
+    # Strict completion: the request must have allocated cleanly AND
+    # freed cleanly. request_had_oom defaults to False at arrival; any
+    # allocate or free OOM flips it.
+    had_prior_oom = request_had_oom.pop(request_id, True)
+    if not free_ooms and not had_prior_oom:
+        collector.record_completed()
 
 
 def _timed_allocate(
@@ -280,6 +326,9 @@ def _timed_allocate(
     collector: MetricsCollector,
     num_blocks: int,
     dtype_bytes: int,
+    *,
+    request_id: int,
+    request_had_oom: dict[int, bool],
 ) -> list[int]:
     start = time.perf_counter_ns()
     try:
@@ -288,6 +337,7 @@ def _timed_allocate(
         elapsed = time.perf_counter_ns() - start
         collector.record_allocate(elapsed)
         collector.record_oom()
+        request_had_oom[request_id] = True
         return []
     elapsed = time.perf_counter_ns() - start
     collector.record_allocate(elapsed)
