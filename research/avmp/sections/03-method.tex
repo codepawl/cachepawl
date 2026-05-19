@@ -23,12 +23,79 @@ The AVMP design provisions two distinct physical regions: a \texttt{KVPagesStore
 
 We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\_tokens} multiplied by \texttt{per\_token\_bytes}, defaulting to 16 tokens per page. SSM blocks match the exact \texttt{state\_dim} multiplied by \texttt{bytes\_per\_element}. We enforce strict alignment rules: 128-byte slab alignment globally and 16-byte page alignment within slabs (Figure~\ref{fig:page-table-structure}). Unlike PagedAttention~\cite{kwon2023pagedattention}, which uses uniform page sizes, this multi-resolution approach extends GPU virtual memory concepts \cite{xu2024vtensor} to support hybrid cache abstractions.
 
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    font=\footnotesize,
+    node distance=3mm and 4mm,
+    box/.style={draw, rounded corners, align=center,
+                inner sep=2pt, minimum height=11mm},
+    handle/.style={box, minimum width=16mm},
+    ptable/.style={box, minimum width=24mm, align=left},
+    store/.style={box, minimum width=22mm},
+    page/.style={draw, fill=blue!12, minimum width=2.6mm,
+                 minimum height=3mm, inner sep=0pt},
+    block/.style={draw, fill=orange!25, minimum width=6mm,
+                  minimum height=4mm, inner sep=0pt},
+    kvarrow/.style={->, thick, blue!70!black},
+    ssmarrow/.style={->, thick, orange!70!black},
+  ]
+  \node[handle] (h) {VirtualHandle\\(32-bit)\\\texttt{pool\,|\,page}};
+  \node[ptable, right=of h] (pt) {%
+    \texttt{h\_0 $\to$ KV[3]}\\
+    \texttt{h\_1 $\to$ SSM[1]}\\
+    \texttt{h\_2 $\to$ KV[7]}};
+  \node[store, right=of pt, yshift=8mm] (kv)
+    {KVPagesStore\\[1pt]
+     \tikz[baseline]{\foreach \i in {1,...,5} \node[page] at (\i*3.2mm,0) {};}\\
+     {\scriptsize 16-token pages}};
+  \node[store, right=of pt, yshift=-8mm] (ssm)
+    {SSMBlocksStore\\[1pt]
+     \tikz[baseline]{\foreach \i in {1,2,3} \node[block] at (\i*6.5mm,0) {};}\\
+     {\scriptsize \texttt{state\_dim} blocks}};
+  \draw[->, thick] (h) -- (pt);
+  \draw[kvarrow]  (pt.east) to[out=25, in=180]  (kv.west);
+  \draw[ssmarrow] (pt.east) to[out=-25, in=180] (ssm.west);
+\end{tikzpicture}
+\caption{AVMP virtual handle resolution. A 32-bit handle is tagged by pool identifier and indexed into the page table, which dispatches to either the KVPagesStore (fine-grained pages) or the SSMBlocksStore (per-layer contiguous blocks).}
+\label{fig:page-table-structure}
+\Description{Block diagram showing virtual handle flowing through page table to two physically separate backing stores for KV cache and SSM state.}
+\end{figure}
+
 \subsection{Dynamic Pool Rebalancing}
 \label{sec:method:rebalance}
 
 Static dual pools \cite{zheng2024sglang} pre-allocate physical regions using a fixed ratio, such as a \texttt{--mamba-full-memory-ratio} default of 0.9, which cannot change without a system restart. We demonstrate in Table~\ref{tab:baseline-comparison} that fixed allocations fail to generalize across diverse prompt distributions. \texttt{fixed\_dual\_mr05} records 552 cross-workload OOMs versus \texttt{fixed\_dual\_mr09}'s 1507.3 OOMs, but neither wins on all workload mixes. We design a dynamic rebalancing mechanism to migrate capacity between the KV and SSM pools at runtime.
 
 The system tracks pool pressure using a state machine with three states: \texttt{BALANCED}, \texttt{KV\_PRESSURED} / \texttt{SSM\_PRESSURED}, and \texttt{REBALANCING} (Figure~\ref{fig:state-machine}). We evaluate state transitions strictly within the \texttt{CapacityError} exception handler of the \texttt{allocate()} path. If an allocation triggers a \texttt{CapacityError} in one pool, and the other pool maintains a free fraction greater than \texttt{threshold\_high} (0.30), the allocator initiates capacity migration. We place the trigger in the \texttt{CapacityError} handler rather than as a pre-emptive sampling hook, because pre-emptive triggers fire on transient pressure that resolves without migration, while \texttt{CapacityError} fires only when allocation would otherwise fail.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    font=\footnotesize,
+    state/.style={draw, rounded corners, align=center,
+                  minimum width=20mm, minimum height=7mm,
+                  inner sep=2pt, fill=white},
+    trans/.style={->, thick, gray!50!black},
+    tlabel/.style={font=\scriptsize, fill=white, inner sep=1pt},
+  ]
+  \node[state] (B) {BALANCED};
+  \node[state, below left=10mm and -2mm of B] (KP) {KV\_PRESSURED};
+  \node[state, below right=10mm and -2mm of B] (SP) {SSM\_PRESSURED};
+  \node[state, below=22mm of B] (R) {REBALANCING};
+  \draw[->, thick] ($(B.north)+(0,4mm)$) -- (B.north);
+  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free<th\_lo}} (KP);
+  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free<th\_lo}} (SP);
+  \draw[trans] (KP) -- node[tlabel, sloped] {\texttt{ssm\_free>th\_hi}} (R);
+  \draw[trans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free>th\_hi}} (R);
+  \draw[trans] (R)  to[bend left=15]  node[tlabel, near start] {migration complete} (B);
+  \draw[trans] (KP) to[bend left=30]  node[tlabel] {free recovers} (B);
+  \draw[trans] (SP) to[bend right=30] node[tlabel] {free recovers} (B);
+\end{tikzpicture}
+\caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30).}
+\label{fig:state-machine}
+\Description{Four-state finite state machine showing BALANCED, KV\_PRESSURED, SSM\_PRESSURED, and REBALANCING states with labeled transitions based on per-pool free fraction thresholds.}
+\end{figure}
 
 During migration, the allocator calls \texttt{resize\_capacity()} on the donor pool, shrinking it at the high end of its address space, and the recipient pool grows. The wasted bytes per migration equal the donor bytes freed modulo the recipient page size. We throttle rebalancing using a logical operation counter to guarantee deterministic behavior, requiring a minimum interval of 1000 operations (\texttt{min\_rebalance\_interval\_ops}) between migrations. In partial failure scenarios, the allocator executes a rollback of the migration state. This dynamic rebalancing yields a 7.6\% Out-of-Memory (OOM) reduction (510 OOMs versus 552) and a 13.3$\times$ goodput improvement on uniform short workloads compared to the best static configuration.
 
