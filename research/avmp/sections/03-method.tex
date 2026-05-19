@@ -41,16 +41,16 @@ We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\
                   inner sep=0pt, font=\tiny, fill=white},
     bcell/.style={draw, minimum width=5mm, minimum height=4.4mm,
                   inner sep=0pt, font=\tiny, fill=white},
-    kvarrow/.style={->, line width=0.9pt, kvblue},
-    ssmarrow/.style={->, line width=0.9pt, ssmorange},
+    kvarrow/.style={->, line width=1.1pt, kvblue},
+    ssmarrow/.style={->, line width=1.1pt, ssmorange},
     lookup/.style={->, line width=0.9pt},
   ]
   % ===== VirtualHandle (left column) =====
   \node[font=\scriptsize\bfseries] (htitle) at (0,0) {VirtualHandle};
   \node[font=\tiny, below=0.3mm of htitle] (hsub) {(32-bit)};
-  \node[bitbox, minimum width=2.5mm, below=1mm of hsub.south,
-        xshift=-4.5mm] (pool) {\texttt{p}};
-  \node[bitbox, minimum width=8.5mm, right=0pt of pool]
+  \node[bitbox, minimum width=7mm, below=1mm of hsub.south,
+        xshift=-2.5mm] (pool) {\texttt{pool\_id}};
+  \node[bitbox, minimum width=8mm, right=0pt of pool]
         (page) {\texttt{page\_id}};
   \node[draw, rounded corners=2pt, fit=(htitle)(pool)(page),
         inner sep=1.3mm] (h) {};
@@ -111,23 +111,23 @@ The system tracks pool pressure using a state machine with three states: \texttt
 \begin{tikzpicture}[
     font=\footnotesize,
     state/.style={draw, rounded corners, align=center,
-                  minimum width=20mm, minimum height=7mm,
+                  minimum width=22mm, minimum height=7.5mm,
                   inner sep=2pt, fill=white},
     trans/.style={->, thick, gray!50!black},
-    tlabel/.style={font=\scriptsize, fill=white, inner sep=1pt},
+    tlabel/.style={font=\footnotesize, fill=white, inner sep=1.2pt},
   ]
   \node[state] (B) {BALANCED};
-  \node[state, below left=10mm and -2mm of B] (KP) {KV\_PRESSURED};
-  \node[state, below right=10mm and -2mm of B] (SP) {SSM\_PRESSURED};
-  \node[state, below=22mm of B] (R) {REBALANCING};
+  \node[state, below left=14mm and 1mm of B] (KP) {KV\_PRESSURED};
+  \node[state, below right=14mm and 1mm of B] (SP) {SSM\_PRESSURED};
+  \node[state, below=28mm of B] (R) {REBALANCING};
   \draw[->, thick] ($(B.north)+(0,4mm)$) -- (B.north);
-  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free<th\_lo}} (KP);
-  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free<th\_lo}} (SP);
-  \draw[trans] (KP) -- node[tlabel, sloped] {\texttt{ssm\_free>th\_hi}} (R);
-  \draw[trans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free>th\_hi}} (R);
-  \draw[trans] (R)  to[bend left=15]  node[tlabel, near start] {migration complete} (B);
-  \draw[trans] (KP) to[bend left=30]  node[tlabel] {free recovers} (B);
-  \draw[trans] (SP) to[bend right=30] node[tlabel] {free recovers} (B);
+  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free $<$ th\_low}} (KP);
+  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free $<$ th\_low}} (SP);
+  \draw[trans] (KP) -- node[tlabel, sloped] {\texttt{ssm\_free $>$ th\_high}} (R);
+  \draw[trans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free $>$ th\_high}} (R);
+  \draw[trans] (R)  to[bend left=18]  node[tlabel, near start] {migration complete} (B);
+  \draw[trans] (KP) to[bend left=35]  node[tlabel] {free recovers} (B);
+  \draw[trans] (SP) to[bend right=35] node[tlabel] {free recovers} (B);
 \end{tikzpicture}
 \caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30).}
 \label{fig:state-machine}
