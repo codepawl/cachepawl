@@ -171,21 +171,14 @@ def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
     lines.append("\\begin{tabular}{lrrr}")
     lines.append("\\toprule")
     lines.append(
-        f"Workload & {_tex_escape(baseline)} (req/s) & "
-        f"{_tex_escape(target)} (req/s) & Ratio \\\\"
+        f"Workload & {_tex_escape(baseline)} (req/s) & {_tex_escape(target)} (req/s) & Ratio \\\\"
     )
     lines.append("\\midrule")
     for workload in _WORKLOAD_ORDER:
         base_v = baseline_gp[workload]
         targ_v = target_gp[workload]
-        if base_v > 0.0:
-            ratio_str = f"{targ_v / base_v:.2f}$\\times$"
-        else:
-            ratio_str = "n/a"
-        lines.append(
-            f"{_tex_escape(workload)} & {base_v:.2f} & {targ_v:.2f} & "
-            f"{ratio_str} \\\\"
-        )
+        ratio_str = f"{targ_v / base_v:.2f}$\\times$" if base_v > 0.0 else "n/a"
+        lines.append(f"{_tex_escape(workload)} & {base_v:.2f} & {targ_v:.2f} & {ratio_str} \\\\")
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     return _write_table(out_dir, "table_per_workload_winner", "\n".join(lines) + "\n")
