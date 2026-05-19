@@ -1,34 +1,21 @@
 \section{Related Work}
-\label{sec:related-work}
+\label{sec:related}
 
-% CONTENT GUIDANCE (delete before submission):
-% - Subsection 6.1: KV-cache memory management. PagedAttention
-%   (\cite{kwon2023pagedattention}), vTensor
-%   (\cite{xu2024vtensor}), SGLang RadixAttention
-%   (\cite{zheng2024sglang}). Position AVMP as the asymmetric extension.
-% - Subsection 6.2: SSM and hybrid architectures. Mamba
-%   (\cite{gu2023mamba}, \cite{dao2024mamba2}), Jamba
-%   (\cite{lieber2024jamba}), Zamba2 (\cite{glorioso2024zamba2}),
-%   Samba (\cite{ren2024samba}), Hymba (\cite{dong2024hymba}),
-%   RecurrentGemma (\cite{botev2024recurrentgemma}). None prescribe
-%   a serving-time memory-layout policy.
-% - Subsection 6.3: attention kernels. FlashAttention 2 / 3
-%   (\cite{dao2023flashattention2}, \cite{shah2024flashattention3}).
-%   Note that AVMP's design is kernel-agnostic.
-% - Source: bibliography/refs.bib for the cite-keys above.
+\subsection{Cache Management for LLM Inference}
+\label{sec:related:cache}
 
-\subsection{KV-Cache Memory Management}
-\label{sec:related:kv}
+Production inference engines optimize transformer serving through paged memory allocation. Systems like PagedAttention and vLLM \cite{kwon2023pagedattention} manage the KV cache by dividing sequences into fixed-size blocks, reducing fragmentation and enabling efficient scatter-gather memory access. High-performance kernel libraries, such as FlashInfer, and production execution engines, like TensorRT-LLM, adopt similar block-based abstractions. These systems handle a single, homogeneous cache type exceptionally well. They assume uniform memory access patterns and predictable block scaling tied directly to sequence length. AVMP extends this page-based paradigm to support two physically heterogeneous cache types simultaneously. Rather than replacing these highly optimized attention managers, AVMP provides a complementary memory abstraction that integrates with existing page tables to support hybrid model execution.
 
-% TODO author: position AVMP against PagedAttention, vTensor, SGLang.
-
-\subsection{SSM and Hybrid Architectures}
+\subsection{Hybrid Architecture Serving}
 \label{sec:related:hybrid}
 
-% TODO author: argue that the hybrid family motivates AVMP but does
-% not solve the layout problem.
+Recent systems extend inference engines to support hybrid architectures containing both State Space Model and transformer layers \cite{lieber2024jamba, dao2024mamba2}. SGLang provides production serving for these models using a static dual-pool approach \cite{zheng2024sglang}. It provisions a \texttt{HybridReqToTokenPool} for attention and a \texttt{HybridLinearKVPool} for SSM state. Operators configure the partition at engine startup via the \texttt{mamba\_full\_memory\_ratio} parameter. This rigidity causes capacity failures when prompt distributions shift. As we demonstrate in \S\ref{sec:eval}, a default 0.9 ratio triggers 1221 OOM events compared to 552 OOMs at a 0.5 ratio on identical workloads.
 
-\subsection{Attention Kernels}
-\label{sec:related:kernels}
+Alternatively, vTensor introduces GPU virtual memory management for KV caches using hardware features to decouple physical memory mapping from virtual address spaces \cite{xu2024vtensor}. While vTensor targets a single cache type to reduce fragmentation, AVMP applies this virtual abstraction to two heterogeneous pools. AVMP contributes a unified virtual handle system combined with runtime capacity rebalancing, addressing both the correctness requirements and the adaptivity challenges in hybrid serving.
 
-% TODO author: orthogonality to FlashAttention 2/3.
+\subsection{Dynamic Resource Allocation}
+\label{sec:related:dynamic}
+
+Inference engines employ runtime adaptation to maximize hardware utilization. Continuous batching strategies adapt batch sizes dynamically at iteration boundaries to increase throughput. AVMP adapts pool capacity at request-level boundaries, using a more conservative trigger placed strictly in the allocation path. Memory eviction strategies, such as sliding window attention, discard older tokens dynamically under memory pressure. These techniques operate within a single pool; AVMP migrates capacity across two heterogeneous pools.
+
+At the framework level, tools like the PyTorch \texttt{expandable\_segments} allocator manage dynamic segment growth directly in CUDA. This allocator operates below the inference engine abstractions. AVMP operates at the pool level, translating application-level \texttt{CapacityError} exceptions into physical capacity migrations between distinct cache implementations. AVMP's CapacityError-triggered migration is conservative: it fires only when allocation would otherwise fail, not preemptively on transient pressure.
