@@ -25,78 +25,137 @@ We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\
 
 \definecolor{kvblue}{HTML}{1F77B4}
 \definecolor{ssmorange}{HTML}{FF7F0E}
+
 \begin{figure}[t]
 \centering
 \begin{tikzpicture}[
-    font=\scriptsize,
-    every node/.style={outer sep=0pt},
-    bitbox/.style={draw, minimum height=3.5mm, font=\tiny,
-                   inner sep=1pt, fill=gray!10},
-    ptrow/.style={draw, minimum width=21mm, minimum height=3.6mm,
-                  align=left, inner ysep=0.6pt, inner xsep=1.5pt,
-                  font=\scriptsize},
-    pthdr/.style={ptrow, font=\scriptsize\bfseries, align=center,
-                  fill=gray!15},
-    pcell/.style={draw, minimum width=2.0mm, minimum height=3.4mm,
-                  inner sep=0pt, font=\tiny, fill=white},
-    bcell/.style={draw, minimum width=4.5mm, minimum height=4.4mm,
-                  inner sep=0pt, font=\tiny, fill=white},
-    kvarrow/.style={->, line width=1.1pt, kvblue},
-    ssmarrow/.style={->, line width=1.1pt, ssmorange},
-    lookup/.style={->, line width=0.9pt},
-  ]
-  % ===== VirtualHandle (left column) =====
-  \node[font=\scriptsize\bfseries] (htitle) at (0,0) {VirtualHandle};
-  \node[font=\tiny, below=0.3mm of htitle] (hsub) {(32-bit)};
-  \node[bitbox, minimum width=7mm, below=1mm of hsub.south,
-        xshift=-2.5mm] (pool) {\texttt{pool\_id}};
-  \node[bitbox, minimum width=8mm, right=0pt of pool]
-        (page) {\texttt{page\_id}};
-  \node[draw, rounded corners=2pt, fit=(htitle)(pool)(page),
-        inner sep=1.3mm] (h) {};
+font=\scriptsize,
+every node/.style={outer sep=0pt},
+bitbox/.style={
+draw,
+minimum height=3.5mm,
+font=\tiny,
+inner sep=1pt,
+fill=gray!10
+},
+ptrow/.style={
+draw,
+minimum width=24mm,
+minimum height=3.8mm,
+align=left,
+inner ysep=0.8pt,
+inner xsep=1.8pt,
+font=\scriptsize
+},
+pthdr/.style={
+ptrow,
+font=\scriptsize\bfseries,
+align=center,
+fill=gray!15
+},
+pcell/.style={
+draw,
+minimum width=3.6mm,
+minimum height=3.5mm,
+inner sep=0pt,
+font=\tiny,
+fill=white
+},
+bcell/.style={
+draw,
+minimum width=5.2mm,
+minimum height=4.5mm,
+inner sep=0pt,
+font=\tiny,
+fill=white
+},
+kvarrow/.style={->, line width=1.0pt, kvblue},
+ssmarrow/.style={->, line width=1.0pt, ssmorange},
+lookup/.style={->, line width=0.9pt}
+]
 
-  % ===== VirtualPageTable (middle column) =====
-  \node[pthdr, anchor=west] (pthdr) at ([xshift=2.5mm] h.east)
-        {VirtualPageTable};
-  \node[ptrow, below=0pt of pthdr.south west, anchor=north west]
-        (r0) {\textcolor{kvblue}{\texttt{h\_0 $\to$ KV[3]}}};
-  \node[ptrow, below=0pt of r0.south west, anchor=north west]
-        (r1) {\textcolor{ssmorange}{\texttt{h\_1 $\to$ SSM[1]}}};
-  \node[ptrow, below=0pt of r1.south west, anchor=north west]
-        (r2) {\textcolor{kvblue}{\texttt{h\_2 $\to$ KV[7]}}};
+% ===== VirtualHandle: left column =====
+\node[font=\scriptsize\bfseries] (htitle) at (0,0.55) {VirtualHandle};
+\node[font=\tiny] (hsub) at (0,0.27) {(32-bit)};
 
-  % ===== KVPagesStore (top right) =====
-  \node[pcell] (kvp0) at ([xshift=0.5mm, yshift=2.5mm] pthdr.east) {p0};
-  \node[pcell, right=0.15mm of kvp0] (kvp1) {p1};
-  \node[pcell, right=0.15mm of kvp1] (kvp2) {p2};
-  \node[pcell, right=0.15mm of kvp2, fill=kvblue!35] (kvp3) {p3};
-  \node[pcell, right=0.15mm of kvp3] (kvp4) {p4};
-  \node[font=\tiny, right=0.15mm of kvp4] (kvdots) {$\cdots$};
-  \node[pcell, right=0.15mm of kvdots, fill=kvblue!35] (kvp7) {p7};
-  \node[draw, rounded corners=2pt, fit=(kvp0)(kvp7),
-        inner xsep=1.2mm, inner ysep=2mm,
-        label={[font=\scriptsize, yshift=-0.5mm]above:KVPagesStore}]
-        (kvbox) {};
+\node[bitbox, minimum width=7.5mm] (pool) at (-0.45,-0.18)
+{\texttt{pool\_id}};
+\node[bitbox, minimum width=9.0mm, anchor=west] (page) at (pool.east)
+{\texttt{page\_id}};
 
-  % ===== SSMBlocksStore (bottom right) =====
-  \node[bcell] (ssmb0) at ([xshift=0.5mm, yshift=-2mm] r2.east) {b0};
-  \node[bcell, right=0.15mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
-  \node[bcell, right=0.15mm of ssmb1] (ssmb2) {b2};
-  \node[draw, rounded corners=2pt, fit=(ssmb0)(ssmb2),
-        inner xsep=1.2mm, inner ysep=2mm,
-        label={[font=\scriptsize, yshift=0.5mm]below:SSMBlocksStore}]
-        (ssmbox) {};
+\node[
+draw,
+rounded corners=2pt,
+fit=(htitle)(hsub)(pool)(page),
+inner sep=1.5mm
+] (hbox) {};
 
-  % ===== Arrows =====
-  \draw[lookup] (h.east) -- node[above, font=\tiny] {lookup}
-                            (pthdr.west);
-  \draw[kvarrow]  (r0.east) to[out=0, in=270] (kvp3.south);
-  \draw[ssmarrow] (r1.east) to[out=0, in=180] (ssmb1.west);
-  \draw[kvarrow]  (r2.east) to[out=0, in=270] (kvp7.south);
+% ===== VirtualPageTable: middle column =====
+\node[pthdr, anchor=north west] (pthdr) at (2.25,0.90)
+{VirtualPageTable};
+
+\node[ptrow, anchor=north west] (r0) at (pthdr.south west)
+{\textcolor{kvblue}{\texttt{h\_0} $\to$ \texttt{KV[3]}}};
+
+\node[ptrow, anchor=north west] (r1) at (r0.south west)
+{\textcolor{ssmorange}{\texttt{h\_1} $\to$ \texttt{SSM[1]}}};
+
+\node[ptrow, anchor=north west] (r2) at (r1.south west)
+{\textcolor{kvblue}{\texttt{h\_2} $\to$ \texttt{KV[7]}}};
+
+% ===== KVPagesStore: top right =====
+\node[font=\scriptsize\bfseries] (kvtitle) at (6.55,1.05)
+{KVPagesStore};
+
+\node[pcell, anchor=west] (kvp0) at (5.25,0.55) {p0};
+\node[pcell, right=0.2mm of kvp0] (kvp1) {p1};
+\node[pcell, right=0.2mm of kvp1] (kvp2) {p2};
+\node[pcell, right=0.2mm of kvp2, fill=kvblue!35] (kvp3) {p3};
+\node[pcell, right=0.2mm of kvp3] (kvp4) {p4};
+\node[font=\tiny, right=0.8mm of kvp4] (kvdots) {$\cdots$};
+\node[pcell, right=0.8mm of kvdots, fill=kvblue!35] (kvp7) {p7};
+
+\node[
+draw,
+rounded corners=2pt,
+fit=(kvtitle)(kvp0)(kvp7),
+inner xsep=1.4mm,
+inner ysep=1.2mm
+] (kvbox) {};
+
+% ===== SSMBlocksStore: bottom right =====
+\node[font=\scriptsize\bfseries] (ssmtitle) at (6.25,-0.72)
+{SSMBlocksStore};
+
+\node[bcell, anchor=west] (ssmb0) at (5.65,-1.22) {b0};
+\node[bcell, right=0.25mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
+\node[bcell, right=0.25mm of ssmb1] (ssmb2) {b2};
+
+\node[
+draw,
+rounded corners=2pt,
+fit=(ssmtitle)(ssmb0)(ssmb2),
+inner xsep=1.4mm,
+inner ysep=1.2mm
+] (ssmbox) {};
+
+% ===== Arrows =====
+\draw[lookup]
+(hbox.east) -- node[above, font=\tiny] {lookup} (pthdr.west);
+
+\draw[kvarrow]
+(r0.east) to[out=0,in=210] (kvp3.south west);
+
+\draw[ssmarrow]
+(r1.east) to[out=0,in=180] (ssmb1.west);
+
+\draw[kvarrow]
+(r2.east) to[out=0,in=240] (kvp7.south);
+
 \end{tikzpicture}
-\caption{AVMP virtual handle resolution. A 32-bit handle is tagged by pool identifier and indexed into the page table, which dispatches to either the KVPagesStore (fine-grained pages) or the SSMBlocksStore (per-layer contiguous blocks).}
+\caption{AVMP virtual handle resolution. A 32-bit handle is tagged by pool identifier and indexed into the page table, which dispatches to either the KVPagesStore, with fine-grained pages, or the SSMBlocksStore, with per-layer contiguous blocks.}
 \label{fig:page-table-structure}
-\Description{Block diagram of AVMP handle resolution. On the left, a VirtualHandle container holds two sub-fields: a single-bit pool identifier and a 24-bit page identifier. A solid lookup arrow leads to the central VirtualPageTable, which holds three colored entries that map handles to backing-store coordinates. Two stores sit on the right: KVPagesStore on top with five visible pages plus an ellipsis and a highlighted seventh page, SSMBlocksStore below with three blocks. Colored arrows route each page-table entry to the specific highlighted cell it indexes, using blue for KV and orange for SSM.}
+\Description{Block diagram of AVMP handle resolution. On the left, a VirtualHandle container holds two sub-fields: a pool identifier and a page identifier. A solid lookup arrow leads to the central VirtualPageTable, which holds three colored entries that map handles to backing-store coordinates. Two stores sit on the right: KVPagesStore on top with visible pages plus an ellipsis and a highlighted seventh page, and SSMBlocksStore below with three blocks. Colored arrows route each page-table entry to the specific highlighted cell it indexes, using blue for KV and orange for SSM.}
 \end{figure}
 
 \subsection{Dynamic Pool Rebalancing}

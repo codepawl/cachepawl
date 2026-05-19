@@ -225,8 +225,14 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
     ax.set_xticklabels([w.replace("_", " ") for w in _WORKLOAD_ORDER])
     ax.set_ylabel("Sum of mean OOMs across 12 cells")
     ax.set_title("Cross-allocator OOM comparison")
-    ax.legend(loc="best", framealpha=0.85, fontsize=8)
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.18),
+        framealpha=1.0,
+        fontsize=7,
+        ncol=4,
+    )
     return _save_pair(fig, out_dir, "fig_oom_comparison_final")
 
 
