@@ -9,8 +9,9 @@ Tables produced:
 
 1. ``table_baseline_comparison``: cross-workload OOMs for the 4
    headline variants.
-2. ``table_per_workload_winner``: per-workload best variant + delta
-   vs fixed_dual_mr05.
+2. ``table_per_workload_winner``: per-workload goodput (req/s) for
+   ``fixed_dual_mr05`` vs ``avmp_dynamic_b128`` plus their ratio,
+   matching the Section 5.3 prose narrative.
 3. ``table_parameter_defaults``: AVMP knob defaults read live from
    :class:`AsymmetricVirtualPool` via :func:`inspect.signature` so the
    table never drifts from the code.
@@ -20,8 +21,9 @@ Tables produced:
    reference row, showing the cross-variant tie at 510.
 
 All numerical content comes from
-``benchmarks/results/avmp-v2-batchsize-sweep/aggregated.json`` and
-``benchmarks/results/avmp-v2-threshold-sweep/aggregated.json`` plus the
+``benchmarks/results/avmp-v2-batchsize-sweep/aggregated.json``,
+``benchmarks/results/avmp-v2-threshold-sweep/aggregated.json``, and
+``benchmarks/results/avmp-v2-throughput/full/aggregated.json`` plus the
 live :class:`AsymmetricVirtualPool` constructor defaults. No hardcoded
 data values.
 """
@@ -40,6 +42,7 @@ from cachepawl.allocator.avmp import AsymmetricVirtualPool
 REPO_ROOT: Path = Path(__file__).resolve().parents[3]
 BATCHSIZE_SWEEP: Path = REPO_ROOT / "benchmarks/results/avmp-v2-batchsize-sweep/aggregated.json"
 THRESHOLD_SWEEP: Path = REPO_ROOT / "benchmarks/results/avmp-v2-threshold-sweep/aggregated.json"
+THROUGHPUT_SWEEP: Path = REPO_ROOT / "benchmarks/results/avmp-v2-throughput/full/aggregated.json"
 
 _HEADLINE_VARIANTS: tuple[str, ...] = (
     "padded_unified",
@@ -70,6 +73,7 @@ class Row:
     rebalance_count_median: float
     threshold_low_median: float
     threshold_high_median: float
+    goodput_req_per_s_median: float
 
 
 def _coerce_row(raw: object) -> Row:
@@ -81,6 +85,8 @@ def _coerce_row(raw: object) -> Row:
         for k, v in asp_raw.items():
             if isinstance(v, (int, float)):
                 asp[str(k)] = float(v)
+    gp_raw = raw.get("goodput_requests_per_second_median")
+    goodput = float(gp_raw) if isinstance(gp_raw, (int, float)) else 0.0
     return Row(
         variant_label=str(raw["variant_label"]),
         workload_name=str(raw["workload_name"]),
@@ -90,6 +96,7 @@ def _coerce_row(raw: object) -> Row:
         rebalance_count_median=float(asp.get("rebalance_count", 0.0)),
         threshold_low_median=float(asp.get("threshold_low", 0.0)),
         threshold_high_median=float(asp.get("threshold_high", 0.0)),
+        goodput_req_per_s_median=goodput,
     )
 
 
@@ -115,6 +122,14 @@ def _sum_oom_per_workload(rows: list[Row], variant: str) -> dict[str, float]:
 
 def _sum_rebalance(rows: list[Row], variant: str) -> float:
     return sum(r.rebalance_count_median for r in rows if r.variant_label == variant)
+
+
+def _mean_goodput_per_workload(rows: list[Row], variant: str) -> dict[str, float]:
+    buckets: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    for r in rows:
+        if r.variant_label == variant and r.workload_name in buckets:
+            buckets[r.workload_name].append(r.goodput_req_per_s_median)
+    return {w: (sum(v) / len(v) if v else 0.0) for w, v in buckets.items()}
 
 
 def _write_table(out_dir: Path, basename: str, body: str) -> Path:
@@ -148,24 +163,28 @@ def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
 
 
 def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
+    baseline = "fixed_dual_mr05"
+    target = "avmp_dynamic_b128"
+    baseline_gp = _mean_goodput_per_workload(rows, baseline)
+    target_gp = _mean_goodput_per_workload(rows, target)
     lines: list[str] = []
-    lines.append("\\begin{tabular}{llrr}")
+    lines.append("\\begin{tabular}{lrrr}")
     lines.append("\\toprule")
-    lines.append("Workload & Best variant & OOMs & vs fixed\\_dual\\_mr05 \\\\")
+    lines.append(
+        f"Workload & {_tex_escape(baseline)} (req/s) & "
+        f"{_tex_escape(target)} (req/s) & Ratio \\\\"
+    )
     lines.append("\\midrule")
     for workload in _WORKLOAD_ORDER:
-        best_variant: str = _HEADLINE_VARIANTS[0]
-        best_oom: float = float("inf")
-        for variant in _HEADLINE_VARIANTS:
-            per = _sum_oom_per_workload(rows, variant)
-            if per[workload] < best_oom:
-                best_oom = per[workload]
-                best_variant = variant
-        fd05_oom = _sum_oom_per_workload(rows, "fixed_dual_mr05")[workload]
-        delta = best_oom - fd05_oom
+        base_v = baseline_gp[workload]
+        targ_v = target_gp[workload]
+        if base_v > 0.0:
+            ratio_str = f"{targ_v / base_v:.2f}$\\times$"
+        else:
+            ratio_str = "n/a"
         lines.append(
-            f"{_tex_escape(workload)} & {_tex_escape(best_variant)} & "
-            f"{best_oom:.1f} & {delta:+.1f} \\\\"
+            f"{_tex_escape(workload)} & {base_v:.2f} & {targ_v:.2f} & "
+            f"{ratio_str} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -252,9 +271,10 @@ def table_stage2_threshold(
 def generate_all(out_dir: Path) -> list[Path]:
     batchsize_rows = _load_rows(BATCHSIZE_SWEEP)
     threshold_rows = _load_rows(THRESHOLD_SWEEP)
+    throughput_rows = _load_rows(THROUGHPUT_SWEEP)
     return [
         table_baseline_comparison(batchsize_rows, out_dir),
-        table_per_workload_winner(batchsize_rows, out_dir),
+        table_per_workload_winner(throughput_rows, out_dir),
         table_parameter_defaults(out_dir),
         table_stage1_batchsize(batchsize_rows, out_dir),
         table_stage2_threshold(threshold_rows, batchsize_rows, out_dir),
