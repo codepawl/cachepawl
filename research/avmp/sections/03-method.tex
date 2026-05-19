@@ -37,9 +37,9 @@ We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\
                   font=\scriptsize},
     pthdr/.style={ptrow, font=\scriptsize\bfseries, align=center,
                   fill=gray!15},
-    pcell/.style={draw, minimum width=2.3mm, minimum height=3.4mm,
+    pcell/.style={draw, minimum width=2.0mm, minimum height=3.4mm,
                   inner sep=0pt, font=\tiny, fill=white},
-    bcell/.style={draw, minimum width=5mm, minimum height=4.4mm,
+    bcell/.style={draw, minimum width=4.5mm, minimum height=4.4mm,
                   inner sep=0pt, font=\tiny, fill=white},
     kvarrow/.style={->, line width=1.1pt, kvblue},
     ssmarrow/.style={->, line width=1.1pt, ssmorange},
@@ -66,22 +66,22 @@ We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\
         (r2) {\textcolor{kvblue}{\texttt{h\_2 $\to$ KV[7]}}};
 
   % ===== KVPagesStore (top right) =====
-  \node[pcell] (kvp0) at ([xshift=1.5mm, yshift=2.5mm] pthdr.east) {p0};
-  \node[pcell, right=0.2mm of kvp0] (kvp1) {p1};
-  \node[pcell, right=0.2mm of kvp1] (kvp2) {p2};
-  \node[pcell, right=0.2mm of kvp2, fill=kvblue!35] (kvp3) {p3};
-  \node[pcell, right=0.2mm of kvp3] (kvp4) {p4};
-  \node[font=\tiny, right=0.2mm of kvp4] (kvdots) {$\cdots$};
-  \node[pcell, right=0.2mm of kvdots, fill=kvblue!35] (kvp7) {p7};
+  \node[pcell] (kvp0) at ([xshift=0.5mm, yshift=2.5mm] pthdr.east) {p0};
+  \node[pcell, right=0.15mm of kvp0] (kvp1) {p1};
+  \node[pcell, right=0.15mm of kvp1] (kvp2) {p2};
+  \node[pcell, right=0.15mm of kvp2, fill=kvblue!35] (kvp3) {p3};
+  \node[pcell, right=0.15mm of kvp3] (kvp4) {p4};
+  \node[font=\tiny, right=0.15mm of kvp4] (kvdots) {$\cdots$};
+  \node[pcell, right=0.15mm of kvdots, fill=kvblue!35] (kvp7) {p7};
   \node[draw, rounded corners=2pt, fit=(kvp0)(kvp7),
         inner xsep=1.2mm, inner ysep=2mm,
         label={[font=\scriptsize, yshift=-0.5mm]above:KVPagesStore}]
         (kvbox) {};
 
   % ===== SSMBlocksStore (bottom right) =====
-  \node[bcell] (ssmb0) at ([xshift=1.5mm, yshift=-2mm] r2.east) {b0};
-  \node[bcell, right=0.2mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
-  \node[bcell, right=0.2mm of ssmb1] (ssmb2) {b2};
+  \node[bcell] (ssmb0) at ([xshift=0.5mm, yshift=-2mm] r2.east) {b0};
+  \node[bcell, right=0.15mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
+  \node[bcell, right=0.15mm of ssmb1] (ssmb2) {b2};
   \node[draw, rounded corners=2pt, fit=(ssmb0)(ssmb2),
         inner xsep=1.2mm, inner ysep=2mm,
         label={[font=\scriptsize, yshift=0.5mm]below:SSMBlocksStore}]
@@ -117,8 +117,8 @@ The system tracks pool pressure using a state machine with three states: \texttt
     tlabel/.style={font=\footnotesize, fill=white, inner sep=1.2pt},
   ]
   \node[state] (B) {BALANCED};
-  \node[state, below left=14mm and 1mm of B] (KP) {KV\_PRESSURED};
-  \node[state, below right=14mm and 1mm of B] (SP) {SSM\_PRESSURED};
+  \node[state, below left=15mm and 5mm of B] (KP) {KV\_PRESSURED};
+  \node[state, below right=15mm and 5mm of B] (SP) {SSM\_PRESSURED};
   \node[state, below=28mm of B] (R) {REBALANCING};
   \draw[->, thick] ($(B.north)+(0,4mm)$) -- (B.north);
   \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free $<$ th\_low}} (KP);
