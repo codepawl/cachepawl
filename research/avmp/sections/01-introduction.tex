@@ -24,5 +24,5 @@ We make the following specific contributions:
 
 \item \textbf{Empirical Validation on Hybrid Architectures (\S\ref{sec:eval}):} We execute a 270-cell sweep evaluating 5 allocator variants, 3 synthetic workloads, 3 pool sizes, and 3 random seeds. The dynamic AVMP allocator records a 7.6\% OOM reduction (510 versus 552) against the best static baseline. AVMP records 13.3$\times$ higher goodput on \texttt{uniform\_short}, 2.39$\times$ on \texttt{mixed\_long}, and 1.83$\times$ on \texttt{agentic\_burst} traffic patterns. A parameter sensitivity analysis proves \texttt{migration\_batch\_size} acts as the dominant configuration axis, while a Stage 2 threshold sweep returned a strict null result.
 
-\item \textbf{Open-Source Prototype:} We provide a reference Python implementation and synthetic workload harness with committed sweep artifacts for reproducibility.
+\item \textbf{Open-Source Prototype:} We provide a reference Python implementation and synthetic workload harness with committed sweep artifacts at \url{https://github.com/codepawl/cachepawl}.
 \end{itemize}
