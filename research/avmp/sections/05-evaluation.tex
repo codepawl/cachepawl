@@ -15,14 +15,14 @@ We generate synthetic workloads to capture three distinct prompt distributions. 
 
 We compare the dynamic AVMP allocator against static dual-pool baselines \cite{zheng2024sglang} and unified pool baselines \cite{kwon2023pagedattention}. Table~\ref{tab:baseline-comparison} presents the cross-workload aggregated results.
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \input{tables/generated/table_baseline_comparison.tex}
 \caption{Cross-workload OOM and fragmentation baseline comparison.}
 \label{tab:baseline-comparison}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
 \caption{Final out-of-memory occurrence comparison across allocator variants.}
@@ -40,7 +40,7 @@ We measure system throughput using goodput, defined as completed requests per se
 
 Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP records 434.24 req/s on \texttt{uniform\_short} versus 32.65 req/s for \texttt{fixed\_dual\_mr05}, a 13.299$\times$ ratio. On \texttt{mixed\_long}, 65.07 req/s versus 27.25 req/s gives 2.388$\times$. On \texttt{agentic\_burst}, 46.91 req/s versus 25.69 req/s gives 1.826$\times$.
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \input{tables/generated/table_per_workload_winner.tex}
 \caption{Per-workload goodput comparison between AVMP and best static baseline.}
@@ -58,14 +58,14 @@ We conduct a two-stage sensitivity analysis to identify the dominant parameters 
 
 In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 values ranging from 1 to 256. The results confirm our hypothesis that migration batch size acts as the dominant performance axis. We select \texttt{b128} as the default. Cross-workload, b128 records 510.0 OOMs versus b256's 509.3 OOMs, a 0.7 OOM gap within per-cell standard deviation (0.8 to 3.0). However, b128 migrates 313 MiB versus b256's 352 MiB per cell on average, a 12.5\% reduction in migration churn. Per-workload optima vary slightly (b4 for \texttt{uniform\_short}, b128 for \texttt{mixed\_long}, b256 for \texttt{agentic\_burst}), but all values within {b64, b128, b256} cluster within 13 OOMs cross-workload. We choose b128 as the conservative point in the near-optimal region (Figure~\ref{fig:oom-vs-batch-size}). Table~\ref{tab:stage1-batchsize} details the complete Stage 1 distributions.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_vs_batch_size.pdf}
 \caption{OOM occurrence variance across different migration batch sizes.}
 \label{fig:oom-vs-batch-size}
 \end{figure}
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \input{tables/generated/table_stage1_batchsize.tex}
 \caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes.}
@@ -74,7 +74,7 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 
 In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The empirical data falsifies both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_threshold_sensitivity.pdf}
 \caption{Threshold sensitivity analysis showing marginal effect on OOM events.}
@@ -83,7 +83,7 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 
 We systematically explored the parameter space; thresholds have a marginal effect within the sampled ranges (Figure~\ref{fig:threshold-sensitivity}). Table~\ref{tab:stage2-threshold} confirms the performance invariance across threshold bounds. This negative result narrows the design space: future work on AVMP should focus on migration batch size rather than threshold tuning.
 
-\begin{table}[h]
+\begin{table}[t]
 \centering
 \input{tables/generated/table_stage2_threshold.tex}
 \caption{Stage 2 threshold sweep at b128: all four variants yield byte-identical OOM, rebalance count, and migration totals.}
@@ -97,7 +97,7 @@ We acknowledge four primary limitations in the current AVMP prototype design.
 
 First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig:peak-reserved-tradeoff}). We size the backing stores to the maximum possible capacity of both pools combined. AVMP peaks at 9 GiB on a 4 GiB pool budget to enable zero-copy migration. Integrating \texttt{cuMemMap} would address this overhead by dynamically mapping virtual addresses to physical pages, similar to the approach in vTensor~\cite{xu2024vtensor}.
 
-\begin{figure}[h]
+\begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_peak_reserved_tradeoff.pdf}
 \caption{Peak reserved VRAM trade-off for dynamic allocation.}

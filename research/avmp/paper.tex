@@ -1,5 +1,8 @@
 \documentclass[sigconf, nonacm, screen]{acmart}
 
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+
 % Drop ACM ConferenceInfo placeholder for non-ACM preprint builds.
 \setcopyright{none}
 \settopmatter{printacmref=false, printfolios=true}
@@ -11,6 +14,7 @@
 \input{sections/00-abstract.tex}
 
 \begin{document}
+\sloppy
 
 \title{Asymmetric Virtual Memory Paging for Hybrid Mamba-Transformer-MoE Inference (DRAFT)}
 
