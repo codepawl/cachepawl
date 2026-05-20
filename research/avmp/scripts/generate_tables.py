@@ -184,10 +184,25 @@ def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
         for w in _WORKLOAD_ORDER
     }
     formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
+    baseline_total = totals[0]
+    delta_cells: list[str] = []
+    for i, total in enumerate(totals):
+        if i == 0:
+            delta_cells.append("---")
+            continue
+        if baseline_total <= 0.0:
+            delta_cells.append("n/a")
+            continue
+        delta_pct = (total - baseline_total) / baseline_total * 100.0
+        sign = "$-$" if delta_pct < 0 else "$+$"
+        delta_cells.append(f"{sign}{abs(delta_pct):.1f}\\%")
     lines: list[str] = []
-    lines.append("\\begin{tabular}{lrrrr}")
+    lines.append("\\begin{tabular}{lrrrrr}")
     lines.append("\\toprule")
-    lines.append("Variant & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
+    lines.append(
+        "Variant & uniform\\_short & mixed\\_long & agentic\\_burst & Total & "
+        "$\\Delta\\%$ vs padded\\_unified \\\\"
+    )
     lines.append("\\midrule")
     for i, variant in enumerate(_HEADLINE_VARIANTS):
         lines.append(
@@ -195,7 +210,7 @@ def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
             f"{formatted_per_workload['uniform_short'][i]} & "
             f"{formatted_per_workload['mixed_long'][i]} & "
             f"{formatted_per_workload['agentic_burst'][i]} & "
-            f"{formatted_totals[i]} \\\\"
+            f"{formatted_totals[i]} & {delta_cells[i]} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
