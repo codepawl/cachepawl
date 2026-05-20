@@ -6,11 +6,6 @@
 
 We select \texttt{avmp\_dynamic\_b128} as the default configuration rather than the \texttt{b256} variant. While \texttt{b256} records marginally fewer OOM events (509.3 versus 510.0 cross-workload), this 0.7 OOM gap falls completely within the per-cell standard deviation of 0.8 to 3.0. Furthermore, the \texttt{b128} configuration migrates 313 MiB per cell on average compared to 352 MiB for \texttt{b256}, representing a 12.5\% reduction in migration churn. We choose \texttt{b128} as the conservative point in the near-optimal region.
 
-\subsection{Limitations}
-\label{sec:discussion:limits}
-
-As detailed in \S\ref{sec:eval:limitations}, the current AVMP design requires a 2$\times$ VRAM footprint overhead, which future \texttt{cuMemMap} integrations would address. We scope this validation strictly to a pure Python prototype evaluated on a single GPU using synthetic workloads. Real-world validation requires Triton kernel implementations, multi-GPU tensor parallelism, and production traffic traces like ShareGPT or Alpaca.
-
 \subsection{Future Work}
 \label{sec:discussion:future}
 
