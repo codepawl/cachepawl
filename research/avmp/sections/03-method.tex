@@ -174,6 +174,8 @@ The system tracks pool pressure using a state machine with three states: \texttt
                   minimum width=20mm, minimum height=7.5mm,
                   inner sep=2pt, fill=white},
     trans/.style={->, thick, gray!50!black},
+    kvtrans/.style={->, thick, kvblue},
+    ssmtrans/.style={->, thick, ssmorange},
     tlabel/.style={font=\scriptsize, fill=white, inner sep=2pt},
   ]
   \node[state] (B) {BALANCED};
@@ -181,13 +183,13 @@ The system tracks pool pressure using a state machine with three states: \texttt
   \node[state, below right=20mm and 10mm of B] (SP) {SSM\_PRESSURED};
   \node[state, below=46mm of B] (R) {REBALANCING};
   \draw[->, thick] ($(B.north)+(0,4mm)$) -- (B.north);
-  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free $<$ th\_low}} (KP);
-  \draw[trans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free $<$ th\_low}} (SP);
-  \draw[trans] (KP) -- node[tlabel, sloped] {\texttt{ssm\_free $>$ th\_high}} (R);
-  \draw[trans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free $>$ th\_high}} (R);
-  \draw[trans] (R)  to[bend left=15]  node[tlabel, near start] {migration complete} (B);
-  \draw[trans] (KP) to[bend left=20]  node[tlabel] {free recovers} (B);
-  \draw[trans] (SP) to[bend right=20] node[tlabel] {free recovers} (B);
+  \draw[kvtrans]  (B) -- node[tlabel, sloped] {\texttt{kv\_free $<$ th\_low}} (KP);
+  \draw[ssmtrans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free $<$ th\_low}} (SP);
+  \draw[kvtrans]  (KP) -- node[tlabel, sloped] {\texttt{ssm\_free $>$ th\_high}} (R);
+  \draw[ssmtrans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free $>$ th\_high}} (R);
+  \draw[trans]    (R)  to[bend left=15]  node[tlabel, near start] {migration complete} (B);
+  \draw[kvtrans]  (KP) to[bend left=20]  node[tlabel] {free recovers} (B);
+  \draw[ssmtrans] (SP) to[bend right=20] node[tlabel] {free recovers} (B);
 \end{tikzpicture}
 \caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30). Edges are labelled by per-pool free-fraction conditions on \texttt{kv\_free}, \texttt{ssm\_free}, \texttt{threshold\_low} (\texttt{th\_low}), and \texttt{threshold\_high} (\texttt{th\_high}); all transitions fire inside the \texttt{CapacityError} handler of \texttt{allocate()} rather than from a pre-emptive sampling hook, so migration costs are paid only when allocation would otherwise fail.}
 \label{fig:state-machine}
