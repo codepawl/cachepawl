@@ -48,9 +48,17 @@ THROUGHPUT_SWEEP: Path = REPO_ROOT / "benchmarks/results/avmp-v2-throughput/full
 _HEADLINE_VARIANTS: tuple[str, ...] = (
     "padded_unified",
     "fixed_dual_mr05",
+    "fixed_dual_mr09",
     "avmp_static_mr05",
     "avmp_dynamic_b128",
 )
+
+# Variants that are absent from the batchsize-sweep snapshot and must be
+# fetched from the throughput-sweep snapshot when building tables that
+# otherwise read from batchsize-sweep. Both sweeps share the same 12-cell
+# grid (2 models x 2 budgets x 3 seeds per workload), so the per-cell
+# averages and std propagation are comparable.
+_THROUGHPUT_ONLY_VARIANTS: frozenset[str] = frozenset({"fixed_dual_mr09"})
 
 _WORKLOAD_ORDER: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
 _BATCH_SIZE_SERIES: tuple[int, ...] = (1, 2, 4, 8, 16, 32, 64, 128, 256)
@@ -195,13 +203,18 @@ def _format_with_rank(values: list[float], lower_is_better: bool, fmt: str) -> l
     return out
 
 
-def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
+def table_baseline_comparison(
+    batchsize_rows: list[Row],
+    throughput_rows: list[Row],
+    out_dir: Path,
+) -> Path:
     per_workload_mean: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
     per_workload_std: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
     totals: list[float] = []
     total_stds: list[float] = []
     for variant in _HEADLINE_VARIANTS:
-        per = _sum_oom_with_std_per_workload(rows, variant)
+        source = throughput_rows if variant in _THROUGHPUT_ONLY_VARIANTS else batchsize_rows
+        per = _sum_oom_with_std_per_workload(source, variant)
         for w in _WORKLOAD_ORDER:
             per_workload_mean[w].append(per[w][0])
             per_workload_std[w].append(per[w][1])
@@ -373,7 +386,7 @@ def generate_all(out_dir: Path) -> list[Path]:
     threshold_rows = _load_rows(THRESHOLD_SWEEP)
     throughput_rows = _load_rows(THROUGHPUT_SWEEP)
     return [
-        table_baseline_comparison(batchsize_rows, out_dir),
+        table_baseline_comparison(batchsize_rows, throughput_rows, out_dir),
         table_per_workload_winner(throughput_rows, out_dir),
         table_parameter_defaults(out_dir),
         table_stage1_batchsize(batchsize_rows, out_dir),
