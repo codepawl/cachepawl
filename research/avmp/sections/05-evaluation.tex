@@ -29,7 +29,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \label{fig:oom-comparison-final}
 \end{figure}
 
-The \texttt{avmp\_dynamic\_b128} variant records the lowest absolute OOM count at 510. This represents a 7.6\% reduction compared to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs, validating that our virtual handle abstraction introduces zero routing or logical capacity overhead.
+The \texttt{avmp\_dynamic\_b128} variant records the lowest absolute OOM count at 510. This represents a 7.6\% reduction compared to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs, validating that our virtual handle abstraction introduces no measurable effect on simulated capacity behavior relative to direct pool access.
 
 Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567.7 OOM events. This confirms that our modeled unified padding baseline fails under hybrid architecture constraints due to capacity overestimation, consistent with the behavior reported in vLLM issue \#37121. Furthermore, the \texttt{fixed\_dual\_mr09} variant, matching the default 0.9 ratio used in SGLang, records 1221.3 OOMs, demonstrating that static default ratios perform poorly on mixed workloads. As a design trade-off, AVMP maintains a 2$\times$ VRAM footprint, peaking at 9216 MiB reserved compared to 5120 MiB for static baselines.
 
