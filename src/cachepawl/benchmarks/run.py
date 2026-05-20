@@ -2,7 +2,7 @@
 
 Usage:
     python -m cachepawl.benchmarks.run \\
-        --workload {uniform_short,mixed_long,agentic_burst} \\
+        --workload {uniform_short,mixed_long,agentic_burst,sharegpt_replay} \\
         --allocator <name> \\
         [--device {cpu,cuda}] \\
         [--output benchmarks/results/] \\

@@ -73,6 +73,22 @@ class AllocatorMetrics:
     ``time_to_first_oom_seconds`` is wall-clock time from the start
     of the metrics window to the first ``record_oom`` call; ``None``
     if the run had no OOMs.
+
+    Phase-time fields (added in schema 1.3.0) decompose wall-clock
+    time across four buckets. ``time_in_service_ns`` is the cumulative
+    elapsed time of ``allocator.allocate`` and ``allocator.free``
+    calls that succeeded (no OOM). ``time_in_oom_retry_ns`` is the
+    cumulative elapsed time of allocate/free calls that ended in
+    ``OutOfMemoryError``. ``time_in_migration_ns`` is read from
+    ``allocator_specific_stats['time_spent_rebalancing_ns']`` and
+    represents the share of service time spent inside the allocator's
+    rebalancing path; it overlaps with service time rather than adding
+    to it. ``time_in_idle_ns`` is the residual
+    ``wall_ns - service - oom_retry`` clamped to a non-negative
+    integer; it covers event-heap operations, fragmentation sampling,
+    and any other non-allocator wall time. These fields let us
+    decompose goodput differences across variants instead of
+    asserting "faster recovery" without evidence.
     """
 
     peak_reserved_bytes: int = 0
@@ -90,6 +106,10 @@ class AllocatorMetrics:
     goodput_requests_per_second: float = 0.0
     completion_ratio: float = 0.0
     time_to_first_oom_seconds: float | None = None
+    time_in_service_ns: int = 0
+    time_in_oom_retry_ns: int = 0
+    time_in_migration_ns: int = 0
+    time_in_idle_ns: int = 0
     allocator_specific_stats: dict[str, float] = field(default_factory=dict)
 
     def allocate_latency_percentiles(self) -> LatencyPercentiles:
@@ -187,6 +207,16 @@ class MetricsCollector:
     def record_free(self, latency_ns: int) -> None:
         self._metrics.free_latency_ns.append(latency_ns)
 
+    def record_service_ns(self, ns: int) -> None:
+        """Accumulate elapsed time of a successful allocate/free call."""
+
+        self._metrics.time_in_service_ns += ns
+
+    def record_oom_retry_ns(self, ns: int) -> None:
+        """Accumulate elapsed time of an allocate/free call that ended in OOM."""
+
+        self._metrics.time_in_oom_retry_ns += ns
+
     def record_oom(self) -> None:
         self._metrics.oom_count += 1
         if self._first_oom_wall_ns is None:
@@ -247,6 +277,19 @@ class MetricsCollector:
             ) / 1e9
         else:
             self._metrics.time_to_first_oom_seconds = None
+
+        # Phase-time decomposition (schema 1.3.0). Migration time is a
+        # sub-component of service time, exported by avmp_dynamic through
+        # allocator_specific_stats and read here so the runner does not
+        # need allocator-specific knowledge. Idle is the residual of
+        # wall_ns after subtracting service + oom_retry, clamped to
+        # zero (small negative drift can occur from time.perf_counter_ns
+        # ordering at run boundaries).
+        wall_ns = max(end_ns - start_ns, 0)
+        migration_raw = self._metrics.allocator_specific_stats.get("time_spent_rebalancing_ns", 0.0)
+        self._metrics.time_in_migration_ns = max(0, int(migration_raw))
+        idle_ns = wall_ns - self._metrics.time_in_service_ns - self._metrics.time_in_oom_retry_ns
+        self._metrics.time_in_idle_ns = max(0, idle_ns)
 
     def sample(self, num_active_requests: int) -> None:
         """Capture an occupancy snapshot for the run timeline."""

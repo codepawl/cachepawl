@@ -43,6 +43,8 @@ benchmarks/results/*
 !benchmarks/results/avmp-v2-batchsize-sweep/
 !benchmarks/results/avmp-v2-threshold-sweep/
 !benchmarks/results/avmp-v2-throughput/
+!benchmarks/results/avmp-v15-timedecomp/
+!benchmarks/results/avmp-v15-sharegpt/
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
 benchmarks/results/avmp-v2/full/runs/
@@ -53,6 +55,10 @@ benchmarks/results/avmp-v2-batchsize-sweep/sweep.log
 benchmarks/results/avmp-v2-threshold-sweep/runs/
 benchmarks/results/avmp-v2-threshold-sweep/sweep.log
 benchmarks/results/avmp-v2-throughput/full/runs/
+benchmarks/results/avmp-v15-timedecomp/runs/
+benchmarks/results/avmp-v15-timedecomp/sweep.log
+benchmarks/results/avmp-v15-sharegpt/runs/
+benchmarks/results/avmp-v15-sharegpt/sweep.log
 
 # Paper build artifacts (scoped to research/avmp/)
 research/avmp/figures/generated/

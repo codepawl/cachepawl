@@ -208,10 +208,13 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
     x = np.arange(len(_WORKLOAD_ORDER), dtype=np.float64)
     width = 0.20
     offset = -1.5 * width
+    all_ys: list[float] = []
+    bar_annotations: list[tuple[float, float, str]] = []
     for variant in _HEADLINE_VARIANTS:
         per = _sum_oom_per_workload(rows, variant)
         ys = [per[w] for w in _WORKLOAD_ORDER]
-        ax.bar(
+        all_ys.extend(ys)
+        bars = ax.bar(
             x + offset,
             ys,
             width,
@@ -220,12 +223,31 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
             edgecolor="black",
             linewidth=0.4,
         )
+        for bar_obj, val in zip(bars, ys, strict=True):
+            label = f"{val:.0f}" if val >= 100 else f"{val:.1f}"
+            bar_annotations.append(
+                (bar_obj.get_x() + bar_obj.get_width() / 2, bar_obj.get_height(), label)
+            )
         offset += width
+    ymax = (max(all_ys) if all_ys else 1.0) * 1.12
+    ax.set_ylim(0.0, ymax)
+    for cx, top, label in bar_annotations:
+        ax.annotate(
+            label,
+            xy=(cx, top),
+            xytext=(0, 2),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=6.5,
+            rotation=0,
+        )
     ax.set_xticks(x)
     ax.set_xticklabels([w.replace("_", " ") for w in _WORKLOAD_ORDER])
     ax.set_ylabel("Total OOM events")
     ax.set_title("Cross-allocator OOM comparison")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+    ax.set_axisbelow(True)
     ax.legend(
         loc="upper center",
         bbox_to_anchor=(0.5, -0.18),

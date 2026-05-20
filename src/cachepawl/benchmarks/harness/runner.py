@@ -313,6 +313,10 @@ def _process_departure(
         free_ooms = True
     elapsed = time.perf_counter_ns() - start
     collector.record_free(elapsed)
+    if free_ooms:
+        collector.record_oom_retry_ns(elapsed)
+    else:
+        collector.record_service_ns(elapsed)
     # Strict completion: the request must have allocated cleanly AND
     # freed cleanly. request_had_oom defaults to False at arrival; any
     # allocate or free OOM flips it.
@@ -336,11 +340,13 @@ def _timed_allocate(
     except torch.cuda.OutOfMemoryError:
         elapsed = time.perf_counter_ns() - start
         collector.record_allocate(elapsed)
+        collector.record_oom_retry_ns(elapsed)
         collector.record_oom()
         request_had_oom[request_id] = True
         return []
     elapsed = time.perf_counter_ns() - start
     collector.record_allocate(elapsed)
+    collector.record_service_ns(elapsed)
     return ids
 
 

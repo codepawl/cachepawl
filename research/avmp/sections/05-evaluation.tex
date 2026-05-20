@@ -4,9 +4,11 @@
 \subsection{Experimental Setup}
 \label{sec:eval:setup}
 
-We evaluate the Asymmetric Virtual Page Table (AVMP) allocator on a single NVIDIA RTX 3060 12GB GPU running CUDA 13.0, PyTorch 2.12.0+cu130, and Python 3.10.19 on WSL2 Ubuntu. We execute an experimental sweep across 270 cells: 5 allocator variants, 3 synthetic workloads, 2 model specifications (\texttt{jamba\_1\_5\_mini} and \texttt{zamba2\_2\_7b}), 3 total memory pool sizes (1 GiB, 4 GiB, 8 GiB), and 3 random seeds. The entire sweep completes in 16 minutes and 14 seconds of wall time.
+We evaluate the Asymmetric Virtual Page Table (AVMP) allocator on a single NVIDIA RTX 3060 12GB GPU running CUDA 13.0, PyTorch 2.12.0+cu130, and Python 3.10.19 on WSL2 Ubuntu. We execute an experimental sweep across 270 cells: 5 allocator variants, 3 synthetic workloads, 2 model specifications (\texttt{jamba\_1\_5\_mini} and \texttt{zamba2\_2\_7b}), 3 total memory pool sizes (1 GiB, 4 GiB, 8 GiB), and 3 random seeds. The entire sweep completes in 16 minutes and 14 seconds of wall time. Two supplementary V1.5 sweeps on the same hardware add the wall-clock decomposition data (90 cells, 18:46) and the ShareGPT trace replay (60 cells, 1:56).
 
 We enforce strict determinism by using a logical operation counter for migration throttling rather than wall-clock time. This guarantees byte-identical reproducibility across reruns for event-deterministic fields. We include \texttt{effective\_batch\_size\_p50} in the deterministic subset by construction. We exclude \texttt{goodput} and \texttt{time\_to\_first\_oom} from strict reproducibility requirements as they depend on wall-clock execution speed.
+
+We report 95\% confidence intervals from paired bootstrap resampling for the headline claims (Table~\ref{tab:bootstrap-ci}). For each comparison we form matched pairs over the (workload, model, pool, seed) grid and resample the per-cell delta or ratio-of-means 10{,}000 times. Variants share random seeds across cells, so the comparison is paired by construction. Pre-registered RNG seed 20260520 makes the CIs byte-stable across reruns of \texttt{scripts/bootstrap\_ci.py}.
 
 We generate synthetic workloads to capture three distinct prompt distributions. The \texttt{uniform\_short} workload simulates KV-heavy traffic with low concurrency variance. The \texttt{mixed\_long} workload simulates long context requests that generate high SSM pressure and lower batch density. The \texttt{agentic\_burst} workload tests allocator responsiveness using a mix of short and long contexts with variable arrival loads.
 
@@ -32,16 +34,25 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \label{fig:oom-comparison-final}
 \end{figure}
 
-The \texttt{avmp\_dynamic\_b128} variant records the lowest absolute OOM count at 510. This represents a 7.6\% reduction compared to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs, validating that our virtual handle abstraction introduces no measurable effect on simulated capacity behavior relative to direct pool access.
+The \texttt{avmp\_dynamic\_b128} variant records the lowest cross-workload OOM count at 510, a 7.6\% reduction relative to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The paired bootstrap on the per-cell delta over the 36-cell grid puts the 95\% confidence interval at $[-5.83, -1.39]$ OOMs per cell, equivalent to a 3.0--12.7\% cross-workload reduction and excluding the null. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs (bootstrap CI $[0,0]$), validating that our virtual handle abstraction introduces no measurable overhead relative to direct pool access.
 
-Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567.7 OOM events. This confirms that our modeled unified padding baseline fails under hybrid architecture constraints due to capacity overestimation, consistent with the behavior reported in vLLM issue \#37121. Furthermore, the \texttt{fixed\_dual\_mr09} variant, matching the default 0.9 ratio used in SGLang, records 1221.3 OOMs, demonstrating that static default ratios perform poorly on mixed workloads. As a design trade-off, AVMP maintains a 2$\times$ VRAM footprint, peaking at 9216 MiB reserved compared to 5120 MiB for static baselines.
+The cross-workload reduction is concentrated on the long-context and bursty workloads. The per-cell delta on \texttt{mixed\_long} has 95\% CI $[-10.3, -1.3]$ OOMs and \texttt{agentic\_burst} has $[-9.3, -1.3]$; both exclude zero. On \texttt{uniform\_short} the per-cell delta is $+0.4$ with 95\% CI $[0.0, +1.3]$, so the comparison is statistically inconclusive on that workload, consistent with the within-1.7-OOM tie shown in Figure~\ref{fig:oom-comparison-final}. AVMP wins where the workload shifts pressure between pools; on the KV-only workload it is statistically indistinguishable from the best static partition.
+
+Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567.7 OOM events (bootstrap CI on the per-cell delta vs \texttt{fixed\_dual\_mr05}: $[+46.2, +128]$). This confirms that our modeled unified padding baseline fails under hybrid architecture constraints due to capacity overestimation, consistent with the behavior reported in vLLM issue \#37121. Furthermore, the \texttt{fixed\_dual\_mr09} variant, matching the default 0.9 ratio used in SGLang, records 1221.3 OOMs (bootstrap CI on the per-cell delta: $[+29.2, +86.9]$), demonstrating that static default ratios perform poorly on mixed workloads. As a design trade-off, AVMP maintains a 2$\times$ VRAM footprint, peaking at 9216 MiB reserved compared to 5120 MiB for static baselines.
+
+\begin{table*}[t]
+\centering
+\caption{Paired bootstrap 95\% confidence intervals for the headline claims. Each row resamples matched ``(workload, model, pool, seed)'' tuples with replacement 10{,}000 times and reports the per-tuple delta or the ratio-of-means as appropriate. The ``Significant'' column marks rows whose CI excludes the null (0 for deltas, 1 for ratios). Reproducible via \texttt{python scripts/bootstrap\_ci.py}.}
+\label{tab:bootstrap-ci}
+\input{tables/generated/table_bootstrap_ci.tex}
+\end{table*}
 
 \subsection{Throughput Analysis}
 \label{sec:eval:throughput}
 
 We measure system throughput using goodput, defined as completed requests per second. Our pre-registered protocol dictates that dynamic allocation is justified if the goodput exceeds 1.10$\times$ the best baseline on at least one workload. AVMP passes this threshold across all three workloads simultaneously.
 
-Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP records 434.24 req/s on \texttt{uniform\_short} versus 32.65 req/s for \texttt{fixed\_dual\_mr05}, a 13.30$\times$ ratio. On \texttt{mixed\_long}, 65.07 req/s versus 27.25 req/s gives 2.39$\times$. On \texttt{agentic\_burst}, 46.91 req/s versus 25.69 req/s gives 1.83$\times$.
+Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP records 434.24 req/s on \texttt{uniform\_short} versus 32.65 req/s for \texttt{fixed\_dual\_mr05}, a 13.30$\times$ ratio (paired bootstrap 95\% CI on the ratio of means: $[11.18, 16.00]$). On \texttt{mixed\_long}, 65.07 vs 27.25 req/s gives 2.39$\times$ (95\% CI $[1.70, 3.04]$). On \texttt{agentic\_burst}, 46.91 vs 25.69 req/s gives 1.83$\times$ (95\% CI $[1.42, 2.60]$). All three CIs exclude both the unit ratio and the pre-registered 1.10$\times$ threshold.
 
 \begin{table*}[t]
 \centering
@@ -52,7 +63,45 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 
 We explicitly report per-workload ratios rather than a cross-workload mean because static baselines exhibit high variance across distinct prompt distributions. The \texttt{fixed\_dual\_mr05} goodput ranges narrowly from 25.69 to 32.65 req/s across the workloads. Mean aggregation obscures this variance and misleads interpretations of allocator resilience. AVMP maintains consistently higher goodput by adapting dynamically.
 
-The primary mechanism driving this throughput increase is faster recovery from OOM events, not sustained concurrency. The median effective batch size (\texttt{effective\_batch\_size\_p50}) is strictly identical across all 5 variants per workload: 129 for \texttt{agentic\_burst}, 132 for \texttt{mixed\_long}, and 284 for \texttt{uniform\_short}. Since operational batch sizes remain workload-dominated rather than allocator-dominated, the goodput improvements directly result from static baselines spending significantly more wall time blocked in OOM-rejected recovery states.
+The median effective batch size (\texttt{effective\_batch\_size\_p50}) is strictly identical across all 5 variants per workload: 129 for \texttt{agentic\_burst}, 132 for \texttt{mixed\_long}, and 284 for \texttt{uniform\_short}. Bootstrap CIs on the per-cell batch-size delta are $[0,0]$ on every workload (Table~\ref{tab:bootstrap-ci}). Operational batch sizes are therefore workload-dominated rather than allocator-dominated, ruling out sustained-concurrency differences as the source of the goodput gap.
+
+To probe the actual mechanism we instrument the harness with a four-bucket wall-clock decomposition (service / OOM retry / migration / idle, schema 1.3.0) and rerun the throughput sweep on the same 90-cell grid (Figure~\ref{fig:time-decomposition}). Two distinct mechanisms appear, not one.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.95\linewidth]{figures/generated/fig_time_decomposition.pdf}
+\caption{Wall-clock phase decomposition per (variant, workload) cell ($\downarrow$ lower OOM-retry is better). Each bar normalizes service / OOM retry / migration / idle to a fraction of cell wall time, taking the median across 12 (model, pool, seed) cells. Service includes migration time as a sub-component; for stacked display we plot ``service excluding migration''. On \texttt{mixed\_long} and \texttt{agentic\_burst} \texttt{fixed\_dual\_mr05} spends 26\% / 10\% of wall time in OOM retry; \texttt{avmp\_dynamic\_b128} cuts that to 8.5\% / 2.1\%. On \texttt{uniform\_short} both variants OOM-retry at $\approx 0$\%, so the 13.30$\times$ goodput gap arises from a different source: \texttt{fixed\_dual\_mr05}'s per-call allocator service time is 32.2 s for the 512-request stream versus 2.1 s for AVMP at the same pool budget.}
+\label{fig:time-decomposition}
+\end{figure*}
+
+On the long-context and bursty workloads, where static partitions OOM repeatedly, the mechanism is exactly the one V1 hypothesized: AVMP reduces the share of wall time spent recovering from OOM-rejected allocations. For \texttt{mixed\_long}, \texttt{fixed\_dual\_mr05} spends 26.3\% of wall time in OOM retry vs 8.5\% for \texttt{avmp\_dynamic\_b128}. For \texttt{agentic\_burst} the figures are 10.0\% vs 2.1\%. Migration time for \texttt{avmp\_dynamic\_b128} on these workloads is well under 1\% of wall time, so the dynamic rebalancer pays for itself.
+
+On \texttt{uniform\_short}, where no variant OOMs at meaningful rates, OOM retry is negligible for both and cannot explain the 13.30$\times$ goodput ratio. The decomposition reveals a second mechanism: \texttt{fixed\_dual\_mr05}'s allocate / free latency is dramatically higher on the KV-heavy workload (32.2 s of cumulative service time for 512 requests at the 4 GiB pool budget vs 2.1 s for \texttt{avmp\_dynamic\_b128}). The virtual handle abstraction in \texttt{avmp\_static\_mr05} alone closes most of this gap (2.2 s service time at the same cell), so the speedup is attributable to the virtual address-space layer rather than the dynamic rebalancer. We refine the V1 framing accordingly: AVMP wins via OOM-retry reduction on workloads with capacity pressure and via faster per-call service on the workloads without it. We treat the per-call speedup as an observation of the prototype implementation rather than a load-bearing design claim; quantifying its share of the 13.30$\times$ would require an additional ablation that we leave to future work.
+
+\subsection{ShareGPT Trace Replay}
+\label{sec:eval:sharegpt}
+
+The three synthetic workloads target distinct stress axes (KV pressure, SSM pressure, burst variance) but do not match any particular real prompt distribution. We add a fourth workload, \texttt{sharegpt\_replay}, that samples prompt-token counts from 5{,}000 first-human-turn prompts in the ShareGPT-Vicuna corpus~\cite{sharegpt}. Token counts are a word-count proxy ($1.3 \times \text{words}$) and are clamped to $[16, 4096]$ so a single pathological 6{,}708-token prompt cannot exceed the 4 GiB pool budget. Generation lengths are log-normally distributed (mean 4.5, sigma 1.0, clipped to $[32, 2048]$) and arrival times are deterministically staggered. The clamp floor activates on $\approx 36$\% of draws, reflecting ShareGPT's short-prompt skew (median 25, p95 810 tokens); we report this faithfully rather than filtering.
+
+We rerun the throughput-v2 variant set on \texttt{sharegpt\_replay} alone (5 variants $\times$ 2 models $\times$ 2 pool budgets $\times$ 3 seeds $=$ 60 cells, 1:56 wall time). Table~\ref{tab:sharegpt-results} reports per-variant aggregates with paired bootstrap CIs against \texttt{fixed\_dual\_mr05}. Figure~\ref{fig:sharegpt-vs-synthetic} contrasts the per-workload goodput ratios.
+
+\begin{table*}[t]
+\centering
+\caption{ShareGPT trace replay: per-variant aggregates and paired bootstrap CIs (B=10000, RNG seed 20260520) over the 12-cell (model, pool, seed) grid. Goodput ratio is the ratio of means with the same paired-bootstrap resampling; \textbf{*} marks CIs that exclude the null. \texttt{fixed\_dual\_mr05} is the baseline. All AVMP variants record the same OOM count as \texttt{fixed\_dual\_mr05}; the goodput advantage comes from faster per-call service rather than from OOM avoidance.}
+\label{tab:sharegpt-results}
+\input{tables/generated/table_sharegpt_results.tex}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/generated/fig_sharegpt_vs_synthetic.pdf}
+\caption{AVMP goodput ratio vs \texttt{fixed\_dual\_mr05} across the three synthetic workloads and the ShareGPT replay ($\uparrow$ higher is better; dashed line = unity). Error bars are paired bootstrap 95\% CIs. ShareGPT lands at 2.36$\times$, between \texttt{agentic\_burst}'s 1.83$\times$ and \texttt{mixed\_long}'s 2.39$\times$, and well below \texttt{uniform\_short}'s 13.30$\times$. The synthetic short-prompt extreme inflates the headline number; ShareGPT gives a more realistic central-tendency estimate of the per-call-service-speedup mechanism.}
+\label{fig:sharegpt-vs-synthetic}
+\end{figure}
+
+The replay confirms the §4.3 mechanism story rather than the V1 framing. \texttt{avmp\_dynamic\_b128} records 2.33 OOMs per cell, identical to \texttt{fixed\_dual\_mr05} (bootstrap CI on the per-cell delta: $[0,0]$), so the 2.36$\times$ goodput ratio cannot arise from OOM avoidance. \texttt{avmp\_static\_mr05} produces an almost identical 2.48$\times$ ratio with the same zero OOM delta, consistent with the §4.3 finding that the per-call speedup is attributable to the virtual-handle layer rather than the dynamic rebalancer. The 95\% CI on the dynamic ratio is wide ($[1.33, 5.65]$) due to the heavy-tailed prompt distribution producing high per-cell variance, but it cleanly excludes the unit ratio.
+
+ShareGPT's 2.36$\times$ ratio is much smaller than the synthetic \texttt{uniform\_short} headline of 13.30$\times$. The synthetic workload's uniform 128--1024 prompt-token distribution is a deliberate stress test for the KV pool path and overstates the per-call service gap; ShareGPT's heavy-tailed but predominantly short prompts (median 25 tokens, p95 810) trigger the same mechanism but at a more realistic magnitude. We treat the 2.36$\times$ as the load-bearing point estimate for prompt distributions in the ShareGPT shape, and the 13.30$\times$ synthetic figure as an upper bound for the same allocator on a workload tuned to maximize the effect.
 
 \subsection{Sensitivity Analysis}
 \label{sec:eval:sensitivity}
@@ -109,7 +158,7 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 
 Second, we execute the allocator as a pure Python prototype without Triton or CUDA kernels. This validates allocator semantics; integration with Triton kernels and real model runtime is future work.
 
-Third, our evaluation uses synthetic prompt distributions. While our three presets successfully capture short, long, and bursty axes, they do not replicate real model traffic semantics. Future evaluations require ShareGPT \cite{sharegpt} and Alpaca \cite{taori2023alpaca} traces.
+Third, our evaluation supplements synthetic prompts with a ShareGPT-Vicuna trace replay (\S\ref{sec:eval:sharegpt}), which lands the AVMP-vs-baseline goodput ratio at $2.36\times$ (95\% CI $[1.33, 5.65]$) - well below the synthetic $13.30\times$ on \texttt{uniform\_short} and consistent with the $2.39\times$ on \texttt{mixed\_long}. The ShareGPT replay uses a word-count proxy for token lengths and a deterministic per-tick arrival schedule, so it captures the prompt-length distribution faithfully but not the temporal arrival semantics of real production traffic. Adversarial workloads, multi-tenant scheduling effects, and SLO-driven admission control remain unevaluated; Alpaca \cite{taori2023alpaca} and full HuggingFace conversation streams are natural next-step traces.
 
 Finally, we test strictly on a single GPU. Extending AVMP to multi-GPU environments requires implementing tensor parallelism with cross-device virtual pool sizing synchronization.
 

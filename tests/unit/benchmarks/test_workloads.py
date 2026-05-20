@@ -18,8 +18,8 @@ from cachepawl.benchmarks import (
 from cachepawl.quant.dtypes import DType
 
 
-def test_presets_expose_three_named_workloads() -> None:
-    assert set(PRESETS) == {"uniform_short", "mixed_long", "agentic_burst"}
+def test_presets_expose_named_workloads() -> None:
+    assert set(PRESETS) == {"uniform_short", "mixed_long", "agentic_burst", "sharegpt_replay"}
 
 
 def test_preset_layer_profiles_match_jamba_mini() -> None:
@@ -78,6 +78,24 @@ def test_agentic_burst_lognormal_produces_extreme_tail() -> None:
     assert above_extreme >= 1
     for r in requests:
         assert 64 <= r.prompt_len <= 65536
+
+
+def test_sharegpt_replay_request_bounds() -> None:
+    spec = replace(PRESETS["sharegpt_replay"], num_requests=512, seed=4)
+    requests = generate_request_stream(spec)
+    assert len(requests) == 512
+    for r in requests:
+        assert 16 <= r.prompt_len <= 4096
+        assert 32 <= r.gen_len <= 2048
+        assert r.arrival_tick == r.request_id
+        assert r.departure_tick == r.arrival_tick + r.prompt_len + r.gen_len
+
+
+def test_sharegpt_replay_is_deterministic() -> None:
+    spec = PRESETS["sharegpt_replay"]
+    first = generate_request_stream(spec)
+    second = generate_request_stream(spec)
+    assert first == second
 
 
 def test_agentic_burst_arrivals_are_compressed() -> None:
