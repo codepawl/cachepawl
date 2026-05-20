@@ -22,7 +22,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 
 \begin{table*}[t]
 \centering
-\caption{Cross-workload $N_{\mathrm{OOM}}$ baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total $N_{\mathrm{OOM}}$ versus \texttt{padded\_unified}: negative numbers mark improvement.}
+\caption{Cross-workload OOM totals per variant ($\downarrow$ lower is better). Each row sums per-(model, pool, seed) cell means over the 12-cell grid; $\sigma$ propagates per-cell std across cells as $\sqrt{\sum_i \sigma_i^2}$. \texttt{avmp\_dynamic\_b128} records 510 cross-workload OOMs, 7.6\% under the best static baseline (\texttt{fixed\_dual\_mr05} at 552); bootstrap CI excludes the null (see Table~\ref{tab:bootstrap-ci}). \textbf{Bold} = best per column; \underline{underline} = second; $\Delta\%$ is vs \texttt{padded\_unified}.}
 \label{tab:baseline-comparison}
 \input{tables/generated/table_baseline_comparison.tex}
 \end{table*}
@@ -30,7 +30,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
-\caption{Cross-allocator $N_{\mathrm{OOM}}$ comparison ($\downarrow$ lower is better). Grouped bars show total OOM events per workload across 4 allocator variants; each bar is summed over 12 cells (2 model specs $\times$ 3 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} records the lowest counts on \texttt{mixed\_long} and \texttt{agentic\_burst}, and ties the static baselines on \texttt{uniform\_short} within 1.7 OOMs (9.0 vs 7.3, both far below \texttt{padded\_unified}'s 482.7). \texttt{padded\_unified} fails worst on every workload.}
+\caption{Cross-allocator OOM totals per workload ($\downarrow$ lower is better). Each bar sums per-cell means over 12 cells (2 models $\times$ 2 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} wins on \texttt{mixed\_long} (364 vs 387) and \texttt{agentic\_burst} (137 vs 157), and ties the static baselines on \texttt{uniform\_short} within $\approx 2$ OOMs (9.0 vs 7.3); \texttt{padded\_unified} loses on every workload.}
 \label{fig:oom-comparison-final}
 \end{figure}
 
@@ -42,7 +42,7 @@ Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567
 
 \begin{table*}[t]
 \centering
-\caption{Paired bootstrap 95\% confidence intervals for the headline claims. Each row resamples matched ``(workload, model, pool, seed)'' tuples with replacement 10{,}000 times and reports the per-tuple delta or the ratio-of-means as appropriate. The ``Significant'' column marks rows whose CI excludes the null (0 for deltas, 1 for ratios). Reproducible via \texttt{python scripts/bootstrap\_ci.py}.}
+\caption{Paired bootstrap 95\% CIs for the V1 headline claims (B=10000, RNG seed 20260520). Each row resamples matched (workload, model, pool, seed) tuples and reports either the per-tuple delta or the ratio of means. The V1 point estimates (13.30$\times$, 2.39$\times$, 1.83$\times$, $-7.6\%$) all sit inside their bootstrap CIs; the OOM delta on \texttt{uniform\_short} alone is inconclusive (CI $[0, +1.25]$ per cell). \textbf{Significant} = CI excludes the null (0 for deltas, 1 for ratios). Reproducible via \texttt{scripts/bootstrap\_ci.py}.}
 \label{tab:bootstrap-ci}
 \input{tables/generated/table_bootstrap_ci.tex}
 \end{table*}
@@ -56,7 +56,7 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 
 \begin{table*}[t]
 \centering
-\caption{Per-workload goodput comparison between AVMP and the best static baseline. Goodput columns ($\uparrow$ higher is better) are mean req/s across 12 cells; the ratio column is $g_{\mathrm{AVMP}} / g_{\mathrm{baseline}}$ where $g$ is goodput. \textbf{Bold} = winner per row. AVMP wins all three workloads, with the largest gap on \texttt{uniform\_short} ($13.30\times$).}
+\caption{Per-workload goodput, AVMP vs the best static baseline ($\uparrow$ higher is better). Goodput columns are mean req/s across the 12-cell (model, pool, seed) grid; ratio is $g_{\mathrm{AVMP}} / g_{\mathrm{baseline}}$. AVMP wins all three: 13.30$\times$ on \texttt{uniform\_short} (95\% CI $[11.18, 16.00]$), 2.39$\times$ on \texttt{mixed\_long} ($[1.70, 3.04]$), 1.83$\times$ on \texttt{agentic\_burst} ($[1.42, 2.60]$); CIs from Table~\ref{tab:bootstrap-ci}. \textbf{Bold} = winner per row.}
 \label{tab:per-workload-winner}
 \input{tables/generated/table_per_workload_winner.tex}
 \end{table*}
@@ -70,7 +70,7 @@ To probe the actual mechanism we instrument the harness with a four-bucket wall-
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.95\linewidth]{figures/generated/fig_time_decomposition.pdf}
-\caption{Wall-clock phase decomposition per (variant, workload) cell ($\downarrow$ lower OOM-retry is better). Each bar normalizes service / OOM retry / migration / idle to a fraction of cell wall time, taking the median across 12 (model, pool, seed) cells. Service includes migration time as a sub-component; for stacked display we plot ``service excluding migration''. On \texttt{mixed\_long} and \texttt{agentic\_burst} \texttt{fixed\_dual\_mr05} spends 26\% / 10\% of wall time in OOM retry; \texttt{avmp\_dynamic\_b128} cuts that to 8.5\% / 2.1\%. On \texttt{uniform\_short} both variants OOM-retry at $\approx 0$\%, so the 13.30$\times$ goodput gap arises from a different source: \texttt{fixed\_dual\_mr05}'s per-call allocator service time is 32.2 s for the 512-request stream versus 2.1 s for AVMP at the same pool budget.}
+\caption{Wall-clock phase decomposition per (variant, workload) cell ($\downarrow$ lower OOM-retry is better). Each bar shows service / OOM retry / migration / idle as fractions of cell wall time, median across 12 (model, pool, seed) cells. AVMP cuts OOM-retry from 26\% to 8.5\% on \texttt{mixed\_long} and from 10\% to 2.1\% on \texttt{agentic\_burst}; on \texttt{uniform\_short} both variants idle at $\approx 0$\% OOM-retry, exposing the per-call service mechanism (see \S\ref{sec:eval:throughput}).}
 \label{fig:time-decomposition}
 \end{figure*}
 
@@ -87,7 +87,7 @@ We rerun the throughput-v2 variant set on \texttt{sharegpt\_replay} alone (5 var
 
 \begin{table*}[t]
 \centering
-\caption{ShareGPT trace replay: per-variant aggregates and paired bootstrap CIs (B=10000, RNG seed 20260520) over the 12-cell (model, pool, seed) grid. Goodput ratio is the ratio of means with the same paired-bootstrap resampling; \textbf{*} marks CIs that exclude the null. \texttt{fixed\_dual\_mr05} is the baseline. All AVMP variants record the same OOM count as \texttt{fixed\_dual\_mr05}; the goodput advantage comes from faster per-call service rather than from OOM avoidance.}
+\caption{ShareGPT trace replay: per-variant aggregates with paired bootstrap CIs vs \texttt{fixed\_dual\_mr05} ($\uparrow$ higher goodput is better). 60 cells (5 variants $\times$ 2 models $\times$ 2 pool budgets $\times$ 3 seeds, 1:56 wall time, B=10000); \textbf{*} marks CIs that exclude the null. All AVMP variants tie \texttt{fixed\_dual\_mr05} on OOM count (per-cell delta CI $[0,0]$); the 2.36$\times$ goodput advantage comes from faster per-call service, not OOM avoidance (see \S\ref{sec:eval:sharegpt}).}
 \label{tab:sharegpt-results}
 \input{tables/generated/table_sharegpt_results.tex}
 \end{table*}
@@ -95,7 +95,7 @@ We rerun the throughput-v2 variant set on \texttt{sharegpt\_replay} alone (5 var
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_sharegpt_vs_synthetic.pdf}
-\caption{AVMP goodput ratio vs \texttt{fixed\_dual\_mr05} across the three synthetic workloads and the ShareGPT replay ($\uparrow$ higher is better; dashed line = unity). Error bars are paired bootstrap 95\% CIs. ShareGPT lands at 2.36$\times$, between \texttt{agentic\_burst}'s 1.83$\times$ and \texttt{mixed\_long}'s 2.39$\times$, and well below \texttt{uniform\_short}'s 13.30$\times$. The synthetic short-prompt extreme inflates the headline number; ShareGPT gives a more realistic central-tendency estimate of the per-call-service-speedup mechanism.}
+\caption{AVMP goodput ratio vs \texttt{fixed\_dual\_mr05} per workload ($\uparrow$ higher is better; dashed line = unity). Error bars are paired bootstrap 95\% CIs. ShareGPT lands at 2.36$\times$, between \texttt{agentic\_burst}'s 1.83$\times$ and \texttt{mixed\_long}'s 2.39$\times$, and well under the synthetic \texttt{uniform\_short} extreme of 13.30$\times$. The synthetic short-prompt workload inflates the headline; ShareGPT is the realistic central-tendency estimate.}
 \label{fig:sharegpt-vs-synthetic}
 \end{figure}
 
