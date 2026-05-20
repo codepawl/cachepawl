@@ -197,7 +197,7 @@ def fig_oom_vs_batch_size(rows: list[Row], out_dir: Path) -> tuple[Path, Path]:
     ax.set_xticklabels([str(bs) for bs in _BATCH_SIZE_SERIES])
     ax.set_xlabel("Migration batch size B (log2 scale)")
     ax.set_ylabel("Total OOM events")
-    ax.set_title("Stage 1: OOM events vs migration batch size B (per workload)")
+    ax.set_title("Stage 1 sweep of OOM events vs migration batch size B (per workload)")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ax.legend(loc="best", framealpha=0.85, fontsize=8)
     return _save_pair(fig, out_dir, "fig_oom_vs_batch_size")
@@ -289,7 +289,7 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     ax.set_xticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=20, ha="right")
     ax.set_ylabel("Peak reserved VRAM (MiB)")
-    ax.set_title("Peak reserved memory: AVMP carries a 2x physical-footprint cost")
+    ax.set_title("Peak reserved memory shows AVMP's 2x physical-footprint cost")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ymax = (max(v + e for v, e in zip(values, errors, strict=True)) if values else 1.0) * 1.18
     ax.set_ylim(0, ymax)
@@ -322,7 +322,7 @@ def fig_threshold_sensitivity(
     ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=20, ha="right")
     ax.set_ylabel("Total OOM events (cross-workload)")
-    ax.set_title("Stage 2: threshold variants all tie with stage 1 b128 reference")
+    ax.set_title("Stage 2 sweep where threshold variants all tie with stage 1 b128 reference")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ymax = max(values) * 1.15 if values else 1.0
     ax.set_ylim(0, ymax)

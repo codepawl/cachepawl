@@ -316,7 +316,7 @@ def write_figure(
     ax.set_xticks(x)
     ax.set_xticklabels([w.replace("_", " ") for w in workloads], rotation=15, ha="right")
     ax.set_ylabel(r"avmp\_dynamic\_b128 / fixed\_dual\_mr05 goodput")
-    ax.set_title("AVMP goodput advantage: synthetic workloads vs ShareGPT replay")
+    ax.set_title("AVMP goodput advantage on synthetic and ShareGPT workloads")
     ymax = max(r + h for r, h in zip(ratios, err_high, strict=True)) * 1.12
     ax.set_ylim(0.0, ymax)
     for rect, point, hi_err in zip(bars, ratios, err_high, strict=True):
