@@ -240,22 +240,48 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     fig, ax = plt.subplots(figsize=(6.5, 3.8))
     mib = 1024.0 * 1024.0
     means: dict[str, float] = {}
+    stds: dict[str, float] = {}
     for variant in _HEADLINE_VARIANTS:
-        peaks = [r.peak_reserved_bytes_mean for r in rows if r.variant_label == variant]
-        means[variant] = (sum(peaks) / len(peaks) / mib) if peaks else 0.0
+        peaks_mib = [
+            r.peak_reserved_bytes_mean / mib for r in rows if r.variant_label == variant
+        ]
+        if peaks_mib:
+            arr = np.asarray(peaks_mib, dtype=np.float64)
+            means[variant] = float(arr.mean())
+            stds[variant] = float(arr.std(ddof=0))
+        else:
+            means[variant] = 0.0
+            stds[variant] = 0.0
     labels = [_VARIANT_DISPLAY[v] for v in _HEADLINE_VARIANTS]
     values = [means[v] for v in _HEADLINE_VARIANTS]
+    errors = [stds[v] for v in _HEADLINE_VARIANTS]
     colors = [_PALETTE[v] for v in _HEADLINE_VARIANTS]
-    ax.bar(labels, values, color=colors, edgecolor="black", linewidth=0.4)
+    ax.bar(
+        labels,
+        values,
+        yerr=errors,
+        color=colors,
+        edgecolor="black",
+        linewidth=0.4,
+        capsize=4,
+        error_kw={"elinewidth": 0.8, "ecolor": "#333333"},
+    )
     ax.set_xticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=20, ha="right")
-    ax.set_ylabel("Mean peak_reserved (MiB)")
+    ax.set_ylabel("Peak reserved VRAM (MiB)")
     ax.set_title("Peak reserved memory: AVMP carries a 2x physical-footprint cost")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
-    ymax = max(values) * 1.15 if values else 1.0
+    ymax = (max(v + e for v, e in zip(values, errors)) if values else 1.0) * 1.18
     ax.set_ylim(0, ymax)
-    for i, v in enumerate(values):
-        ax.text(i, v + ymax * 0.01, f"{v:,.0f}", ha="center", va="bottom", fontsize=8)
+    for i, (v, e) in enumerate(zip(values, errors)):
+        ax.text(
+            i,
+            v + e + ymax * 0.01,
+            f"{v:,.0f} $\\pm$ {e:,.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
     return _save_pair(fig, out_dir, "fig_peak_reserved_tradeoff")
 
 

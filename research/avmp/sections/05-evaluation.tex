@@ -18,7 +18,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_baseline_comparison.tex}
-\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better). \textbf{Bold} = best per column; \underline{underline} = second best. The $\Delta\%$ column reports the change in total OOMs versus \texttt{padded\_unified}: negative numbers mark improvement.}
+\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total OOMs versus \texttt{padded\_unified}: negative numbers mark improvement.}
 \label{tab:baseline-comparison}
 \end{table*}
 
@@ -68,7 +68,7 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_stage1_batchsize.tex}
-\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better). \textbf{Bold} = best per column; \underline{underline} = second best.}
+\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is propagated across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ from per-cell std across 3 seeds. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means).}
 \label{tab:stage1-batchsize}
 \end{table*}
 
@@ -86,7 +86,7 @@ We systematically explored the parameter space; thresholds have a marginal effec
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_stage2_threshold.tex}
-\caption{Stage 2 threshold sweep at b128: all four variants yield byte-identical OOM, rebalance count, and migration totals.}
+\caption{Stage 2 threshold sweep at b128 ($\downarrow$ lower \texttt{total\_oom} is better): all four threshold variants and the b128 reference yield byte-identical OOM means and identical rebalance counts. The $\pm$ values on \texttt{total\_oom} propagate per-cell std across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ and are also identical, confirming the tie at the distribution level.}
 \label{tab:stage2-threshold}
 \end{table*}
 
@@ -100,7 +100,7 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_peak_reserved_tradeoff.pdf}
-\caption{Peak reserved VRAM trade-off for dynamic allocation; lower VRAM is better in absolute terms, but AVMP intentionally trades 2$\times$ VRAM for capacity migration headroom.}
+\caption{Peak reserved VRAM trade-off for dynamic allocation; lower VRAM is better in absolute terms, but AVMP intentionally trades 2$\times$ VRAM for capacity migration headroom. Bars show mean across 12 cells with error bars at $\pm 1\sigma$ (cross-cell standard deviation), and value labels report $\mathrm{mean} \pm \sigma$.}
 \label{fig:peak-reserved-tradeoff}
 \end{figure}
 

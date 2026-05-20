@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +71,7 @@ class Row:
     model_spec_name: str
     total_bytes: int
     oom_count_mean: float
+    oom_count_std: float
     rebalance_count_median: float
     threshold_low_median: float
     threshold_high_median: float
@@ -87,12 +89,15 @@ def _coerce_row(raw: object) -> Row:
                 asp[str(k)] = float(v)
     gp_raw = raw.get("goodput_requests_per_second_median")
     goodput = float(gp_raw) if isinstance(gp_raw, (int, float)) else 0.0
+    oom_std_raw = raw.get("oom_count_std")
+    oom_std = float(oom_std_raw) if isinstance(oom_std_raw, (int, float)) else 0.0
     return Row(
         variant_label=str(raw["variant_label"]),
         workload_name=str(raw["workload_name"]),
         model_spec_name=str(raw["model_spec_name"]),
         total_bytes=int(cast(int, raw["total_bytes"])),
         oom_count_mean=float(cast(float, raw["oom_count_mean"])),
+        oom_count_std=oom_std,
         rebalance_count_median=float(asp.get("rebalance_count", 0.0)),
         threshold_low_median=float(asp.get("threshold_low", 0.0)),
         threshold_high_median=float(asp.get("threshold_high", 0.0)),
@@ -118,6 +123,27 @@ def _sum_oom_per_workload(rows: list[Row], variant: str) -> dict[str, float]:
         if r.variant_label == variant and r.workload_name in out:
             out[r.workload_name] += r.oom_count_mean
     return out
+
+
+def _sum_oom_with_std_per_workload(
+    rows: list[Row], variant: str
+) -> dict[str, tuple[float, float]]:
+    """Sum mean OOMs and propagate std across cells assuming independence.
+
+    Per-cell ``oom_count_std`` is taken from :mod:`aggregate`; the std of
+    a sum of independent random variables is ``sqrt(sum(var_i))``, which
+    is the standard error propagation result. This is not data
+    fabrication: it is a derivable transformation of the existing
+    pipeline output.
+    """
+
+    sums: dict[str, float] = dict.fromkeys(_WORKLOAD_ORDER, 0.0)
+    vars_: dict[str, float] = dict.fromkeys(_WORKLOAD_ORDER, 0.0)
+    for r in rows:
+        if r.variant_label == variant and r.workload_name in sums:
+            sums[r.workload_name] += r.oom_count_mean
+            vars_[r.workload_name] += r.oom_count_std * r.oom_count_std
+    return {w: (sums[w], math.sqrt(vars_[w])) for w in _WORKLOAD_ORDER}
 
 
 def _sum_rebalance(rows: list[Row], variant: str) -> float:
@@ -172,15 +198,19 @@ def _format_with_rank(values: list[float], lower_is_better: bool, fmt: str) -> l
 
 
 def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
-    per_workload: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_mean: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_std: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
     totals: list[float] = []
+    total_stds: list[float] = []
     for variant in _HEADLINE_VARIANTS:
-        per = _sum_oom_per_workload(rows, variant)
+        per = _sum_oom_with_std_per_workload(rows, variant)
         for w in _WORKLOAD_ORDER:
-            per_workload[w].append(per[w])
-        totals.append(sum(per.values()))
+            per_workload_mean[w].append(per[w][0])
+            per_workload_std[w].append(per[w][1])
+        totals.append(sum(per[w][0] for w in _WORKLOAD_ORDER))
+        total_stds.append(math.sqrt(sum(per[w][1] ** 2 for w in _WORKLOAD_ORDER)))
     formatted_per_workload = {
-        w: _format_with_rank(per_workload[w], lower_is_better=True, fmt="{:.1f}")
+        w: _format_with_rank(per_workload_mean[w], lower_is_better=True, fmt="{:.1f}")
         for w in _WORKLOAD_ORDER
     }
     formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
@@ -205,12 +235,14 @@ def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
     )
     lines.append("\\midrule")
     for i, variant in enumerate(_HEADLINE_VARIANTS):
+        cells = [
+            f"{formatted_per_workload[w][i]} $\\pm$ {per_workload_std[w][i]:.1f}"
+            for w in _WORKLOAD_ORDER
+        ]
+        total_cell = f"{formatted_totals[i]} $\\pm$ {total_stds[i]:.1f}"
         lines.append(
-            f"{_tex_escape(variant)} & "
-            f"{formatted_per_workload['uniform_short'][i]} & "
-            f"{formatted_per_workload['mixed_long'][i]} & "
-            f"{formatted_per_workload['agentic_burst'][i]} & "
-            f"{formatted_totals[i]} & {delta_cells[i]} \\\\"
+            f"{_tex_escape(variant)} & {cells[0]} & {cells[1]} & "
+            f"{cells[2]} & {total_cell} & {delta_cells[i]} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -273,15 +305,19 @@ def table_parameter_defaults(out_dir: Path) -> Path:
 
 
 def table_stage1_batchsize(rows: list[Row], out_dir: Path) -> Path:
-    per_workload: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_mean: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_std: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
     totals: list[float] = []
+    total_stds: list[float] = []
     for bs in _BATCH_SIZE_SERIES:
-        per = _sum_oom_per_workload(rows, f"avmp_dynamic_b{bs}")
+        per = _sum_oom_with_std_per_workload(rows, f"avmp_dynamic_b{bs}")
         for w in _WORKLOAD_ORDER:
-            per_workload[w].append(per[w])
-        totals.append(sum(per.values()))
+            per_workload_mean[w].append(per[w][0])
+            per_workload_std[w].append(per[w][1])
+        totals.append(sum(per[w][0] for w in _WORKLOAD_ORDER))
+        total_stds.append(math.sqrt(sum(per[w][1] ** 2 for w in _WORKLOAD_ORDER)))
     formatted_per_workload = {
-        w: _format_with_rank(per_workload[w], lower_is_better=True, fmt="{:.1f}")
+        w: _format_with_rank(per_workload_mean[w], lower_is_better=True, fmt="{:.1f}")
         for w in _WORKLOAD_ORDER
     }
     formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
@@ -291,12 +327,13 @@ def table_stage1_batchsize(rows: list[Row], out_dir: Path) -> Path:
     lines.append("batch\\_size & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
     lines.append("\\midrule")
     for i, bs in enumerate(_BATCH_SIZE_SERIES):
+        cells = [
+            f"{formatted_per_workload[w][i]} $\\pm$ {per_workload_std[w][i]:.1f}"
+            for w in _WORKLOAD_ORDER
+        ]
+        total_cell = f"{formatted_totals[i]} $\\pm$ {total_stds[i]:.1f}"
         lines.append(
-            f"{bs} & "
-            f"{formatted_per_workload['uniform_short'][i]} & "
-            f"{formatted_per_workload['mixed_long'][i]} & "
-            f"{formatted_per_workload['agentic_burst'][i]} & "
-            f"{formatted_totals[i]} \\\\"
+            f"{bs} & {cells[0]} & {cells[1]} & {cells[2]} & {total_cell} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -323,13 +360,14 @@ def table_stage2_threshold(
     lines.append("\\midrule")
     for variant in _THRESHOLD_TABLE_VARIANTS:
         source = batchsize_rows if variant == "avmp_dynamic_b128" else threshold_rows
-        per = _sum_oom_per_workload(source, variant)
-        total = sum(per.values())
+        per_with_std = _sum_oom_with_std_per_workload(source, variant)
+        total = sum(per_with_std[w][0] for w in _WORKLOAD_ORDER)
+        total_std = math.sqrt(sum(per_with_std[w][1] ** 2 for w in _WORKLOAD_ORDER))
         rebal = _sum_rebalance(source, variant)
         th_low, th_high = _representative_thresholds(source, variant)
         lines.append(
             f"{_tex_escape(variant)} & {th_low:.2f} & {th_high:.2f} & "
-            f"{total:.1f} & {rebal:.0f} \\\\"
+            f"{total:.1f} $\\pm$ {total_std:.1f} & {rebal:.0f} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
