@@ -317,13 +317,16 @@ def write_figure(
     ax.set_xticklabels([w.replace("_", " ") for w in workloads], rotation=15, ha="right")
     ax.set_ylabel(r"avmp\_dynamic\_b128 / fixed\_dual\_mr05 goodput")
     ax.set_title("AVMP goodput advantage: synthetic workloads vs ShareGPT replay")
-    for rect, point in zip(bars, ratios, strict=True):
+    ymax = max(r + h for r, h in zip(ratios, err_high, strict=True)) * 1.12
+    ax.set_ylim(0.0, ymax)
+    for rect, point, hi_err in zip(bars, ratios, err_high, strict=True):
         ax.annotate(
             f"{point:.2f}x",
-            xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
-            xytext=(0, 3),
+            xy=(rect.get_x() + rect.get_width() / 2, rect.get_height() + hi_err),
+            xytext=(0, 5),
             textcoords="offset points",
             ha="center",
+            va="bottom",
             fontsize=9,
         )
     ax.spines["top"].set_visible(False)

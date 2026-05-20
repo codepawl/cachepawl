@@ -285,7 +285,7 @@ def make_figure(rows: list[_PhaseRow], output_dir: Path) -> tuple[Path, Path]:
                 final_labels.append(target)
                 seen.add(target)
                 break
-    focus_label = f"★ {_VARIANT_SHORT[_FOCUS_VARIANT]} = {_FOCUS_VARIANT.replace('_', ' ')} (focus)"
+    focus_label = f"★ {_VARIANT_SHORT[_FOCUS_VARIANT]} = {_FOCUS_VARIANT.replace('_', ' ')} (ours)"
     ax.legend(
         final_handles,
         final_labels,
