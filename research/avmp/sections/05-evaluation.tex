@@ -6,7 +6,7 @@
 
 We evaluate the Asymmetric Virtual Page Table (AVMP) allocator on a single NVIDIA RTX 3060 12GB GPU running CUDA 13.0, PyTorch 2.12.0+cu130, and Python 3.10.19 on WSL2 Ubuntu. We execute an experimental sweep across 270 cells: 5 allocator variants, 3 synthetic workloads, 2 model specifications (\texttt{jamba\_1\_5\_mini} and \texttt{zamba2\_2\_7b}), 3 total memory pool sizes (1 GiB, 4 GiB, 8 GiB), and 3 random seeds. The entire sweep completes in 16 minutes and 14 seconds of wall time. Two supplementary V1.5 sweeps on the same hardware add the wall-clock decomposition data (90 cells, 18:46) and the ShareGPT trace replay (60 cells, 1:56).
 
-We enforce determinism by using a logical operation counter for migration throttling rather than wall-clock time. This guarantees byte-identical reproducibility across reruns for event-deterministic fields. We include \texttt{effective\_batch\_size\_p50} in the deterministic subset by construction. We exclude \texttt{goodput} and \texttt{time\_to\_first\_oom} from strict reproducibility requirements as they depend on wall-clock execution speed.
+We enforce determinism by using a logical operation counter for migration throttling rather than wall-clock time. This ensures byte-identical reproducibility across reruns for event-deterministic fields. We include \texttt{effective\_batch\_size\_p50} in the deterministic subset by construction. We exclude \texttt{goodput} and \texttt{time\_to\_first\_oom} from strict reproducibility requirements as they depend on wall-clock execution speed.
 
 We report 95\% confidence intervals from paired bootstrap resampling for the headline claims (Table~\ref{tab:bootstrap-ci}). For each comparison we form matched pairs over the (workload, model, pool, seed) grid and resample the per-cell delta or ratio-of-means 10{,}000 times. Variants share random seeds across cells, so the comparison is paired by construction. Pre-registered RNG seed 20260520 makes the CIs byte-stable across reruns of \texttt{scripts/bootstrap\_ci.py}.
 
@@ -133,7 +133,7 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 \label{fig:threshold-sensitivity}
 \end{figure}
 
-We systematically explored the parameter space; thresholds have a marginal effect within the sampled ranges (Figure~\ref{fig:threshold-sensitivity}). Table~\ref{tab:stage2-threshold} confirms the performance invariance across threshold bounds. This negative result narrows the design space: future work on AVMP should focus on migration batch size rather than threshold tuning.
+Thresholds have a marginal effect within the sampled ranges (Figure~\ref{fig:threshold-sensitivity}). Table~\ref{tab:stage2-threshold} confirms the performance invariance across threshold bounds. This negative result narrows the design space: future work on AVMP should focus on migration batch size rather than threshold tuning.
 
 \begin{table*}[t]
 \centering
