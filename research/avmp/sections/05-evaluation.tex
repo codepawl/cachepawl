@@ -10,6 +10,9 @@ We enforce strict determinism by using a logical operation counter for migration
 
 We generate synthetic workloads to capture three distinct prompt distributions. The \texttt{uniform\_short} workload simulates KV-heavy traffic with low concurrency variance. The \texttt{mixed\_long} workload simulates long context requests that generate high SSM pressure and lower batch density. The \texttt{agentic\_burst} workload tests allocator responsiveness using a mix of short and long contexts with variable arrival loads.
 
+\paragraph{Baseline fidelity.}
+We model two production systems as allocator-level baselines rather than reproducing full inference engines. The \texttt{padded\_unified} baseline implements the unified pool padding behavior documented in vLLM issue \#37121, where SSM state is padded to attention page granularity. The \texttt{fixed\_dual\_mr05} and \texttt{fixed\_dual\_mr09} baselines model SGLang's \texttt{HybridReqToTokenPool} and \texttt{HybridLinearKVPool} with the \texttt{mamba\_full\_memory\_ratio} parameter at 0.5 and the default 0.9, respectively~\cite{zheng2024sglang}. These baselines isolate allocator behavior from kernel execution and request scheduling, which our prototype does not implement. A full reproduction against vLLM main or SGLang main would require integrating AVMP into those engines, which we leave to future work.
+
 \subsection{Baseline Comparison}
 \label{sec:eval:baseline}
 
@@ -29,9 +32,9 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \label{fig:oom-comparison-final}
 \end{figure}
 
-The \texttt{avmp\_dynamic\_b128} variant records the lowest absolute OOM count at 510. This represents a 7.6\% reduction compared to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs, validating that our virtual handle abstraction introduces zero routing or logical capacity overhead.
+The \texttt{avmp\_dynamic\_b128} variant records the lowest absolute OOM count at 510. This represents a 7.6\% reduction compared to the best static baseline, \texttt{fixed\_dual\_mr05}, which records 552 OOMs. The \texttt{avmp\_static\_mr05} variant perfectly ties the \texttt{fixed\_dual\_mr05} baseline at 552 OOMs, validating that our virtual handle abstraction introduces no measurable effect on simulated capacity behavior relative to direct pool access.
 
-Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567.7 OOM events. This confirms that vLLM-style unified pools fail under hybrid architecture constraints due to extreme capacity overestimation. Furthermore, the \texttt{fixed\_dual\_mr09} variant, matching the default 0.9 ratio used in SGLang, records 1221.3 OOMs, demonstrating that static default ratios perform poorly on mixed workloads. As a design trade-off, AVMP maintains a 2$\times$ VRAM footprint, peaking at 9216 MiB reserved compared to 5120 MiB for static baselines.
+Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567.7 OOM events. This confirms that our modeled unified padding baseline fails under hybrid architecture constraints due to capacity overestimation, consistent with the behavior reported in vLLM issue \#37121. Furthermore, the \texttt{fixed\_dual\_mr09} variant, matching the default 0.9 ratio used in SGLang, records 1221.3 OOMs, demonstrating that static default ratios perform poorly on mixed workloads. As a design trade-off, AVMP maintains a 2$\times$ VRAM footprint, peaking at 9216 MiB reserved compared to 5120 MiB for static baselines.
 
 \subsection{Throughput Analysis}
 \label{sec:eval:throughput}
@@ -109,6 +112,9 @@ Second, we execute the allocator as a pure Python prototype without Triton or CU
 Third, our evaluation uses synthetic prompt distributions. While our three presets successfully capture short, long, and bursty axes, they do not replicate real model traffic semantics. Future evaluations require ShareGPT \cite{sharegpt} and Alpaca \cite{taori2023alpaca} traces.
 
 Finally, we test strictly on a single GPU. Extending AVMP to multi-GPU environments requires implementing tensor parallelism with cross-device virtual pool sizing synchronization.
+
+\paragraph{Failure modes.}
+AVMP does not help in several allocator regimes. When both pools simultaneously approach saturation, the rebalancing trigger fires but finds no donor pool with free fraction above \texttt{threshold\_high}, so the system degrades to behavior equivalent to the best static configuration. When \texttt{migration\_batch\_size} is mistuned to extreme values, the allocator either migrates too slowly to recover from CapacityError (at $B=1$) or wastes capacity through fragmentation (at $B \geq 256$, see Figure~\ref{fig:oom-vs-batch-size}). Invalid configurations where \texttt{threshold\_low} $\geq$ \texttt{threshold\_high} produce undefined transition semantics; the prototype includes a validation check but does not formally prove allocator invariants. The logical operation counter uses a 64-bit integer with no wraparound risk in any realistic deployment lifetime, but distributed multi-instance deployments would require additional synchronization beyond the current single-process design.
 
 \subsection{Reproducibility}
 \label{sec:eval:reproducibility}
