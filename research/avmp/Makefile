@@ -23,6 +23,7 @@ figures:
 
 tables:
 	uv run --project .. python scripts/generate_tables.py tables/generated
+	uv run --project .. python scripts/bootstrap_ci.py
 
 # Extract acmart.cls (and the helper .sty files that acmart.ins emits)
 # from the vendored acmart.dtx source on first build.
