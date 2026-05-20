@@ -7,19 +7,29 @@
 ## Summary
 
 **73 claims audited:**
-- **MATCH: 60**
-- **MISMATCH: 5** (five distinct issues; one issue replicated across 4+ sections counts as one MISMATCH here, with all paper locations listed)
-- **UNTRACED: 1**
+- **MATCH: 61** (M1-M4 fixed in Phase 2; U1 upgraded to MATCH after byte-identical re-run of `analyze_sharegpt.py`)
+- **MISMATCH: 1** (M5; needs user decision before fix)
+- **UNTRACED: 0**
 - **EXTERNAL_FLAG: 4**
 - **NOTE (acceptable rounding / multi-statistic): 3**
 
-Reproducibility smoke: `scripts/bootstrap_ci.py` re-run produces byte-identical `bootstrap_ci.json` (md5 unchanged). Throughput sweep grid verified directly from `aggregated.json` row enumeration.
+Reproducibility smoke: `scripts/bootstrap_ci.py` re-run produces byte-identical `bootstrap_ci.json` (md5 unchanged); `scripts/analyze_sharegpt.py` re-run produces byte-identical `table_sharegpt_results.tex` AND `fig_sharegpt_vs_synthetic.pdf` (md5s unchanged). Throughput sweep grid verified directly from `aggregated.json` row enumeration.
 
-**Verdict before arXiv submission: NOT READY.** Five MISMATCHes need decisions before fixing. The biggest is the sweep-grid misdescription that propagates across the abstract, §1, §4, and conclusion.
+**Verdict before arXiv submission: 1 decision blocks readiness.** M1-M4 (sweep grid, migration churn) fixed in commit `5c0702e`. M5 (goodput point-estimate vs bootstrap-statistic gap) deferred to user; both presentations are technically correct (13.30× is mean-of-cell-medians, 12.93× is ratio-of-paired-means), but the paper currently quotes 13.30× alongside a CI that was bootstrapped around 12.93×. See M5 below for the three options.
 
 ---
 
 ## MISMATCHes (need Phase 2 fixes — see decision points)
+
+### M1-M4 status update (Phase 2 resolved in commit `5c0702e`)
+
+M1, M2, M3, M4 below are kept for record. All four were autofixed by updating the paper to match the committed source data:
+- M1: `270 cells` → `180 cells`; `zamba2_2_7b` → `mamba2_1b3`; `3 pool sizes (1/4/8 GiB)` → `2 pool sizes (1/4 GiB)`. Touched Abstract, §1.2, §4.1, §4.7.
+- M2: `90 cells` → `180 cells` for the timedecomp parenthetical in §4.1.
+- M3: `313 MiB` / `352 MiB` → `298.67 MiB` / `336.00 MiB` in §4.5.
+- M4: `12.5%` → `11.1%` in §4.5.
+
+Paper still builds clean at 11 pages with these corrections.
 
 ### M1. Sweep grid: 270 vs 180 cells, 3 vs 2 pool sizes, zamba2_2_7b vs mamba2_1b3
 
@@ -101,11 +111,11 @@ The CI bounds quoted in prose (`[11.18, 16.00]`, etc.) match `bootstrap_ci.json`
 
 ---
 
-## UNTRACED
+## UNTRACED → resolved
 
-### U1. Table 4 (`table_sharegpt_results.tex`) bootstrap CIs
+### U1. Table 4 (`table_sharegpt_results.tex`) bootstrap CIs — RESOLVED: MATCH
 
-The CIs in `table_sharegpt_results.tex` (e.g., `2.36× [1.33, 5.65]`) are NOT in `bootstrap_ci.json` (which only holds the synthetic 270-cell/180-cell sweep results). They are produced by `analyze_sharegpt.py` separately. The audit did NOT re-run `analyze_sharegpt.py` to confirm byte-identical reproduction; verbal cross-check of the rendered values vs prose found them internally consistent. To upgrade to MATCH, re-run the script and md5-check the output against the committed table.
+Re-ran `scripts/analyze_sharegpt.py` during Phase 2; the regenerated `table_sharegpt_results.tex` AND `fig_sharegpt_vs_synthetic.pdf` are byte-identical (md5 unchanged) to the committed versions. Bootstrap RNG seed 20260520, B=10000. All ShareGPT CIs reproduce.
 
 ---
 
