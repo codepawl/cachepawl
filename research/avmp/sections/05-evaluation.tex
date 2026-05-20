@@ -17,9 +17,9 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_baseline_comparison.tex}
 \caption{Cross-workload $N_{\mathrm{OOM}}$ baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total $N_{\mathrm{OOM}}$ versus \texttt{padded\_unified}: negative numbers mark improvement.}
 \label{tab:baseline-comparison}
+\input{tables/generated/table_baseline_comparison.tex}
 \end{table*}
 
 \begin{figure}[t]
@@ -42,9 +42,9 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_per_workload_winner.tex}
 \caption{Per-workload goodput comparison between AVMP and best static baseline; goodput columns $\uparrow$ higher is better, ratio shown without direction. \textbf{Bold} = winner per row.}
 \label{tab:per-workload-winner}
+\input{tables/generated/table_per_workload_winner.tex}
 \end{table*}
 
 We explicitly report per-workload ratios rather than a cross-workload mean because static baselines exhibit high variance across distinct prompt distributions. The \texttt{fixed\_dual\_mr05} goodput ranges narrowly from 25.69 to 32.65 req/s across the workloads. Mean aggregation obscures this variance and misleads interpretations of allocator resilience. AVMP maintains consistently higher goodput by adapting dynamically.
@@ -67,9 +67,9 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_stage1_batchsize.tex}
 \caption{Stage 1 sweep over migration batch size $B$: per-workload $N_{\mathrm{OOM}}$ for $B \in \{1, \ldots, 256\}$ ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is propagated across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ from per-cell std across 3 seeds. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means).}
 \label{tab:stage1-batchsize}
+\input{tables/generated/table_stage1_batchsize.tex}
 \end{table*}
 
 In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The empirical data falsifies both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
@@ -85,9 +85,9 @@ We systematically explored the parameter space; thresholds have a marginal effec
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_stage2_threshold.tex}
 \caption{Stage 2 threshold sweep at b128 ($\downarrow$ lower \texttt{total\_oom} is better): all four threshold variants and the b128 reference yield byte-identical OOM means and identical rebalance counts. The $\pm$ values on \texttt{total\_oom} propagate per-cell std across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ and are also identical, confirming the tie at the distribution level.}
 \label{tab:stage2-threshold}
+\input{tables/generated/table_stage2_threshold.tex}
 \end{table*}
 
 \subsection{Limitations}
