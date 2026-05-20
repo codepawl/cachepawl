@@ -25,7 +25,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
-\caption{Cross-allocator $N_{\mathrm{OOM}}$ comparison ($\downarrow$ lower is better). Grouped bars show total OOM events per workload across 4 allocator variants; each bar is summed over 12 cells (2 model specs $\times$ 3 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} achieves the lowest count in \texttt{mixed\_long} and \texttt{agentic\_burst}, while \texttt{padded\_unified} fails worst on every workload.}
+\caption{Cross-allocator $N_{\mathrm{OOM}}$ comparison ($\downarrow$ lower is better). Grouped bars show total OOM events per workload across 4 allocator variants; each bar is summed over 12 cells (2 model specs $\times$ 3 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} records the lowest counts on \texttt{mixed\_long} and \texttt{agentic\_burst}, and ties the static baselines on \texttt{uniform\_short} within 1.7 OOMs (9.0 vs 7.3, both far below \texttt{padded\_unified}'s 482.7). \texttt{padded\_unified} fails worst on every workload.}
 \label{fig:oom-comparison-final}
 \end{figure}
 
