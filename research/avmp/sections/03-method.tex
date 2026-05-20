@@ -23,6 +23,8 @@ The AVMP design provisions two distinct physical regions: a \texttt{KVPagesStore
 
 We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\_tokens} multiplied by \texttt{per\_token\_bytes}, defaulting to 16 tokens per page. SSM blocks match the exact \texttt{state\_dim} multiplied by \texttt{bytes\_per\_element}. We enforce strict alignment rules: 128-byte slab alignment globally and 16-byte page alignment within slabs (Figure~\ref{fig:page-table-structure}). Unlike PagedAttention~\cite{kwon2023pagedattention}, which uses uniform page sizes, this multi-resolution approach extends GPU virtual memory concepts \cite{xu2024vtensor} to support hybrid cache abstractions.
 
+We use two metrics throughout the rest of the paper. $N_{\mathrm{OOM}}$ denotes the count of out-of-memory events triggered during a benchmark cell, aggregated per workload or summed cross-workload as noted in each caption. $B$ denotes the \texttt{migration\_batch\_size} configuration parameter that bounds the per-rebalance migration step; we sweep $B \in \{1, 2, 4, 8, 16, 32, 64, 128, 256\}$ in \S\ref{sec:eval:sensitivity}.
+
 \definecolor{kvblue}{HTML}{1F77B4}
 \definecolor{ssmorange}{HTML}{FF7F0E}
 
@@ -69,93 +71,92 @@ inner sep=0pt,
 font=\tiny,
 fill=white
 },
-kvarrow/.style={->, line width=1.0pt, kvblue},
-ssmarrow/.style={->, line width=1.0pt, ssmorange},
+kvarrow/.style={->, line width=1.0pt, kvblue, dashed},
+ssmarrow/.style={->, line width=1.0pt, ssmorange, dashed},
 lookup/.style={->, line width=0.9pt}
 ]
 
-% ===== VirtualHandle: left column =====
-\node[font=\scriptsize\bfseries] (htitle) at (0,0.55) {VirtualHandle};
-\node[font=\tiny] (hsub) at (0,0.27) {(32-bit)};
+% ===== VirtualHandle: top =====
+\node[font=\scriptsize\bfseries] (htitle) at (0,3.45) {VirtualHandle (32-bit)};
 
-\node[bitbox, minimum width=7.5mm] (pool) at (-0.45,-0.18)
+\node[bitbox, minimum width=11mm, anchor=east] (pool) at (-0.20,3.05)
 {\texttt{pool\_id}};
-\node[bitbox, minimum width=9.0mm, anchor=west] (page) at (pool.east)
+\node[bitbox, minimum width=13mm, anchor=west] (page) at (0.00,3.05)
 {\texttt{page\_id}};
 
 \node[
 draw,
 rounded corners=2pt,
-fit=(htitle)(hsub)(pool)(page),
-inner sep=1.5mm
+fit=(htitle)(pool)(page),
+inner sep=1.4mm
 ] (hbox) {};
 
-% ===== VirtualPageTable: middle column =====
-\node[pthdr, anchor=north west] (pthdr) at (2.25,0.90)
+% ===== VirtualPageTable: middle =====
+\node[pthdr, anchor=north] (pthdr) at (0,2.05)
 {VirtualPageTable};
 
-\node[ptrow, anchor=north west] (r0) at (pthdr.south west)
+\node[ptrow, anchor=north] (r0) at (pthdr.south)
 {\textcolor{kvblue}{\texttt{h\_0} $\to$ \texttt{KV[3]}}};
 
-\node[ptrow, anchor=north west] (r1) at (r0.south west)
+\node[ptrow, anchor=north] (r1) at (r0.south)
 {\textcolor{ssmorange}{\texttt{h\_1} $\to$ \texttt{SSM[1]}}};
 
-\node[ptrow, anchor=north west] (r2) at (r1.south west)
+\node[ptrow, anchor=north] (r2) at (r1.south)
 {\textcolor{kvblue}{\texttt{h\_2} $\to$ \texttt{KV[7]}}};
 
-% ===== KVPagesStore: top right =====
-\node[font=\scriptsize\bfseries] (kvtitle) at (6.55,1.05)
+% ===== KVPagesStore: bottom left =====
+\node[font=\scriptsize\bfseries, anchor=south] (kvtitle) at (-1.85,-1.30)
 {KVPagesStore};
 
-\node[pcell, anchor=west] (kvp0) at (5.25,0.55) {p0};
-\node[pcell, right=0.2mm of kvp0] (kvp1) {p1};
-\node[pcell, right=0.2mm of kvp1] (kvp2) {p2};
-\node[pcell, right=0.2mm of kvp2, fill=kvblue!35] (kvp3) {p3};
-\node[pcell, right=0.2mm of kvp3] (kvp4) {p4};
-\node[font=\tiny, right=0.8mm of kvp4] (kvdots) {$\cdots$};
-\node[pcell, right=0.8mm of kvdots, fill=kvblue!35] (kvp7) {p7};
+\node[pcell, anchor=west] (kvp0) at (-3.40,-1.70) {p0};
+\node[pcell, right=0.15mm of kvp0] (kvp1) {p1};
+\node[pcell, right=0.15mm of kvp1] (kvp2) {p2};
+\node[pcell, right=0.15mm of kvp2, fill=kvblue!35] (kvp3) {p3};
+\node[pcell, right=0.15mm of kvp3] (kvp4) {p4};
+\node[font=\tiny, right=0.6mm of kvp4] (kvdots) {$\cdots$};
+\node[pcell, right=0.6mm of kvdots, fill=kvblue!35] (kvp7) {p7};
 
 \node[
 draw,
 rounded corners=2pt,
 fit=(kvtitle)(kvp0)(kvp7),
-inner xsep=1.4mm,
-inner ysep=1.2mm
+inner xsep=1.0mm,
+inner ysep=1.0mm
 ] (kvbox) {};
 
 % ===== SSMBlocksStore: bottom right =====
-\node[font=\scriptsize\bfseries] (ssmtitle) at (6.25,-0.72)
+\node[font=\scriptsize\bfseries, anchor=south] (ssmtitle) at (2.20,-1.30)
 {SSMBlocksStore};
 
-\node[bcell, anchor=west] (ssmb0) at (5.65,-1.22) {b0};
-\node[bcell, right=0.25mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
-\node[bcell, right=0.25mm of ssmb1] (ssmb2) {b2};
+\node[bcell, anchor=west] (ssmb0) at (1.55,-1.70) {b0};
+\node[bcell, right=0.2mm of ssmb0, fill=ssmorange!35] (ssmb1) {b1};
+\node[bcell, right=0.2mm of ssmb1] (ssmb2) {b2};
 
 \node[
 draw,
 rounded corners=2pt,
 fit=(ssmtitle)(ssmb0)(ssmb2),
-inner xsep=1.4mm,
-inner ysep=1.2mm
+inner xsep=1.0mm,
+inner ysep=1.0mm
 ] (ssmbox) {};
 
 % ===== Arrows =====
 \draw[lookup]
-(hbox.east) -- node[above, font=\tiny] {lookup} (pthdr.west);
+(hbox.south) -- node[right, font=\tiny] {lookup} (pthdr.north);
 
 \draw[kvarrow]
-(r0.east) to[out=0,in=210] (kvp3.south west);
+(r0.south) to[out=270,in=90] (kvp3.north);
 
 \draw[ssmarrow]
-(r1.east) to[out=0,in=180] (ssmb1.west);
+(r1.south) to[out=270,in=90] (ssmb1.north);
 
 \draw[kvarrow]
-(r2.east) to[out=0,in=240] (kvp7.south);
+(r2.south) to[out=270,in=90] (kvp7.north);
 
 \end{tikzpicture}
 \caption{AVMP virtual handle resolution. A 32-bit handle is tagged by pool identifier and indexed into the page table, which dispatches to either the KVPagesStore, with fine-grained pages, or the SSMBlocksStore, with per-layer contiguous blocks.}
 \label{fig:page-table-structure}
-\Description{Block diagram of AVMP handle resolution. On the left, a VirtualHandle container holds two sub-fields: a pool identifier and a page identifier. A solid lookup arrow leads to the central VirtualPageTable, which holds three colored entries that map handles to backing-store coordinates. Two stores sit on the right: KVPagesStore on top with visible pages plus an ellipsis and a highlighted seventh page, and SSMBlocksStore below with three blocks. Colored arrows route each page-table entry to the specific highlighted cell it indexes, using blue for KV and orange for SSM.}
+\Description{Block diagram of AVMP handle resolution arranged top-to-bottom. At the top, a VirtualHandle container holds two sub-fields: a pool identifier and a page identifier. A solid lookup arrow points down to the VirtualPageTable in the middle, which holds three colored entries that map handles to backing-store coordinates. Two stores sit at the bottom: KVPagesStore on the left with visible pages plus an ellipsis and a highlighted seventh page, and SSMBlocksStore on the right with three blocks. Colored arrows curve down from each page-table entry to the specific highlighted cell it indexes, using blue for KV and orange for SSM.}
 \end{figure}
 
 \subsection{Dynamic Pool Rebalancing}
@@ -170,25 +171,25 @@ The system tracks pool pressure using a state machine with three states: \texttt
 \begin{tikzpicture}[
     font=\footnotesize,
     state/.style={draw, rounded corners, align=center,
-                  minimum width=22mm, minimum height=7.5mm,
+                  minimum width=20mm, minimum height=7.5mm,
                   inner sep=2pt, fill=white},
     trans/.style={->, thick, gray!50!black},
-    tlabel/.style={font=\footnotesize, fill=white, inner sep=1.2pt},
+    tlabel/.style={font=\scriptsize, fill=white, inner sep=2pt},
   ]
   \node[state] (B) {BALANCED};
-  \node[state, below left=15mm and 5mm of B] (KP) {KV\_PRESSURED};
-  \node[state, below right=15mm and 5mm of B] (SP) {SSM\_PRESSURED};
-  \node[state, below=28mm of B] (R) {REBALANCING};
+  \node[state, below left=20mm and 10mm of B] (KP) {KV\_PRESSURED};
+  \node[state, below right=20mm and 10mm of B] (SP) {SSM\_PRESSURED};
+  \node[state, below=46mm of B] (R) {REBALANCING};
   \draw[->, thick] ($(B.north)+(0,4mm)$) -- (B.north);
   \draw[trans] (B) -- node[tlabel, sloped] {\texttt{kv\_free $<$ th\_low}} (KP);
   \draw[trans] (B) -- node[tlabel, sloped] {\texttt{ssm\_free $<$ th\_low}} (SP);
   \draw[trans] (KP) -- node[tlabel, sloped] {\texttt{ssm\_free $>$ th\_high}} (R);
   \draw[trans] (SP) -- node[tlabel, sloped] {\texttt{kv\_free $>$ th\_high}} (R);
-  \draw[trans] (R)  to[bend left=18]  node[tlabel, near start] {migration complete} (B);
-  \draw[trans] (KP) to[bend left=35]  node[tlabel] {free recovers} (B);
-  \draw[trans] (SP) to[bend right=35] node[tlabel] {free recovers} (B);
+  \draw[trans] (R)  to[bend left=15]  node[tlabel, near start] {migration complete} (B);
+  \draw[trans] (KP) to[bend left=20]  node[tlabel] {free recovers} (B);
+  \draw[trans] (SP) to[bend right=20] node[tlabel] {free recovers} (B);
 \end{tikzpicture}
-\caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30).}
+\caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30). Edges are labelled by per-pool free-fraction conditions on \texttt{kv\_free}, \texttt{ssm\_free}, \texttt{threshold\_low} (\texttt{th\_low}), and \texttt{threshold\_high} (\texttt{th\_high}); all transitions fire inside the \texttt{CapacityError} handler of \texttt{allocate()} rather than from a pre-emptive sampling hook, so migration costs are paid only when allocation would otherwise fail.}
 \label{fig:state-machine}
 \Description{Four-state finite state machine showing BALANCED, KV\_PRESSURED, SSM\_PRESSURED, and REBALANCING states with labeled transitions based on per-pool free fraction thresholds.}
 \end{figure}

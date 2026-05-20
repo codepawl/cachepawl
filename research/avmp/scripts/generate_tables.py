@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +71,7 @@ class Row:
     model_spec_name: str
     total_bytes: int
     oom_count_mean: float
+    oom_count_std: float
     rebalance_count_median: float
     threshold_low_median: float
     threshold_high_median: float
@@ -87,12 +89,15 @@ def _coerce_row(raw: object) -> Row:
                 asp[str(k)] = float(v)
     gp_raw = raw.get("goodput_requests_per_second_median")
     goodput = float(gp_raw) if isinstance(gp_raw, (int, float)) else 0.0
+    oom_std_raw = raw.get("oom_count_std")
+    oom_std = float(oom_std_raw) if isinstance(oom_std_raw, (int, float)) else 0.0
     return Row(
         variant_label=str(raw["variant_label"]),
         workload_name=str(raw["workload_name"]),
         model_spec_name=str(raw["model_spec_name"]),
         total_bytes=int(cast(int, raw["total_bytes"])),
         oom_count_mean=float(cast(float, raw["oom_count_mean"])),
+        oom_count_std=oom_std,
         rebalance_count_median=float(asp.get("rebalance_count", 0.0)),
         threshold_low_median=float(asp.get("threshold_low", 0.0)),
         threshold_high_median=float(asp.get("threshold_high", 0.0)),
@@ -120,6 +125,25 @@ def _sum_oom_per_workload(rows: list[Row], variant: str) -> dict[str, float]:
     return out
 
 
+def _sum_oom_with_std_per_workload(rows: list[Row], variant: str) -> dict[str, tuple[float, float]]:
+    """Sum mean OOMs and propagate std across cells assuming independence.
+
+    Per-cell ``oom_count_std`` is taken from :mod:`aggregate`; the std of
+    a sum of independent random variables is ``sqrt(sum(var_i))``, which
+    is the standard error propagation result. This is not data
+    fabrication: it is a derivable transformation of the existing
+    pipeline output.
+    """
+
+    sums: dict[str, float] = dict.fromkeys(_WORKLOAD_ORDER, 0.0)
+    vars_: dict[str, float] = dict.fromkeys(_WORKLOAD_ORDER, 0.0)
+    for r in rows:
+        if r.variant_label == variant and r.workload_name in sums:
+            sums[r.workload_name] += r.oom_count_mean
+            vars_[r.workload_name] += r.oom_count_std * r.oom_count_std
+    return {w: (sums[w], math.sqrt(vars_[w])) for w in _WORKLOAD_ORDER}
+
+
 def _sum_rebalance(rows: list[Row], variant: str) -> float:
     return sum(r.rebalance_count_median for r in rows if r.variant_label == variant)
 
@@ -143,19 +167,80 @@ def _tex_escape(value: str) -> str:
     return value.replace("_", "\\_")
 
 
+def _format_with_rank(values: list[float], lower_is_better: bool, fmt: str) -> list[str]:
+    """Format values, wrapping best in \\textbf and second-best in \\underline.
+
+    Ties at the best are all bolded and no second-best is marked. Ties at
+    the second-best are all underlined. ``fmt`` is a printf-style spec
+    applied to each value (e.g. ``"{:.1f}"``).
+    """
+
+    if not values:
+        return []
+    extreme = min(values) if lower_is_better else max(values)
+    best_indices = {i for i, v in enumerate(values) if v == extreme}
+    rest = [(i, v) for i, v in enumerate(values) if i not in best_indices]
+    second_indices: set[int] = set()
+    if rest:
+        second_extreme = min(v for _, v in rest) if lower_is_better else max(v for _, v in rest)
+        second_indices = {i for i, v in rest if v == second_extreme}
+    out: list[str] = []
+    for i, v in enumerate(values):
+        cell = fmt.format(v)
+        if i in best_indices and len(best_indices) < len(values):
+            cell = f"\\textbf{{{cell}}}"
+        elif i in second_indices:
+            cell = f"\\underline{{{cell}}}"
+        out.append(cell)
+    return out
+
+
 def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
-    lines: list[str] = []
-    lines.append("\\begin{tabular}{lrrrr}")
-    lines.append("\\toprule")
-    lines.append("Variant & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
-    lines.append("\\midrule")
+    per_workload_mean: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_std: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    totals: list[float] = []
+    total_stds: list[float] = []
     for variant in _HEADLINE_VARIANTS:
-        per = _sum_oom_per_workload(rows, variant)
-        total = sum(per.values())
+        per = _sum_oom_with_std_per_workload(rows, variant)
+        for w in _WORKLOAD_ORDER:
+            per_workload_mean[w].append(per[w][0])
+            per_workload_std[w].append(per[w][1])
+        totals.append(sum(per[w][0] for w in _WORKLOAD_ORDER))
+        total_stds.append(math.sqrt(sum(per[w][1] ** 2 for w in _WORKLOAD_ORDER)))
+    formatted_per_workload = {
+        w: _format_with_rank(per_workload_mean[w], lower_is_better=True, fmt="{:.1f}")
+        for w in _WORKLOAD_ORDER
+    }
+    formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
+    baseline_total = totals[0]
+    delta_cells: list[str] = []
+    for i, total in enumerate(totals):
+        if i == 0:
+            delta_cells.append("---")
+            continue
+        if baseline_total <= 0.0:
+            delta_cells.append("n/a")
+            continue
+        delta_pct = (total - baseline_total) / baseline_total * 100.0
+        sign = "$-$" if delta_pct < 0 else "$+$"
+        delta_cells.append(f"{sign}{abs(delta_pct):.1f}\\%")
+    lines: list[str] = []
+    lines.append("\\begin{tabular}{lrrrrr}")
+    lines.append("\\toprule")
+    lines.append(
+        "Variant & uniform\\_short & mixed\\_long & agentic\\_burst & Total & "
+        "$\\Delta\\%$ vs padded\\_unified \\\\"
+    )
+    lines.append("\\midrule")
+    for i, variant in enumerate(_HEADLINE_VARIANTS):
+        cells = [
+            f"{formatted_per_workload[w][i]} $\\pm$ {per_workload_std[w][i]:.1f}"
+            for w in _WORKLOAD_ORDER
+        ]
+        total_cell = f"{formatted_totals[i]} $\\pm$ {total_stds[i]:.1f}"
         lines.append(
-            f"{_tex_escape(variant)} & {per['uniform_short']:.1f} & "
-            f"{per['mixed_long']:.1f} & {per['agentic_burst']:.1f} & "
-            f"{total:.1f} \\\\"
+            f"{_tex_escape(variant)} & {cells[0]} & {cells[1]} & "
+            f"{cells[2]} & {total_cell} & {delta_cells[i]} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -171,14 +256,18 @@ def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
     lines.append("\\begin{tabular}{lrrr}")
     lines.append("\\toprule")
     lines.append(
-        f"Workload & {_tex_escape(baseline)} (req/s) & {_tex_escape(target)} (req/s) & Ratio \\\\"
+        f"Workload & {_tex_escape(baseline)} (req/s, $\\uparrow$) & "
+        f"{_tex_escape(target)} (req/s, $\\uparrow$) & Ratio \\\\"
     )
     lines.append("\\midrule")
     for workload in _WORKLOAD_ORDER:
         base_v = baseline_gp[workload]
         targ_v = target_gp[workload]
         ratio_str = f"{targ_v / base_v:.2f}$\\times$" if base_v > 0.0 else "n/a"
-        lines.append(f"{_tex_escape(workload)} & {base_v:.2f} & {targ_v:.2f} & {ratio_str} \\\\")
+        formatted = _format_with_rank([base_v, targ_v], lower_is_better=False, fmt="{:.2f}")
+        lines.append(
+            f"{_tex_escape(workload)} & {formatted[0]} & {formatted[1]} & {ratio_str} \\\\"
+        )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     return _write_table(out_dir, "table_per_workload_winner", "\n".join(lines) + "\n")
@@ -212,18 +301,34 @@ def table_parameter_defaults(out_dir: Path) -> Path:
 
 
 def table_stage1_batchsize(rows: list[Row], out_dir: Path) -> Path:
+    per_workload_mean: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    per_workload_std: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    totals: list[float] = []
+    total_stds: list[float] = []
+    for bs in _BATCH_SIZE_SERIES:
+        per = _sum_oom_with_std_per_workload(rows, f"avmp_dynamic_b{bs}")
+        for w in _WORKLOAD_ORDER:
+            per_workload_mean[w].append(per[w][0])
+            per_workload_std[w].append(per[w][1])
+        totals.append(sum(per[w][0] for w in _WORKLOAD_ORDER))
+        total_stds.append(math.sqrt(sum(per[w][1] ** 2 for w in _WORKLOAD_ORDER)))
+    formatted_per_workload = {
+        w: _format_with_rank(per_workload_mean[w], lower_is_better=True, fmt="{:.1f}")
+        for w in _WORKLOAD_ORDER
+    }
+    formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
     lines: list[str] = []
     lines.append("\\begin{tabular}{rrrrr}")
     lines.append("\\toprule")
     lines.append("batch\\_size & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
     lines.append("\\midrule")
-    for bs in _BATCH_SIZE_SERIES:
-        per = _sum_oom_per_workload(rows, f"avmp_dynamic_b{bs}")
-        total = sum(per.values())
-        lines.append(
-            f"{bs} & {per['uniform_short']:.1f} & {per['mixed_long']:.1f} & "
-            f"{per['agentic_burst']:.1f} & {total:.1f} \\\\"
-        )
+    for i, bs in enumerate(_BATCH_SIZE_SERIES):
+        cells = [
+            f"{formatted_per_workload[w][i]} $\\pm$ {per_workload_std[w][i]:.1f}"
+            for w in _WORKLOAD_ORDER
+        ]
+        total_cell = f"{formatted_totals[i]} $\\pm$ {total_stds[i]:.1f}"
+        lines.append(f"{bs} & {cells[0]} & {cells[1]} & {cells[2]} & {total_cell} \\\\")
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     return _write_table(out_dir, "table_stage1_batchsize", "\n".join(lines) + "\n")
@@ -243,18 +348,20 @@ def table_stage2_threshold(
     lines.append("\\begin{tabular}{lrrrr}")
     lines.append("\\toprule")
     lines.append(
-        "Variant & threshold\\_low & threshold\\_high & total\\_oom & rebalance\\_count \\\\"
+        "Variant & threshold\\_low & threshold\\_high & "
+        "total\\_oom ($\\downarrow$) & rebalance\\_count \\\\"
     )
     lines.append("\\midrule")
     for variant in _THRESHOLD_TABLE_VARIANTS:
         source = batchsize_rows if variant == "avmp_dynamic_b128" else threshold_rows
-        per = _sum_oom_per_workload(source, variant)
-        total = sum(per.values())
+        per_with_std = _sum_oom_with_std_per_workload(source, variant)
+        total = sum(per_with_std[w][0] for w in _WORKLOAD_ORDER)
+        total_std = math.sqrt(sum(per_with_std[w][1] ** 2 for w in _WORKLOAD_ORDER))
         rebal = _sum_rebalance(source, variant)
         th_low, th_high = _representative_thresholds(source, variant)
         lines.append(
             f"{_tex_escape(variant)} & {th_low:.2f} & {th_high:.2f} & "
-            f"{total:.1f} & {rebal:.0f} \\\\"
+            f"{total:.1f} $\\pm$ {total_std:.1f} & {rebal:.0f} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")

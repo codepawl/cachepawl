@@ -195,9 +195,9 @@ def fig_oom_vs_batch_size(rows: list[Row], out_dir: Path) -> tuple[Path, Path]:
     ax.set_xscale("log", base=2)
     ax.set_xticks(_BATCH_SIZE_SERIES)
     ax.set_xticklabels([str(bs) for bs in _BATCH_SIZE_SERIES])
-    ax.set_xlabel("migration_batch_size")
-    ax.set_ylabel("Sum of mean OOMs across 12 cells")
-    ax.set_title("Stage 1: OOMs vs migration_batch_size (per workload)")
+    ax.set_xlabel("Migration batch size B (log2 scale)")
+    ax.set_ylabel("Total OOM events")
+    ax.set_title("Stage 1: OOM events vs migration batch size B (per workload)")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ax.legend(loc="best", framealpha=0.85, fontsize=8)
     return _save_pair(fig, out_dir, "fig_oom_vs_batch_size")
@@ -223,7 +223,7 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
         offset += width
     ax.set_xticks(x)
     ax.set_xticklabels([w.replace("_", " ") for w in _WORKLOAD_ORDER])
-    ax.set_ylabel("Sum of mean OOMs across 12 cells")
+    ax.set_ylabel("Total OOM events")
     ax.set_title("Cross-allocator OOM comparison")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ax.legend(
@@ -240,22 +240,46 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     fig, ax = plt.subplots(figsize=(6.5, 3.8))
     mib = 1024.0 * 1024.0
     means: dict[str, float] = {}
+    stds: dict[str, float] = {}
     for variant in _HEADLINE_VARIANTS:
-        peaks = [r.peak_reserved_bytes_mean for r in rows if r.variant_label == variant]
-        means[variant] = (sum(peaks) / len(peaks) / mib) if peaks else 0.0
+        peaks_mib = [r.peak_reserved_bytes_mean / mib for r in rows if r.variant_label == variant]
+        if peaks_mib:
+            arr = np.asarray(peaks_mib, dtype=np.float64)
+            means[variant] = float(arr.mean())
+            stds[variant] = float(arr.std(ddof=0))
+        else:
+            means[variant] = 0.0
+            stds[variant] = 0.0
     labels = [_VARIANT_DISPLAY[v] for v in _HEADLINE_VARIANTS]
     values = [means[v] for v in _HEADLINE_VARIANTS]
+    errors = [stds[v] for v in _HEADLINE_VARIANTS]
     colors = [_PALETTE[v] for v in _HEADLINE_VARIANTS]
-    ax.bar(labels, values, color=colors, edgecolor="black", linewidth=0.4)
+    ax.bar(
+        labels,
+        values,
+        yerr=errors,
+        color=colors,
+        edgecolor="black",
+        linewidth=0.4,
+        capsize=4,
+        error_kw={"elinewidth": 0.8, "ecolor": "#333333"},
+    )
     ax.set_xticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=20, ha="right")
-    ax.set_ylabel("Mean peak_reserved (MiB)")
+    ax.set_ylabel("Peak reserved VRAM (MiB)")
     ax.set_title("Peak reserved memory: AVMP carries a 2x physical-footprint cost")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
-    ymax = max(values) * 1.15 if values else 1.0
+    ymax = (max(v + e for v, e in zip(values, errors, strict=True)) if values else 1.0) * 1.18
     ax.set_ylim(0, ymax)
-    for i, v in enumerate(values):
-        ax.text(i, v + ymax * 0.01, f"{v:,.0f}", ha="center", va="bottom", fontsize=8)
+    for i, (v, e) in enumerate(zip(values, errors, strict=True)):
+        ax.text(
+            i,
+            v + e + ymax * 0.01,
+            f"{v:,.0f} $\\pm$ {e:,.0f}",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
     return _save_pair(fig, out_dir, "fig_peak_reserved_tradeoff")
 
 
@@ -275,7 +299,7 @@ def fig_threshold_sensitivity(
     ax.bar(positions, values, color=colors, edgecolor="black", linewidth=0.4)
     ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=20, ha="right")
-    ax.set_ylabel("Cross-workload total OOMs (12 cells x 3 workloads)")
+    ax.set_ylabel("Total OOM events (cross-workload)")
     ax.set_title("Stage 2: threshold variants all tie with stage 1 b128 reference")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ymax = max(values) * 1.15 if values else 1.0
