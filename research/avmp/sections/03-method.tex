@@ -23,6 +23,8 @@ The AVMP design provisions two distinct physical regions: a \texttt{KVPagesStore
 
 We assign native page sizes per pool. KV pages scale by \texttt{attention\_page\_tokens} multiplied by \texttt{per\_token\_bytes}, defaulting to 16 tokens per page. SSM blocks match the exact \texttt{state\_dim} multiplied by \texttt{bytes\_per\_element}. We enforce strict alignment rules: 128-byte slab alignment globally and 16-byte page alignment within slabs (Figure~\ref{fig:page-table-structure}). Unlike PagedAttention~\cite{kwon2023pagedattention}, which uses uniform page sizes, this multi-resolution approach extends GPU virtual memory concepts \cite{xu2024vtensor} to support hybrid cache abstractions.
 
+We use two metrics throughout the rest of the paper. $N_{\mathrm{OOM}}$ denotes the count of out-of-memory events triggered during a benchmark cell, aggregated per workload or summed cross-workload as noted in each caption. $B$ denotes the \texttt{migration\_batch\_size} configuration parameter that bounds the per-rebalance migration step; we sweep $B \in \{1, 2, 4, 8, 16, 32, 64, 128, 256\}$ in \S\ref{sec:eval:sensitivity}.
+
 \definecolor{kvblue}{HTML}{1F77B4}
 \definecolor{ssmorange}{HTML}{FF7F0E}
 

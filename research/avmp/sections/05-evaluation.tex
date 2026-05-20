@@ -18,7 +18,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_baseline_comparison.tex}
-\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total OOMs versus \texttt{padded\_unified}: negative numbers mark improvement.}
+\caption{Cross-workload $N_{\mathrm{OOM}}$ baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total $N_{\mathrm{OOM}}$ versus \texttt{padded\_unified}: negative numbers mark improvement.}
 \label{tab:baseline-comparison}
 \end{table*}
 
@@ -61,14 +61,14 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_vs_batch_size.pdf}
-\caption{OOM occurrence variance across different migration batch sizes ($\downarrow$ lower is better).}
+\caption{$N_{\mathrm{OOM}}$ variance as a function of migration batch size $B \in \{1, \ldots, 256\}$ ($\downarrow$ lower is better). Solid lines plot AVMP per workload; dotted reference lines mark the \texttt{fixed\_dual\_mr05} static baseline for the same workload.}
 \label{fig:oom-vs-batch-size}
 \end{figure}
 
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_stage1_batchsize.tex}
-\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is propagated across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ from per-cell std across 3 seeds. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means).}
+\caption{Stage 1 sweep over migration batch size $B$: per-workload $N_{\mathrm{OOM}}$ for $B \in \{1, \ldots, 256\}$ ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is propagated across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ from per-cell std across 3 seeds. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means).}
 \label{tab:stage1-batchsize}
 \end{table*}
 
