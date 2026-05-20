@@ -377,6 +377,36 @@ THROUGHPUT_V2_VARIANTS: tuple[AllocatorVariant, ...] = (
 )
 
 
+# Phase 4 ShareGPT replay: same 5-variant grid as throughput_v2, but
+# restricted to the sharegpt_replay workload. Defined as a fresh tuple
+# (not a reference to THROUGHPUT_V2_VARIANTS) so future changes to
+# either preset stay decoupled per the CLAUDE.md immutability rule.
+SHAREGPT_VARIANTS: tuple[AllocatorVariant, ...] = (
+    AllocatorVariant(label="padded_unified", allocator_name="padded_unified", kwargs=()),
+    AllocatorVariant(
+        label="fixed_dual_mr05",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="fixed_dual_mr09",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.9),),
+    ),
+    AllocatorVariant(
+        label="avmp_static_mr05",
+        allocator_name="avmp_static",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="avmp_dynamic_b128",
+        allocator_name="avmp_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("migration_batch_size", 128.0)),
+    ),
+)
+SHAREGPT_WORKLOAD_NAMES: tuple[str, ...] = ("sharegpt_replay",)
+
+
 DEFAULT_WORKLOAD_NAMES: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
 DEFAULT_MODEL_SPEC_NAMES: tuple[str, ...] = ("jamba_1_5_mini", "mamba2_1b3")
 DEFAULT_TOTAL_BYTES_OPTIONS: tuple[int, ...] = (
@@ -940,6 +970,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         config = dataclasses.replace(config, variants=THRESHOLD_SWEEP_STAGE2_VARIANTS)
     elif args.variant_set == "throughput_v2":
         config = dataclasses.replace(config, variants=THROUGHPUT_V2_VARIANTS)
+    elif args.variant_set == "sharegpt_replay":
+        config = dataclasses.replace(
+            config,
+            variants=SHAREGPT_VARIANTS,
+            workload_names=SHAREGPT_WORKLOAD_NAMES,
+        )
 
     if args.max_total_bytes is not None:
         if args.max_total_bytes <= 0:
@@ -1082,7 +1118,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--variant-set",
-        choices=["baseline", "batch_size_sweep", "threshold_sweep_stage2", "throughput_v2"],
+        choices=[
+            "baseline",
+            "batch_size_sweep",
+            "threshold_sweep_stage2",
+            "throughput_v2",
+            "sharegpt_replay",
+        ],
         default="baseline",
         help=(
             "Select the variant tuple: 'baseline' is the 5-variant DEFAULT_VARIANTS, "
@@ -1093,7 +1135,8 @@ def _build_parser() -> argparse.ArgumentParser:
             "(3 baselines + 2 threshold_high + 2 threshold_low variants), "
             "'throughput_v2' is the Tier 1 PR B 5-variant grid "
             "(padded_unified, fixed_dual_mr05, fixed_dual_mr09, avmp_static_mr05, "
-            "avmp_dynamic_b128)."
+            "avmp_dynamic_b128), 'sharegpt_replay' pins the throughput_v2 grid "
+            "to the sharegpt_replay workload only."
         ),
     )
     return parser
@@ -1110,6 +1153,8 @@ __all__ = [
     "QUICK_SEED_REPLICATES",
     "QUICK_TOTAL_BYTES_OPTIONS",
     "QUICK_WORKLOAD_NAMES",
+    "SHAREGPT_VARIANTS",
+    "SHAREGPT_WORKLOAD_NAMES",
     "SMOKE_NUM_REQUESTS",
     "THROUGHPUT_V2_VARIANTS",
     "AllocatorVariant",

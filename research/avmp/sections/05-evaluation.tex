@@ -4,7 +4,7 @@
 \subsection{Experimental Setup}
 \label{sec:eval:setup}
 
-We evaluate the Asymmetric Virtual Page Table (AVMP) allocator on a single NVIDIA RTX 3060 12GB GPU running CUDA 13.0, PyTorch 2.12.0+cu130, and Python 3.10.19 on WSL2 Ubuntu. We execute an experimental sweep across 270 cells: 5 allocator variants, 3 synthetic workloads, 2 model specifications (\texttt{jamba\_1\_5\_mini} and \texttt{zamba2\_2\_7b}), 3 total memory pool sizes (1 GiB, 4 GiB, 8 GiB), and 3 random seeds. The entire sweep completes in 16 minutes and 14 seconds of wall time.
+We evaluate the Asymmetric Virtual Page Table (AVMP) allocator on a single NVIDIA RTX 3060 12GB GPU running CUDA 13.0, PyTorch 2.12.0+cu130, and Python 3.10.19 on WSL2 Ubuntu. We execute an experimental sweep across 270 cells: 5 allocator variants, 3 synthetic workloads, 2 model specifications (\texttt{jamba\_1\_5\_mini} and \texttt{zamba2\_2\_7b}), 3 total memory pool sizes (1 GiB, 4 GiB, 8 GiB), and 3 random seeds. The entire sweep completes in 16 minutes and 14 seconds of wall time. Two supplementary V1.5 sweeps on the same hardware add the wall-clock decomposition data (90 cells, 18:46) and the ShareGPT trace replay (60 cells, 1:56).
 
 We enforce strict determinism by using a logical operation counter for migration throttling rather than wall-clock time. This guarantees byte-identical reproducibility across reruns for event-deterministic fields. We include \texttt{effective\_batch\_size\_p50} in the deterministic subset by construction. We exclude \texttt{goodput} and \texttt{time\_to\_first\_oom} from strict reproducibility requirements as they depend on wall-clock execution speed.
 
@@ -78,6 +78,31 @@ On the long-context and bursty workloads, where static partitions OOM repeatedly
 
 On \texttt{uniform\_short}, where no variant OOMs at meaningful rates, OOM retry is negligible for both and cannot explain the 13.30$\times$ goodput ratio. The decomposition reveals a second mechanism: \texttt{fixed\_dual\_mr05}'s allocate / free latency is dramatically higher on the KV-heavy workload (32.2 s of cumulative service time for 512 requests at the 4 GiB pool budget vs 2.1 s for \texttt{avmp\_dynamic\_b128}). The virtual handle abstraction in \texttt{avmp\_static\_mr05} alone closes most of this gap (2.2 s service time at the same cell), so the speedup is attributable to the virtual address-space layer rather than the dynamic rebalancer. We refine the V1 framing accordingly: AVMP wins via OOM-retry reduction on workloads with capacity pressure and via faster per-call service on the workloads without it. We treat the per-call speedup as an observation of the prototype implementation rather than a load-bearing design claim; quantifying its share of the 13.30$\times$ would require an additional ablation that we leave to future work.
 
+\subsection{ShareGPT Trace Replay}
+\label{sec:eval:sharegpt}
+
+The three synthetic workloads target distinct stress axes (KV pressure, SSM pressure, burst variance) but do not match any particular real prompt distribution. We add a fourth workload, \texttt{sharegpt\_replay}, that samples prompt-token counts from 5{,}000 first-human-turn prompts in the ShareGPT-Vicuna corpus~\cite{sharegpt}. Token counts are a word-count proxy ($1.3 \times \text{words}$) and are clamped to $[16, 4096]$ so a single pathological 6{,}708-token prompt cannot exceed the 4 GiB pool budget. Generation lengths are log-normally distributed (mean 4.5, sigma 1.0, clipped to $[32, 2048]$) and arrival times are deterministically staggered. The clamp floor activates on $\approx 36$\% of draws, reflecting ShareGPT's short-prompt skew (median 25, p95 810 tokens); we report this faithfully rather than filtering.
+
+We rerun the throughput-v2 variant set on \texttt{sharegpt\_replay} alone (5 variants $\times$ 2 models $\times$ 2 pool budgets $\times$ 3 seeds $=$ 60 cells, 1:56 wall time). Table~\ref{tab:sharegpt-results} reports per-variant aggregates with paired bootstrap CIs against \texttt{fixed\_dual\_mr05}. Figure~\ref{fig:sharegpt-vs-synthetic} contrasts the per-workload goodput ratios.
+
+\begin{table*}[t]
+\centering
+\caption{ShareGPT trace replay: per-variant aggregates and paired bootstrap CIs (B=10000, RNG seed 20260520) over the 12-cell (model, pool, seed) grid. Goodput ratio is the ratio of means with the same paired-bootstrap resampling; \textbf{*} marks CIs that exclude the null. \texttt{fixed\_dual\_mr05} is the baseline. All AVMP variants record the same OOM count as \texttt{fixed\_dual\_mr05}; the goodput advantage comes from faster per-call service rather than from OOM avoidance.}
+\label{tab:sharegpt-results}
+\input{tables/generated/table_sharegpt_results.tex}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/generated/fig_sharegpt_vs_synthetic.pdf}
+\caption{AVMP goodput ratio vs \texttt{fixed\_dual\_mr05} across the three synthetic workloads and the ShareGPT replay ($\uparrow$ higher is better; dashed line = unity). Error bars are paired bootstrap 95\% CIs. ShareGPT lands at 2.36$\times$, between \texttt{agentic\_burst}'s 1.83$\times$ and \texttt{mixed\_long}'s 2.39$\times$, and well below \texttt{uniform\_short}'s 13.30$\times$. The synthetic short-prompt extreme inflates the headline number; ShareGPT gives a more realistic central-tendency estimate of the per-call-service-speedup mechanism.}
+\label{fig:sharegpt-vs-synthetic}
+\end{figure}
+
+The replay confirms the §4.3 mechanism story rather than the V1 framing. \texttt{avmp\_dynamic\_b128} records 2.33 OOMs per cell, identical to \texttt{fixed\_dual\_mr05} (bootstrap CI on the per-cell delta: $[0,0]$), so the 2.36$\times$ goodput ratio cannot arise from OOM avoidance. \texttt{avmp\_static\_mr05} produces an almost identical 2.48$\times$ ratio with the same zero OOM delta, consistent with the §4.3 finding that the per-call speedup is attributable to the virtual-handle layer rather than the dynamic rebalancer. The 95\% CI on the dynamic ratio is wide ($[1.33, 5.65]$) due to the heavy-tailed prompt distribution producing high per-cell variance, but it cleanly excludes the unit ratio.
+
+ShareGPT's 2.36$\times$ ratio is much smaller than the synthetic \texttt{uniform\_short} headline of 13.30$\times$. The synthetic workload's uniform 128--1024 prompt-token distribution is a deliberate stress test for the KV pool path and overstates the per-call service gap; ShareGPT's heavy-tailed but predominantly short prompts (median 25 tokens, p95 810) trigger the same mechanism but at a more realistic magnitude. We treat the 2.36$\times$ as the load-bearing point estimate for prompt distributions in the ShareGPT shape, and the 13.30$\times$ synthetic figure as an upper bound for the same allocator on a workload tuned to maximize the effect.
+
 \subsection{Sensitivity Analysis}
 \label{sec:eval:sensitivity}
 
@@ -133,7 +158,7 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 
 Second, we execute the allocator as a pure Python prototype without Triton or CUDA kernels. This validates allocator semantics; integration with Triton kernels and real model runtime is future work.
 
-Third, our evaluation uses synthetic prompt distributions. While our three presets successfully capture short, long, and bursty axes, they do not replicate real model traffic semantics. Future evaluations require ShareGPT \cite{sharegpt} and Alpaca \cite{taori2023alpaca} traces.
+Third, our evaluation supplements synthetic prompts with a ShareGPT-Vicuna trace replay (\S\ref{sec:eval:sharegpt}), which lands the AVMP-vs-baseline goodput ratio at $2.36\times$ (95\% CI $[1.33, 5.65]$) - well below the synthetic $13.30\times$ on \texttt{uniform\_short} and consistent with the $2.39\times$ on \texttt{mixed\_long}. The ShareGPT replay uses a word-count proxy for token lengths and a deterministic per-tick arrival schedule, so it captures the prompt-length distribution faithfully but not the temporal arrival semantics of real production traffic. Adversarial workloads, multi-tenant scheduling effects, and SLO-driven admission control remain unevaluated; Alpaca \cite{taori2023alpaca} and full HuggingFace conversation streams are natural next-step traces.
 
 Finally, we test strictly on a single GPU. Extending AVMP to multi-GPU environments requires implementing tensor parallelism with cross-device virtual pool sizing synchronization.
 
