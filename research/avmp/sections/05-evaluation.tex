@@ -25,7 +25,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
-\caption{Final out-of-memory occurrence comparison across allocator variants ($\downarrow$ lower is better).}
+\caption{Cross-allocator $N_{\mathrm{OOM}}$ comparison ($\downarrow$ lower is better). Grouped bars show total OOM events per workload across 4 allocator variants; each bar is summed over 12 cells (2 model specs $\times$ 3 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} achieves the lowest count in \texttt{mixed\_long} and \texttt{agentic\_burst}, while \texttt{padded\_unified} fails worst on every workload.}
 \label{fig:oom-comparison-final}
 \end{figure}
 
@@ -42,7 +42,7 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 
 \begin{table*}[t]
 \centering
-\caption{Per-workload goodput comparison between AVMP and best static baseline; goodput columns $\uparrow$ higher is better, ratio shown without direction. \textbf{Bold} = winner per row.}
+\caption{Per-workload goodput comparison between AVMP and the best static baseline. Goodput columns ($\uparrow$ higher is better) are mean req/s across 12 cells; the ratio column is $g_{\mathrm{AVMP}} / g_{\mathrm{baseline}}$ where $g$ is goodput. \textbf{Bold} = winner per row. AVMP wins all three workloads, with the largest gap on \texttt{uniform\_short} ($13.30\times$). Goodput std is not exposed by the current aggregation pipeline; cells are point estimates.}
 \label{tab:per-workload-winner}
 \input{tables/generated/table_per_workload_winner.tex}
 \end{table*}
@@ -77,7 +77,7 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_threshold_sensitivity.pdf}
-\caption{Threshold sensitivity analysis showing marginal effect on OOM events ($\downarrow$ lower is better).}
+\caption{Stage 2 threshold sensitivity ($\downarrow$ lower is better). Bars are total $N_{\mathrm{OOM}}$ across 12 cells $\times$ 3 workloads = 36 measurements for each of 4 threshold variants plus the b128 reference. All five bars land at 510.0, confirming the stage-2 null result: threshold tuning within the sampled ranges has no measurable effect on OOM count at fixed $B = 128$.}
 \label{fig:threshold-sensitivity}
 \end{figure}
 

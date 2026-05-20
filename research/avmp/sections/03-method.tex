@@ -189,7 +189,7 @@ The system tracks pool pressure using a state machine with three states: \texttt
   \draw[trans] (KP) to[bend left=20]  node[tlabel] {free recovers} (B);
   \draw[trans] (SP) to[bend right=20] node[tlabel] {free recovers} (B);
 \end{tikzpicture}
-\caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30).}
+\caption{Pool rebalancing state machine. The allocator tracks per-pool free fractions and transitions to REBALANCING only when one pool raises CapacityError while the other has slack capacity above \texttt{threshold\_high} (0.30). Edges are labelled by per-pool free-fraction conditions on \texttt{kv\_free}, \texttt{ssm\_free}, \texttt{threshold\_low} (\texttt{th\_low}), and \texttt{threshold\_high} (\texttt{th\_high}); all transitions fire inside the \texttt{CapacityError} handler of \texttt{allocate()} rather than from a pre-emptive sampling hook, so migration costs are paid only when allocation would otherwise fail.}
 \label{fig:state-machine}
 \Description{Four-state finite state machine showing BALANCED, KV\_PRESSURED, SSM\_PRESSURED, and REBALANCING states with labeled transitions based on per-pool free fraction thresholds.}
 \end{figure}
