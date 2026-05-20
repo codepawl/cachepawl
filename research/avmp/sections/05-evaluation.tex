@@ -17,15 +17,15 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_baseline_comparison.tex}
-\caption{Cross-workload OOM and fragmentation baseline comparison.}
+\caption{Cross-workload $N_{\mathrm{OOM}}$ baseline comparison ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is the per-cell standard deviation across 3 random seeds propagated across the 12 summed cells as $\sqrt{\sum_i \sigma_i^2}$. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means). The $\Delta\%$ column reports the change in total $N_{\mathrm{OOM}}$ versus \texttt{padded\_unified}: negative numbers mark improvement.}
 \label{tab:baseline-comparison}
+\input{tables/generated/table_baseline_comparison.tex}
 \end{table*}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
-\caption{Final out-of-memory occurrence comparison across allocator variants.}
+\caption{Cross-allocator $N_{\mathrm{OOM}}$ comparison ($\downarrow$ lower is better). Grouped bars show total OOM events per workload across 4 allocator variants; each bar is summed over 12 cells (2 model specs $\times$ 3 pool budgets $\times$ 3 seeds). \texttt{avmp\_dynamic\_b128} achieves the lowest count in \texttt{mixed\_long} and \texttt{agentic\_burst}, while \texttt{padded\_unified} fails worst on every workload.}
 \label{fig:oom-comparison-final}
 \end{figure}
 
@@ -38,13 +38,13 @@ Conversely, the \texttt{padded\_unified} variant performs worst, triggering 1567
 
 We measure system throughput using goodput, defined as completed requests per second. Our pre-registered protocol dictates that dynamic allocation is justified if the goodput exceeds 1.10$\times$ the best baseline on at least one workload. AVMP passes this threshold across all three workloads simultaneously.
 
-Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP records 434.24 req/s on \texttt{uniform\_short} versus 32.65 req/s for \texttt{fixed\_dual\_mr05}, a 13.299$\times$ ratio. On \texttt{mixed\_long}, 65.07 req/s versus 27.25 req/s gives 2.388$\times$. On \texttt{agentic\_burst}, 46.91 req/s versus 25.69 req/s gives 1.826$\times$.
+Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP records 434.24 req/s on \texttt{uniform\_short} versus 32.65 req/s for \texttt{fixed\_dual\_mr05}, a 13.30$\times$ ratio. On \texttt{mixed\_long}, 65.07 req/s versus 27.25 req/s gives 2.39$\times$. On \texttt{agentic\_burst}, 46.91 req/s versus 25.69 req/s gives 1.83$\times$.
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_per_workload_winner.tex}
-\caption{Per-workload goodput comparison between AVMP and best static baseline.}
+\caption{Per-workload goodput comparison between AVMP and the best static baseline. Goodput columns ($\uparrow$ higher is better) are mean req/s across 12 cells; the ratio column is $g_{\mathrm{AVMP}} / g_{\mathrm{baseline}}$ where $g$ is goodput. \textbf{Bold} = winner per row. AVMP wins all three workloads, with the largest gap on \texttt{uniform\_short} ($13.30\times$). Goodput std is not exposed by the current aggregation pipeline; cells are point estimates.}
 \label{tab:per-workload-winner}
+\input{tables/generated/table_per_workload_winner.tex}
 \end{table*}
 
 We explicitly report per-workload ratios rather than a cross-workload mean because static baselines exhibit high variance across distinct prompt distributions. The \texttt{fixed\_dual\_mr05} goodput ranges narrowly from 25.69 to 32.65 req/s across the workloads. Mean aggregation obscures this variance and misleads interpretations of allocator resilience. AVMP maintains consistently higher goodput by adapting dynamically.
@@ -61,15 +61,15 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_vs_batch_size.pdf}
-\caption{OOM occurrence variance across different migration batch sizes.}
+\caption{$N_{\mathrm{OOM}}$ variance as a function of migration batch size $B \in \{1, \ldots, 256\}$ ($\downarrow$ lower is better). Solid lines plot AVMP per workload; dotted reference lines mark the \texttt{fixed\_dual\_mr05} static baseline for the same workload.}
 \label{fig:oom-vs-batch-size}
 \end{figure}
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_stage1_batchsize.tex}
-\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes.}
+\caption{Stage 1 sweep over migration batch size $B$: per-workload $N_{\mathrm{OOM}}$ for $B \in \{1, \ldots, 256\}$ ($\downarrow$ lower is better). Cells report $\mathrm{mean} \pm \sigma$ where $\sigma$ is propagated across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ from per-cell std across 3 seeds. \textbf{Bold} = best per column; \underline{underline} = second best (ranked on means).}
 \label{tab:stage1-batchsize}
+\input{tables/generated/table_stage1_batchsize.tex}
 \end{table*}
 
 In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The empirical data falsifies both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
@@ -77,7 +77,7 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_threshold_sensitivity.pdf}
-\caption{Threshold sensitivity analysis showing marginal effect on OOM events.}
+\caption{Stage 2 threshold sensitivity ($\downarrow$ lower is better). Bars are total $N_{\mathrm{OOM}}$ across 12 cells $\times$ 3 workloads = 36 measurements for each of 4 threshold variants plus the b128 reference. All five bars land at 510.0, confirming the stage-2 null result: threshold tuning within the sampled ranges has no measurable effect on OOM count at fixed $B = 128$.}
 \label{fig:threshold-sensitivity}
 \end{figure}
 
@@ -85,9 +85,9 @@ We systematically explored the parameter space; thresholds have a marginal effec
 
 \begin{table*}[t]
 \centering
-\input{tables/generated/table_stage2_threshold.tex}
-\caption{Stage 2 threshold sweep at b128: all four variants yield byte-identical OOM, rebalance count, and migration totals.}
+\caption{Stage 2 threshold sweep at b128 ($\downarrow$ lower \texttt{total\_oom} is better): all four threshold variants and the b128 reference yield byte-identical OOM means and identical rebalance counts. The $\pm$ values on \texttt{total\_oom} propagate per-cell std across 12 cells via $\sqrt{\sum_i \sigma_i^2}$ and are also identical, confirming the tie at the distribution level.}
 \label{tab:stage2-threshold}
+\input{tables/generated/table_stage2_threshold.tex}
 \end{table*}
 
 \subsection{Limitations}
@@ -100,7 +100,7 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_peak_reserved_tradeoff.pdf}
-\caption{Peak reserved VRAM trade-off for dynamic allocation.}
+\caption{Peak reserved VRAM trade-off for dynamic allocation; lower VRAM is better in absolute terms, but AVMP intentionally trades 2$\times$ VRAM for capacity migration headroom. Bars show mean across 12 cells with error bars at $\pm 1\sigma$ (cross-cell standard deviation), and value labels report $\mathrm{mean} \pm \sigma$.}
 \label{fig:peak-reserved-tradeoff}
 \end{figure}
 
