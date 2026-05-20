@@ -145,13 +145,13 @@ inner ysep=1.0mm
 (hbox.south) -- node[right, font=\tiny] {lookup} (pthdr.north);
 
 \draw[kvarrow]
-(r0.south) to[out=270,in=90] (kvp3.north);
+(r0.west) to[out=180,in=90] (kvp3.north);
 
 \draw[ssmarrow]
-(r1.south) to[out=270,in=90] (ssmb1.north);
+(r1.east) to[out=0,in=90] (ssmb1.north);
 
 \draw[kvarrow]
-(r2.south) to[out=270,in=90] (kvp7.north);
+(r2.west) to[out=180,in=90] (kvp7.north);
 
 \end{tikzpicture}
 \caption{AVMP virtual handle resolution. A 32-bit handle is tagged by pool identifier and indexed into the page table, which dispatches to either the KVPagesStore, with fine-grained pages, or the SSMBlocksStore, with per-layer contiguous blocks.}
