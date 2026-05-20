@@ -106,6 +106,6 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 
 Second, we execute the allocator as a pure Python prototype without Triton or CUDA kernels. This validates allocator semantics; integration with Triton kernels and real model runtime is future work.
 
-Third, our evaluation uses synthetic prompt distributions. While our three presets successfully capture short, long, and bursty axes, they do not replicate real model traffic semantics. Future evaluations require ShareGPT and Alpaca traces.
+Third, our evaluation uses synthetic prompt distributions. While our three presets successfully capture short, long, and bursty axes, they do not replicate real model traffic semantics. Future evaluations require ShareGPT \cite{sharegpt} and Alpaca \cite{taori2023alpaca} traces.
 
 Finally, we test strictly on a single GPU. Extending AVMP to multi-GPU environments requires implementing tensor parallelism with cross-device virtual pool sizing synchronization.
