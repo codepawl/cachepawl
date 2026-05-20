@@ -110,5 +110,7 @@ Third, our evaluation uses synthetic prompt distributions. While our three prese
 
 Finally, we test strictly on a single GPU. Extending AVMP to multi-GPU environments requires implementing tensor parallelism with cross-device virtual pool sizing synchronization.
 
-\paragraph{Reproducibility.}
+\subsection{Reproducibility}
+\label{sec:eval:reproducibility}
+
 The full sweep harness, generated tables and figures, paper source, and pre-registered analysis protocol are available at \url{https://github.com/codepawl/cachepawl}. The 270-cell sweep completes in 16:14 wall time on a single NVIDIA RTX 3060 12GB. Event-deterministic fields (OOM counts, rebalance events, migrated bytes) reproduce byte-identically across reruns; goodput and time-to-first-OOM depend on wall-clock execution speed and are not subject to byte-identical reproducibility.
