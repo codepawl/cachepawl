@@ -242,9 +242,7 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     means: dict[str, float] = {}
     stds: dict[str, float] = {}
     for variant in _HEADLINE_VARIANTS:
-        peaks_mib = [
-            r.peak_reserved_bytes_mean / mib for r in rows if r.variant_label == variant
-        ]
+        peaks_mib = [r.peak_reserved_bytes_mean / mib for r in rows if r.variant_label == variant]
         if peaks_mib:
             arr = np.asarray(peaks_mib, dtype=np.float64)
             means[variant] = float(arr.mean())
@@ -271,9 +269,9 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     ax.set_ylabel("Peak reserved VRAM (MiB)")
     ax.set_title("Peak reserved memory: AVMP carries a 2x physical-footprint cost")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
-    ymax = (max(v + e for v, e in zip(values, errors)) if values else 1.0) * 1.18
+    ymax = (max(v + e for v, e in zip(values, errors, strict=True)) if values else 1.0) * 1.18
     ax.set_ylim(0, ymax)
-    for i, (v, e) in enumerate(zip(values, errors)):
+    for i, (v, e) in enumerate(zip(values, errors, strict=True)):
         ax.text(
             i,
             v + e + ymax * 0.01,

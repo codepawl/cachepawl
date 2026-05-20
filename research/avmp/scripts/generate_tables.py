@@ -125,9 +125,7 @@ def _sum_oom_per_workload(rows: list[Row], variant: str) -> dict[str, float]:
     return out
 
 
-def _sum_oom_with_std_per_workload(
-    rows: list[Row], variant: str
-) -> dict[str, tuple[float, float]]:
+def _sum_oom_with_std_per_workload(rows: list[Row], variant: str) -> dict[str, tuple[float, float]]:
     """Sum mean OOMs and propagate std across cells assuming independence.
 
     Per-cell ``oom_count_std`` is taken from :mod:`aggregate`; the std of
@@ -266,9 +264,7 @@ def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
         base_v = baseline_gp[workload]
         targ_v = target_gp[workload]
         ratio_str = f"{targ_v / base_v:.2f}$\\times$" if base_v > 0.0 else "n/a"
-        formatted = _format_with_rank(
-            [base_v, targ_v], lower_is_better=False, fmt="{:.2f}"
-        )
+        formatted = _format_with_rank([base_v, targ_v], lower_is_better=False, fmt="{:.2f}")
         lines.append(
             f"{_tex_escape(workload)} & {formatted[0]} & {formatted[1]} & {ratio_str} \\\\"
         )
@@ -332,9 +328,7 @@ def table_stage1_batchsize(rows: list[Row], out_dir: Path) -> Path:
             for w in _WORKLOAD_ORDER
         ]
         total_cell = f"{formatted_totals[i]} $\\pm$ {total_stds[i]:.1f}"
-        lines.append(
-            f"{bs} & {cells[0]} & {cells[1]} & {cells[2]} & {total_cell} \\\\"
-        )
+        lines.append(f"{bs} & {cells[0]} & {cells[1]} & {cells[2]} & {total_cell} \\\\")
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     return _write_table(out_dir, "table_stage1_batchsize", "\n".join(lines) + "\n")
