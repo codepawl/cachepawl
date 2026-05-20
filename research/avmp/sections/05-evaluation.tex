@@ -124,7 +124,7 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \input{tables/generated/table_stage1_batchsize.tex}
 \end{table*}
 
-In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The empirical data falsifies both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
+In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} configuration. We sweep four variants combining \texttt{threshold\_high} (0.10, 0.20) and \texttt{threshold\_low} (0.02, 0.10). We pre-registered hypotheses that lower high thresholds would benefit \texttt{mixed\_long} and lower low thresholds would benefit bursty workloads. The data rejects both hypotheses. All four threshold variants result in identical OOM counts (510.0), identical rebalance event counts, and byte-identical total migrated bytes.
 
 \begin{figure}[t]
 \centering
@@ -145,9 +145,9 @@ We systematically explored the parameter space; thresholds have a marginal effec
 \subsection{Limitations}
 \label{sec:eval:limitations}
 
-We acknowledge four primary limitations in the current AVMP prototype design.
+We note four limitations in the current AVMP prototype design.
 
-First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig:peak-reserved-tradeoff}). We size the backing stores to the maximum possible capacity of both pools combined. AVMP peaks at 9 GiB on a 4 GiB pool budget to enable zero-copy migration. Integrating \texttt{cuMemMap} would address this overhead by dynamically mapping virtual addresses to physical pages, similar to the approach in vTensor~\cite{xu2024vtensor}.
+First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig:peak-reserved-tradeoff}). We size the backing stores to the maximum possible capacity of both pools combined. AVMP peaks at 9 GiB on a 4 GiB pool budget to enable zero-copy migration. Integrating \texttt{cuMemMap} would remove this overhead by dynamically mapping virtual addresses to physical pages, similar to the approach in vTensor~\cite{xu2024vtensor}.
 
 \begin{figure}[t]
 \centering

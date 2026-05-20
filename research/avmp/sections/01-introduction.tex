@@ -18,7 +18,7 @@ In this paper, we introduce Asymmetric Virtual Memory Paging (AVMP), a paged mem
 We make the following specific contributions:
 
 \begin{itemize}[leftmargin=1.4em, itemsep=2pt, topsep=4pt]
-\item \textbf{Asymmetric Virtual Page Table Abstraction (\S\ref{sec:method}):} We design a unified virtual handle space spanning two physically heterogeneous backing stores (KV pages and SSM blocks). AVMP extends the GPU virtual memory approach pioneered for KV caches \cite{xu2024vtensor} to two asymmetric pool types. We validate that this abstraction introduces no measurable effect on simulated capacity outcomes, with byte-identical OOM counts against a static dual-pool baseline (552 OOMs).
+\item \textbf{Asymmetric Virtual Page Table Abstraction (\S\ref{sec:method}):} We design a unified virtual handle space spanning two physically heterogeneous backing stores (KV pages and SSM blocks). AVMP extends the GPU virtual memory approach pioneered for KV caches \cite{xu2024vtensor} to two asymmetric pool types. We show that this abstraction introduces no measurable effect on simulated capacity outcomes, with byte-identical OOM counts against a static dual-pool baseline (552 OOMs).
 
 \item \textbf{Dynamic Pool Rebalancing Mechanism (\S\ref{sec:method}):} We implement a \texttt{CapacityError}-triggered migration mechanism that transfers batched memory capacity between pools. We enforce determinism using a logical operation counter rather than wall-clock time, ensuring per-cell byte-identical reproducibility across all experimental reruns.
 
