@@ -20,7 +20,7 @@ from cachepawl.benchmarks.harness.workloads import WorkloadSpec
 from cachepawl.models.spec import AttentionLayerProfile, SSMLayerProfile
 from cachepawl.quant.dtypes import DType
 
-SCHEMA_VERSION: Final[str] = "1.2.0"
+SCHEMA_VERSION: Final[str] = "1.3.0"
 SUPPORTED_SCHEMA_MAJOR: Final[str] = "1"
 
 
@@ -212,14 +212,19 @@ def _metrics_to_dict(m: AllocatorMetrics) -> dict[str, object]:
         "goodput_requests_per_second": m.goodput_requests_per_second,
         "completion_ratio": m.completion_ratio,
         "time_to_first_oom_seconds": m.time_to_first_oom_seconds,
+        "time_in_service_ns": m.time_in_service_ns,
+        "time_in_oom_retry_ns": m.time_in_oom_retry_ns,
+        "time_in_migration_ns": m.time_in_migration_ns,
+        "time_in_idle_ns": m.time_in_idle_ns,
         "allocator_specific_stats": dict(m.allocator_specific_stats),
     }
 
 
 def _metrics_from_dict(data: dict[str, object]) -> AllocatorMetrics:
-    # Throughput fields were added in schema 1.2.0; 1.1.0 artifacts
-    # lack them and must deserialize with default values
-    # (0.0 for the six floats, None for time_to_first_oom_seconds).
+    # Throughput fields were added in schema 1.2.0; phase-time fields in
+    # 1.3.0. Older artifacts lack them and must deserialize with default
+    # values (0.0 for the six 1.2.0 floats, None for
+    # time_to_first_oom_seconds, 0 for the four 1.3.0 int phase timers).
     return AllocatorMetrics(
         peak_reserved_bytes=_pop_int(data, "peak_reserved_bytes"),
         peak_allocated_bytes=_pop_int(data, "peak_allocated_bytes"),
@@ -236,6 +241,10 @@ def _metrics_from_dict(data: dict[str, object]) -> AllocatorMetrics:
         goodput_requests_per_second=_pop_float_with_default(data, "goodput_requests_per_second"),
         completion_ratio=_pop_float_with_default(data, "completion_ratio"),
         time_to_first_oom_seconds=_pop_optional_float(data, "time_to_first_oom_seconds"),
+        time_in_service_ns=_pop_int_with_default(data, "time_in_service_ns"),
+        time_in_oom_retry_ns=_pop_int_with_default(data, "time_in_oom_retry_ns"),
+        time_in_migration_ns=_pop_int_with_default(data, "time_in_migration_ns"),
+        time_in_idle_ns=_pop_int_with_default(data, "time_in_idle_ns"),
         allocator_specific_stats=_pop_float_mapping_optional(data, "allocator_specific_stats"),
     )
 
@@ -353,6 +362,23 @@ def _pop_float_with_default(data: dict[str, object], key: str, default: float = 
     if not isinstance(value, (int, float)):
         raise ValueError(f"expected numeric at key {key!r}, got {type(value).__name__}")
     return float(value)
+
+
+def _pop_int_with_default(data: dict[str, object], key: str, default: int = 0) -> int:
+    """Return ``data[key]`` as int; missing key yields ``default``.
+
+    Used for 1.3.0 phase-time fields so 1.2.0 and earlier artifacts
+    deserialize without raising.
+    """
+
+    value = data.get(key)
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        raise ValueError(f"expected int at key {key!r}, got bool")
+    if not isinstance(value, int):
+        raise ValueError(f"expected int at key {key!r}, got {type(value).__name__}")
+    return value
 
 
 def _pop_optional_float(data: dict[str, object], key: str) -> float | None:

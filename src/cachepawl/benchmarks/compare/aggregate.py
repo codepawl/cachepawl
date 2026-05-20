@@ -81,6 +81,11 @@ class AggregatedRow:
     completion_ratio_median: float
     time_to_first_oom_seconds_median: float | None
 
+    time_in_service_ns_median: int
+    time_in_oom_retry_ns_median: int
+    time_in_migration_ns_median: int
+    time_in_idle_ns_median: int
+
     allocator_specific_median: tuple[tuple[str, float], ...]
     allocator_specific_iqr: tuple[tuple[str, float], ...]
 
@@ -114,6 +119,10 @@ class AggregatedRow:
             "goodput_requests_per_second_median": self.goodput_requests_per_second_median,
             "completion_ratio_median": self.completion_ratio_median,
             "time_to_first_oom_seconds_median": self.time_to_first_oom_seconds_median,
+            "time_in_service_ns_median": self.time_in_service_ns_median,
+            "time_in_oom_retry_ns_median": self.time_in_oom_retry_ns_median,
+            "time_in_migration_ns_median": self.time_in_migration_ns_median,
+            "time_in_idle_ns_median": self.time_in_idle_ns_median,
             "allocator_specific_median": dict(self.allocator_specific_median),
             "allocator_specific_iqr": dict(self.allocator_specific_iqr),
             "allocate_p50_ns_median": self.allocate_p50_ns_median,
@@ -253,6 +262,10 @@ def _aggregate_one_cell(
     goodputs = [r.metrics.goodput_requests_per_second for r in runs]
     completion_ratios = [r.metrics.completion_ratio for r in runs]
     ttfo_values = [r.metrics.time_to_first_oom_seconds for r in runs]
+    service_ns = [r.metrics.time_in_service_ns for r in runs]
+    oom_retry_ns = [r.metrics.time_in_oom_retry_ns for r in runs]
+    migration_ns = [r.metrics.time_in_migration_ns for r in runs]
+    idle_ns = [r.metrics.time_in_idle_ns for r in runs]
 
     per_run_stats = [r.metrics.allocator_specific_stats for r in runs]
     allocator_specific = _aggregate_allocator_specific(per_run_stats)
@@ -282,6 +295,10 @@ def _aggregate_one_cell(
         goodput_requests_per_second_median=float(statistics.median(goodputs)),
         completion_ratio_median=float(statistics.median(completion_ratios)),
         time_to_first_oom_seconds_median=_optional_median(ttfo_values),
+        time_in_service_ns_median=int(statistics.median(service_ns)),
+        time_in_oom_retry_ns_median=int(statistics.median(oom_retry_ns)),
+        time_in_migration_ns_median=int(statistics.median(migration_ns)),
+        time_in_idle_ns_median=int(statistics.median(idle_ns)),
         allocator_specific_median=allocator_specific[0],
         allocator_specific_iqr=allocator_specific[1],
         allocate_p50_ns_median=int(statistics.median(p50s)),

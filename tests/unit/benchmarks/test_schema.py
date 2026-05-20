@@ -49,9 +49,9 @@ def _sample_run(allocator_name: str = "mock") -> BenchmarkRun:
     )
 
 
-def test_schema_version_is_one_two_zero() -> None:
-    assert SCHEMA_VERSION == "1.2.0"
-    assert _sample_run().schema_version == "1.2.0"
+def test_schema_version_is_one_three_zero() -> None:
+    assert SCHEMA_VERSION == "1.3.0"
+    assert _sample_run().schema_version == "1.3.0"
 
 
 def test_to_json_and_from_json_round_trip() -> None:

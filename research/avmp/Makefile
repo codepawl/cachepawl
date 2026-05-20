@@ -20,6 +20,7 @@ PAPER := paper
 
 figures:
 	uv run --project .. python scripts/generate_figures.py figures/generated
+	uv run --project .. python scripts/generate_time_decomposition.py
 
 tables:
 	uv run --project .. python scripts/generate_tables.py tables/generated
