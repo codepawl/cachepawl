@@ -224,9 +224,15 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
     ax.set_xticks(x)
     ax.set_xticklabels([w.replace("_", " ") for w in _WORKLOAD_ORDER])
     ax.set_ylabel("Sum of mean OOMs across 12 cells")
-    ax.set_title("Headline: cross-allocator OOM comparison (4 variants, 3 workloads)")
-    ax.legend(loc="best", framealpha=0.85, fontsize=8)
+    ax.set_title("Cross-allocator OOM comparison")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.18),
+        framealpha=1.0,
+        fontsize=7,
+        ncol=4,
+    )
     return _save_pair(fig, out_dir, "fig_oom_comparison_final")
 
 
@@ -241,6 +247,8 @@ def fig_peak_reserved_tradeoff(rows: list[Row], out_dir: Path) -> tuple[Path, Pa
     values = [means[v] for v in _HEADLINE_VARIANTS]
     colors = [_PALETTE[v] for v in _HEADLINE_VARIANTS]
     ax.bar(labels, values, color=colors, edgecolor="black", linewidth=0.4)
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=20, ha="right")
     ax.set_ylabel("Mean peak_reserved (MiB)")
     ax.set_title("Peak reserved memory: AVMP carries a 2x physical-footprint cost")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
