@@ -10,6 +10,9 @@ We enforce strict determinism by using a logical operation counter for migration
 
 We generate synthetic workloads to capture three distinct prompt distributions. The \texttt{uniform\_short} workload simulates KV-heavy traffic with low concurrency variance. The \texttt{mixed\_long} workload simulates long context requests that generate high SSM pressure and lower batch density. The \texttt{agentic\_burst} workload tests allocator responsiveness using a mix of short and long contexts with variable arrival loads.
 
+\paragraph{Baseline fidelity.}
+We model two production systems as allocator-level baselines rather than reproducing full inference engines. The \texttt{padded\_unified} baseline implements the unified pool padding behavior documented in vLLM issue \#37121, where SSM state is padded to attention page granularity. The \texttt{fixed\_dual\_mr05} and \texttt{fixed\_dual\_mr09} baselines model SGLang's \texttt{HybridReqToTokenPool} and \texttt{HybridLinearKVPool} with the \texttt{mamba\_full\_memory\_ratio} parameter at 0.5 and the default 0.9, respectively~\cite{zheng2024sglang}. These baselines isolate allocator behavior from kernel execution and request scheduling, which our prototype does not implement. A full reproduction against vLLM main or SGLang main would require integrating AVMP into those engines, which we leave to future work.
+
 \subsection{Baseline Comparison}
 \label{sec:eval:baseline}
 
