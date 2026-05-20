@@ -143,19 +143,59 @@ def _tex_escape(value: str) -> str:
     return value.replace("_", "\\_")
 
 
+def _format_with_rank(values: list[float], lower_is_better: bool, fmt: str) -> list[str]:
+    """Format values, wrapping best in \\textbf and second-best in \\underline.
+
+    Ties at the best are all bolded and no second-best is marked. Ties at
+    the second-best are all underlined. ``fmt`` is a printf-style spec
+    applied to each value (e.g. ``"{:.1f}"``).
+    """
+
+    if not values:
+        return []
+    extreme = min(values) if lower_is_better else max(values)
+    best_indices = {i for i, v in enumerate(values) if v == extreme}
+    rest = [(i, v) for i, v in enumerate(values) if i not in best_indices]
+    second_indices: set[int] = set()
+    if rest:
+        second_extreme = min(v for _, v in rest) if lower_is_better else max(v for _, v in rest)
+        second_indices = {i for i, v in rest if v == second_extreme}
+    out: list[str] = []
+    for i, v in enumerate(values):
+        cell = fmt.format(v)
+        if i in best_indices and len(best_indices) < len(values):
+            cell = f"\\textbf{{{cell}}}"
+        elif i in second_indices:
+            cell = f"\\underline{{{cell}}}"
+        out.append(cell)
+    return out
+
+
 def table_baseline_comparison(rows: list[Row], out_dir: Path) -> Path:
+    per_workload: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    totals: list[float] = []
+    for variant in _HEADLINE_VARIANTS:
+        per = _sum_oom_per_workload(rows, variant)
+        for w in _WORKLOAD_ORDER:
+            per_workload[w].append(per[w])
+        totals.append(sum(per.values()))
+    formatted_per_workload = {
+        w: _format_with_rank(per_workload[w], lower_is_better=True, fmt="{:.1f}")
+        for w in _WORKLOAD_ORDER
+    }
+    formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
     lines: list[str] = []
     lines.append("\\begin{tabular}{lrrrr}")
     lines.append("\\toprule")
     lines.append("Variant & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
     lines.append("\\midrule")
-    for variant in _HEADLINE_VARIANTS:
-        per = _sum_oom_per_workload(rows, variant)
-        total = sum(per.values())
+    for i, variant in enumerate(_HEADLINE_VARIANTS):
         lines.append(
-            f"{_tex_escape(variant)} & {per['uniform_short']:.1f} & "
-            f"{per['mixed_long']:.1f} & {per['agentic_burst']:.1f} & "
-            f"{total:.1f} \\\\"
+            f"{_tex_escape(variant)} & "
+            f"{formatted_per_workload['uniform_short'][i]} & "
+            f"{formatted_per_workload['mixed_long'][i]} & "
+            f"{formatted_per_workload['agentic_burst'][i]} & "
+            f"{formatted_totals[i]} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -179,7 +219,12 @@ def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
         base_v = baseline_gp[workload]
         targ_v = target_gp[workload]
         ratio_str = f"{targ_v / base_v:.2f}$\\times$" if base_v > 0.0 else "n/a"
-        lines.append(f"{_tex_escape(workload)} & {base_v:.2f} & {targ_v:.2f} & {ratio_str} \\\\")
+        formatted = _format_with_rank(
+            [base_v, targ_v], lower_is_better=False, fmt="{:.2f}"
+        )
+        lines.append(
+            f"{_tex_escape(workload)} & {formatted[0]} & {formatted[1]} & {ratio_str} \\\\"
+        )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     return _write_table(out_dir, "table_per_workload_winner", "\n".join(lines) + "\n")
@@ -213,17 +258,30 @@ def table_parameter_defaults(out_dir: Path) -> Path:
 
 
 def table_stage1_batchsize(rows: list[Row], out_dir: Path) -> Path:
+    per_workload: dict[str, list[float]] = {w: [] for w in _WORKLOAD_ORDER}
+    totals: list[float] = []
+    for bs in _BATCH_SIZE_SERIES:
+        per = _sum_oom_per_workload(rows, f"avmp_dynamic_b{bs}")
+        for w in _WORKLOAD_ORDER:
+            per_workload[w].append(per[w])
+        totals.append(sum(per.values()))
+    formatted_per_workload = {
+        w: _format_with_rank(per_workload[w], lower_is_better=True, fmt="{:.1f}")
+        for w in _WORKLOAD_ORDER
+    }
+    formatted_totals = _format_with_rank(totals, lower_is_better=True, fmt="{:.1f}")
     lines: list[str] = []
     lines.append("\\begin{tabular}{rrrrr}")
     lines.append("\\toprule")
     lines.append("batch\\_size & uniform\\_short & mixed\\_long & agentic\\_burst & Total \\\\")
     lines.append("\\midrule")
-    for bs in _BATCH_SIZE_SERIES:
-        per = _sum_oom_per_workload(rows, f"avmp_dynamic_b{bs}")
-        total = sum(per.values())
+    for i, bs in enumerate(_BATCH_SIZE_SERIES):
         lines.append(
-            f"{bs} & {per['uniform_short']:.1f} & {per['mixed_long']:.1f} & "
-            f"{per['agentic_burst']:.1f} & {total:.1f} \\\\"
+            f"{bs} & "
+            f"{formatted_per_workload['uniform_short'][i]} & "
+            f"{formatted_per_workload['mixed_long'][i]} & "
+            f"{formatted_per_workload['agentic_burst'][i]} & "
+            f"{formatted_totals[i]} \\\\"
         )
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")

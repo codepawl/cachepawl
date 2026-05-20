@@ -18,7 +18,7 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_baseline_comparison.tex}
-\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better).}
+\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better). \textbf{Bold} = best per column; \underline{underline} = second best.}
 \label{tab:baseline-comparison}
 \end{table*}
 
@@ -43,7 +43,7 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_per_workload_winner.tex}
-\caption{Per-workload goodput comparison between AVMP and best static baseline; goodput columns $\uparrow$ higher is better, ratio shown without direction.}
+\caption{Per-workload goodput comparison between AVMP and best static baseline; goodput columns $\uparrow$ higher is better, ratio shown without direction. \textbf{Bold} = winner per row.}
 \label{tab:per-workload-winner}
 \end{table*}
 
@@ -68,7 +68,7 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_stage1_batchsize.tex}
-\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better).}
+\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better). \textbf{Bold} = best per column; \underline{underline} = second best.}
 \label{tab:stage1-batchsize}
 \end{table*}
 
