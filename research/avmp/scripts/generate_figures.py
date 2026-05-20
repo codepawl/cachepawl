@@ -195,9 +195,9 @@ def fig_oom_vs_batch_size(rows: list[Row], out_dir: Path) -> tuple[Path, Path]:
     ax.set_xscale("log", base=2)
     ax.set_xticks(_BATCH_SIZE_SERIES)
     ax.set_xticklabels([str(bs) for bs in _BATCH_SIZE_SERIES])
-    ax.set_xlabel("migration_batch_size")
-    ax.set_ylabel("Sum of mean OOMs across 12 cells")
-    ax.set_title("Stage 1: OOMs vs migration_batch_size (per workload)")
+    ax.set_xlabel("Migration batch size B (log2 scale)")
+    ax.set_ylabel("Total OOM events")
+    ax.set_title("Stage 1: OOM events vs migration batch size B (per workload)")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ax.legend(loc="best", framealpha=0.85, fontsize=8)
     return _save_pair(fig, out_dir, "fig_oom_vs_batch_size")
@@ -223,7 +223,7 @@ def fig_oom_comparison_final(rows: list[Row], out_dir: Path) -> tuple[Path, Path
         offset += width
     ax.set_xticks(x)
     ax.set_xticklabels([w.replace("_", " ") for w in _WORKLOAD_ORDER])
-    ax.set_ylabel("Sum of mean OOMs across 12 cells")
+    ax.set_ylabel("Total OOM events")
     ax.set_title("Cross-allocator OOM comparison")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ax.legend(
@@ -301,7 +301,7 @@ def fig_threshold_sensitivity(
     ax.bar(positions, values, color=colors, edgecolor="black", linewidth=0.4)
     ax.set_xticks(positions)
     ax.set_xticklabels(labels, rotation=20, ha="right")
-    ax.set_ylabel("Cross-workload total OOMs (12 cells x 3 workloads)")
+    ax.set_ylabel("Total OOM events (cross-workload)")
     ax.set_title("Stage 2: threshold variants all tie with stage 1 b128 reference")
     ax.grid(True, axis="y", linestyle="--", alpha=0.35)
     ymax = max(values) * 1.15 if values else 1.0
