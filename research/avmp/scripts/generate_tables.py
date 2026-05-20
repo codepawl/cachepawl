@@ -171,7 +171,8 @@ def table_per_workload_winner(rows: list[Row], out_dir: Path) -> Path:
     lines.append("\\begin{tabular}{lrrr}")
     lines.append("\\toprule")
     lines.append(
-        f"Workload & {_tex_escape(baseline)} (req/s) & {_tex_escape(target)} (req/s) & Ratio \\\\"
+        f"Workload & {_tex_escape(baseline)} (req/s, $\\uparrow$) & "
+        f"{_tex_escape(target)} (req/s, $\\uparrow$) & Ratio \\\\"
     )
     lines.append("\\midrule")
     for workload in _WORKLOAD_ORDER:
@@ -243,7 +244,8 @@ def table_stage2_threshold(
     lines.append("\\begin{tabular}{lrrrr}")
     lines.append("\\toprule")
     lines.append(
-        "Variant & threshold\\_low & threshold\\_high & total\\_oom & rebalance\\_count \\\\"
+        "Variant & threshold\\_low & threshold\\_high & "
+        "total\\_oom ($\\downarrow$) & rebalance\\_count \\\\"
     )
     lines.append("\\midrule")
     for variant in _THRESHOLD_TABLE_VARIANTS:

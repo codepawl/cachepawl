@@ -18,14 +18,14 @@ We compare the dynamic AVMP allocator against static dual-pool baselines \cite{z
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_baseline_comparison.tex}
-\caption{Cross-workload OOM and fragmentation baseline comparison.}
+\caption{Cross-workload OOM and fragmentation baseline comparison ($\downarrow$ lower is better).}
 \label{tab:baseline-comparison}
 \end{table*}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_comparison_final.pdf}
-\caption{Final out-of-memory occurrence comparison across allocator variants.}
+\caption{Final out-of-memory occurrence comparison across allocator variants ($\downarrow$ lower is better).}
 \label{fig:oom-comparison-final}
 \end{figure}
 
@@ -43,7 +43,7 @@ Table~\ref{tab:per-workload-winner} summarizes per-workload goodput. AVMP record
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_per_workload_winner.tex}
-\caption{Per-workload goodput comparison between AVMP and best static baseline.}
+\caption{Per-workload goodput comparison between AVMP and best static baseline; goodput columns $\uparrow$ higher is better, ratio shown without direction.}
 \label{tab:per-workload-winner}
 \end{table*}
 
@@ -61,14 +61,14 @@ In Stage 1, we sweep the \texttt{migration\_batch\_size} parameter across 9 valu
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_oom_vs_batch_size.pdf}
-\caption{OOM occurrence variance across different migration batch sizes.}
+\caption{OOM occurrence variance across different migration batch sizes ($\downarrow$ lower is better).}
 \label{fig:oom-vs-batch-size}
 \end{figure}
 
 \begin{table*}[t]
 \centering
 \input{tables/generated/table_stage1_batchsize.tex}
-\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes.}
+\caption{Stage 1 migration batch size sweep: per-workload OOM distribution across 9 batch sizes ($\downarrow$ lower is better).}
 \label{tab:stage1-batchsize}
 \end{table*}
 
@@ -77,7 +77,7 @@ In Stage 2, we evaluate trigger threshold sensitivity at the \texttt{b128} confi
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_threshold_sensitivity.pdf}
-\caption{Threshold sensitivity analysis showing marginal effect on OOM events.}
+\caption{Threshold sensitivity analysis showing marginal effect on OOM events ($\downarrow$ lower is better).}
 \label{fig:threshold-sensitivity}
 \end{figure}
 
@@ -100,7 +100,7 @@ First, the system requires a 2$\times$ VRAM footprint trade-off (Figure~\ref{fig
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/generated/fig_peak_reserved_tradeoff.pdf}
-\caption{Peak reserved VRAM trade-off for dynamic allocation.}
+\caption{Peak reserved VRAM trade-off for dynamic allocation; lower VRAM is better in absolute terms, but AVMP intentionally trades 2$\times$ VRAM for capacity migration headroom.}
 \label{fig:peak-reserved-tradeoff}
 \end{figure}
 
