@@ -13,6 +13,30 @@
 
 \usepackage{enumitem}
 
+% Reduce acmart sigconf's pre-subsection vertical gap. The class default
+% is -.75\baselineskip (~8pt space-before, with first-paragraph indent
+% suppressed). \vspace{...} cannot override this because \@startsection
+% installs the skip via \addvspace, which is a MAX operator. We redefine
+% \subsection from scratch with a smaller-magnitude negative skip; the
+% negative sign preserves the no-indent-after behavior while .3 (vs .75)
+% closes the visual gap.
+%
+% acmart guards against \subsection redefinition by capturing the
+% original definition into \ACM@origsubsection at class load and
+% raising a ClassError at \AtEndDocument if the two no longer match
+% (see acmart.cls:3637-3641). After we install the new definition,
+% we also re-\let \ACM@origsubsection to the new one so the equality
+% check at end-of-document passes.
+\makeatletter
+\renewcommand\subsection{%
+  \@startsection{subsection}{2}{\z@}%
+  {-.3\baselineskip \@plus -2\p@ \@minus -.2\p@}%
+  {.25\baselineskip}%
+  {\ACM@NRadjust\@subsecfont}%
+}
+\let\ACM@origsubsection\subsection
+\makeatother
+
 \input{sections/00-abstract.tex}
 
 \begin{document}
