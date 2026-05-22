@@ -1,5 +1,7 @@
 # Cachepawl
 
+[![arXiv](https://img.shields.io/badge/arXiv-2605.22416-b31b1b.svg)](https://arxiv.org/abs/2605.22416)
+
 > Pre-alpha. Interfaces are stable enough to plan against; nothing inside is implemented yet.
 
 Cachepawl is a hybrid cache allocator for next-generation language models that
@@ -67,6 +69,10 @@ src/cachepawl/
   quant/       cache element dtypes (FP16, BF16, INT8, FP8, FP4)
   utils/       device and VRAM helpers
 ```
+
+## Paper
+
+The AVMP allocator is described in [arXiv:2605.22416](https://arxiv.org/abs/2605.22416). Source under `research/avmp/`.
 
 ## Documentation
 
