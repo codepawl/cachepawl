@@ -97,4 +97,5 @@ pythonpath = ["src", "research/avmp"]
 addopts = ["-ra", "--strict-markers", "--strict-config"]
 markers = [
     "gpu: requires a CUDA-capable GPU",
+    "slow: long-running test, deselect with -m 'not slow'",
 ]
