@@ -78,3 +78,7 @@ research/avmp/acmart.cls
 research/avmp/acmart-tagged.cls
 research/avmp/acmart.cfg
 research/avmp/arxiv-submission.tar.gz
+
+# Top-level arXiv export staging (output of `make arxiv` copied to repo root)
+/arxiv-submission/
+/cachepawl-avmp-arxiv.tar.gz
