@@ -35,6 +35,7 @@ from __future__ import annotations
 from cachepawl.allocator.avmp.handle import HandleKind
 from cachepawl.allocator.avmp.pool import AsymmetricVirtualPool
 from cachepawl.allocator.avmp.state import RebalanceDirection, RebalanceOutcome
+from cachepawl.kernels.allocate import launch_zero_page
 
 
 class TritonAVMPAllocator(AsymmetricVirtualPool):
@@ -58,22 +59,39 @@ class TritonAVMPAllocator(AsymmetricVirtualPool):
     def _allocate_into(self, *, kind: HandleKind, num_blocks: int) -> list[int]:
         """Allocate ``num_blocks`` pages or blocks and zero-fill each.
 
-        Override seam (Week 1): after the base class returns the list of
-        physical offsets via :meth:`_try_bulk_allocate_with_eviction`,
-        the Triton variant launches :func:`launch_zero_page` over each
-        offset's region of the matching :class:`BackingStore._buffer`
-        before minting handles. Mint order is preserved so handle ids
-        remain comparable to the Python baseline.
+        Mirrors :meth:`AsymmetricVirtualPool._allocate_into` byte-for-byte
+        in handle mint order, with one :func:`launch_zero_page` call per
+        offset inserted between offset acquisition and handle minting.
+        Handle ids match the Python baseline because both the offset
+        list and the per-offset mint call sequence are unchanged.
+
+        TODO(stretch): batch contiguous offsets into a single kernel
+        launch. ``num_blocks == 1`` is the common case in the existing
+        workloads (one page per layer per growth event), so single-launch
+        per call is acceptable for Week 1; the stretch lands in v2.1
+        only if the 200 us p95 budget is missed at higher ``num_blocks``.
         """
 
-        # TODO(Week 1): call super()._try_bulk_allocate_with_eviction
-        # directly (skipping the base mint loop), launch zero_page_kernel
-        # over each offset, then mint handles in the same order so handle
-        # ids match the Python baseline byte-for-byte.
-        raise NotImplementedError(
-            "TritonAVMPAllocator._allocate_into lands in Week 1; see "
-            "research/avmp/v2/TRITON_ROADMAP.md section 5"
-        )
+        offsets = self._try_bulk_allocate_with_eviction(kind=kind, num_blocks=num_blocks)
+        size_bytes = self._size_bytes_for(kind)
+        backing = self._kv_store if kind is HandleKind.KV_PAGE else self._ssm_store
+        buffer_tensor = backing.buffer_tensor
+        for offset in offsets:
+            launch_zero_page(buffer_tensor, offset, size_bytes)
+        handle_ids: list[int] = []
+        request_id_str = str(self._current_request_id)
+        for offset in offsets:
+            handle = self._page_table.mint(
+                kind=kind,
+                virtual_offset=offset,
+                size_bytes=size_bytes,
+                request_id=request_id_str,
+                layer_idx=0,
+                physical_offset=offset,
+            )
+            handle_ids.append(handle.handle_id)
+        self._tracker_for(kind).touch(self._current_request_id, handle_ids)
+        return handle_ids
 
     def _apply_rebalance(
         self,
