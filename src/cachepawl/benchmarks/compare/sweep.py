@@ -790,6 +790,7 @@ def _validate_config(config: SweepConfig) -> None:
             "fixed_dual",
             "avmp_static",
             "avmp_dynamic",
+            "avmp_triton_dynamic",
         }:
             raise ValueError(
                 f"variant {variant.label!r}: unknown allocator_name {variant.allocator_name!r}"
