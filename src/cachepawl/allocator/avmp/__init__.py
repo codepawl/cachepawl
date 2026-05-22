@@ -18,6 +18,7 @@ from cachepawl.allocator.avmp.state import (
     RebalanceOutcome,
     ResizeResult,
 )
+from cachepawl.allocator.avmp.triton_allocator import TritonAVMPAllocator
 
 __all__ = [
     "AsymmetricVirtualPool",
@@ -26,4 +27,5 @@ __all__ = [
     "RebalanceDirection",
     "RebalanceOutcome",
     "ResizeResult",
+    "TritonAVMPAllocator",
 ]
