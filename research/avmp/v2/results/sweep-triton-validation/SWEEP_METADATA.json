@@ -1,0 +1,102 @@
+{
+  "cachepawl_version": "0.1.0",
+  "config": {
+    "device": "cuda",
+    "model_spec_names": [
+      "jamba_1_5_mini",
+      "mamba2_1b3"
+    ],
+    "output_dir": "research/avmp/v2/results/sweep-triton-validation",
+    "seed_replicates": 3,
+    "smoke_num_requests": null,
+    "total_bytes_options": [
+      1073741824,
+      4294967296
+    ],
+    "variants": [
+      {
+        "allocator_name": "padded_unified",
+        "kwargs": [],
+        "label": "padded_unified"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "fixed_dual_mr05"
+      },
+      {
+        "allocator_name": "fixed_dual",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.9
+          ]
+        ],
+        "label": "fixed_dual_mr09"
+      },
+      {
+        "allocator_name": "avmp_static",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ]
+        ],
+        "label": "avmp_static_mr05"
+      },
+      {
+        "allocator_name": "avmp_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            128.0
+          ]
+        ],
+        "label": "avmp_dynamic_b128"
+      },
+      {
+        "allocator_name": "avmp_triton_dynamic",
+        "kwargs": [
+          [
+            "mamba_ratio",
+            0.5
+          ],
+          [
+            "migration_batch_size",
+            128.0
+          ]
+        ],
+        "label": "avmp_dynamic_b128_triton"
+      }
+    ],
+    "workload_names": [
+      "uniform_short",
+      "mixed_long",
+      "agentic_burst"
+    ]
+  },
+  "cuda_version": "13.0",
+  "device": "cuda",
+  "failures": [],
+  "git_sha": "28a17eb4d75584de3f324dfb71ffd00de38e3ab3",
+  "gpu_name": "NVIDIA GeForce RTX 3060",
+  "hardware_label": "cuda (linux x86_64)",
+  "n_cells_failed": 0,
+  "n_cells_planned": 216,
+  "n_cells_succeeded": 216,
+  "numpy_version": "2.2.6",
+  "python_version": "3.10.19",
+  "sweep_finished_at": "2026-05-22T17:08:11Z",
+  "sweep_started_at": "2026-05-22T16:30:01Z",
+  "torch_version": "2.12.0+cu130",
+  "total_wall_seconds": 2089.4149711890004
+}

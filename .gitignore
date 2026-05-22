@@ -59,6 +59,9 @@ benchmarks/results/avmp-v15-timedecomp/runs/
 benchmarks/results/avmp-v15-timedecomp/sweep.log
 benchmarks/results/avmp-v15-sharegpt/runs/
 benchmarks/results/avmp-v15-sharegpt/sweep.log
+# v2 hardware-realization parity sweep (per-cell run JSONs not committed)
+research/avmp/v2/results/sweep-triton-validation/runs/
+research/avmp/v2/results/sweep-triton-validation/sweep.log
 
 # Paper build artifacts (scoped to research/avmp/)
 research/avmp/figures/generated/
