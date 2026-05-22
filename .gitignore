@@ -62,6 +62,12 @@ benchmarks/results/avmp-v15-sharegpt/sweep.log
 # v2 hardware-realization parity sweep (per-cell run JSONs not committed)
 research/avmp/v2/results/sweep-triton-validation/runs/
 research/avmp/v2/results/sweep-triton-validation/sweep.log
+# v2 slowdown investigation: profiler traces and per-cell artifacts are large
+# binaries that can be regenerated from the driver script.
+research/avmp/v2/results/profile_*_chrome.json
+research/avmp/v2/results/triton_slowdown.nsys-rep
+research/avmp/v2/results/runs-python/
+research/avmp/v2/results/runs-triton/
 
 # Paper build artifacts (scoped to research/avmp/)
 research/avmp/figures/generated/
