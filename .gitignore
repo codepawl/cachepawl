@@ -78,3 +78,7 @@ research/avmp/acmart.cls
 research/avmp/acmart-tagged.cls
 research/avmp/acmart.cfg
 research/avmp/arxiv-submission.tar.gz
+
+# Top-level arxiv staging artifacts
+arxiv-submission/
+cachepawl-avmp-arxiv.tar.gz
