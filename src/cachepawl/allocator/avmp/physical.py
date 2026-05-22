@@ -101,6 +101,19 @@ class KVPagesStore:
     def num_free(self) -> int:
         return self._table.num_pages_free
 
+    @property
+    def buffer_tensor(self) -> torch.Tensor:
+        """Backing ``torch.uint8`` tensor, full ``total_bytes`` wide.
+
+        Exposed for kernel callers that need to address the slab by
+        absolute byte offset (e.g. ``TritonAVMPAllocator`` passing the
+        tensor to ``launch_zero_page``). The tensor is the live buffer,
+        not a copy; callers must respect the active-capacity counters
+        and not write outside the pages they own.
+        """
+
+        return self._store._buffer
+
     def allocate_one(self) -> int:
         """Reserve one page and return its physical byte offset."""
 
@@ -207,6 +220,16 @@ class SSMBlocksStore:
     @property
     def num_free(self) -> int:
         return self._table.num_pages_free
+
+    @property
+    def buffer_tensor(self) -> torch.Tensor:
+        """Backing ``torch.uint8`` tensor, full ``total_bytes`` wide.
+
+        Mirror of :attr:`KVPagesStore.buffer_tensor` for the SSM store.
+        Same caller contract: live buffer, must respect active capacity.
+        """
+
+        return self._store._buffer
 
     def allocate_one(self) -> int:
         """Reserve one block and return its physical byte offset."""
