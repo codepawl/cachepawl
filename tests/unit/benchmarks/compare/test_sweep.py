@@ -99,6 +99,105 @@ def test_run_sweep_one_cell_exception_recorded(
     assert "synthetic failure" in result.failures[0].exception_repr
 
 
+def test_triton_validation_variants_includes_paired_b128() -> None:
+    """The triton_validation preset has 6 variants — the throughput_v2 5 + Triton.
+
+    Both ``avmp_dynamic_b128`` and ``avmp_dynamic_b128_triton`` must be
+    present with identical kwargs so the head-to-head parity comparison
+    in research/avmp/v2/TRITON_SWEEP_ANALYSIS.md compares like with
+    like.
+    """
+
+    from cachepawl.benchmarks.compare.sweep import TRITON_VALIDATION_VARIANTS
+
+    labels = [v.label for v in TRITON_VALIDATION_VARIANTS]
+    assert labels == [
+        "padded_unified",
+        "fixed_dual_mr05",
+        "fixed_dual_mr09",
+        "avmp_static_mr05",
+        "avmp_dynamic_b128",
+        "avmp_dynamic_b128_triton",
+    ]
+    by_label = {v.label: v for v in TRITON_VALIDATION_VARIANTS}
+    assert by_label["avmp_dynamic_b128"].kwargs == by_label["avmp_dynamic_b128_triton"].kwargs
+    assert by_label["avmp_dynamic_b128"].allocator_name == "avmp_dynamic"
+    assert by_label["avmp_dynamic_b128_triton"].allocator_name == "avmp_triton_dynamic"
+
+
+def test_build_allocator_constructs_triton_avmp() -> None:
+    """The new ``avmp_triton_dynamic`` factory branch returns a TritonAVMPAllocator.
+
+    Constructed on CPU device because the constructor itself does not
+    launch any kernel; only ``allocate()`` would (which a CUDA-less
+    test path would never call). This keeps the factory wiring covered
+    on CPU CI runners without the GPU marker.
+    """
+
+    import torch
+
+    from cachepawl.allocator.avmp import AsymmetricVirtualPool, TritonAVMPAllocator
+    from cachepawl.benchmarks import HybridModelSpec, LayerKind, LayerSpec
+    from cachepawl.benchmarks.harness.workloads import JAMBA_MINI_ATTN, JAMBA_MINI_SSM
+    from cachepawl.quant.dtypes import DType
+
+    model_spec = HybridModelSpec(
+        name="probe",
+        layers=(
+            LayerSpec(index=0, kind=LayerKind.ATTENTION),
+            LayerSpec(index=1, kind=LayerKind.MAMBA2),
+        ),
+        attention_to_ssm_ratio=1.0,
+        attention_profile=JAMBA_MINI_ATTN,
+        ssm_profile=JAMBA_MINI_SSM,
+        dtype=DType.BF16,
+    )
+    variant = AllocatorVariant(
+        label="avmp_dynamic_b128_triton",
+        allocator_name="avmp_triton_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("migration_batch_size", 128.0)),
+    )
+    allocator = sweep_mod._build_allocator(
+        variant=variant,
+        model_spec=model_spec,
+        total_bytes=64 * 1024 * 1024,
+        device=torch.device("cpu"),
+    )
+    assert isinstance(allocator, TritonAVMPAllocator)
+    assert isinstance(allocator, AsymmetricVirtualPool)  # by inheritance, defensive check
+
+
+def test_build_allocator_triton_rejects_unsupported_kwargs() -> None:
+    """Symmetry with the avmp_dynamic factory: misspelled kwargs raise."""
+
+    import torch
+
+    from cachepawl.benchmarks import HybridModelSpec, LayerKind, LayerSpec
+    from cachepawl.benchmarks.harness.workloads import JAMBA_MINI_ATTN, JAMBA_MINI_SSM
+    from cachepawl.quant.dtypes import DType
+
+    model_spec = HybridModelSpec(
+        name="probe",
+        layers=(LayerSpec(index=0, kind=LayerKind.ATTENTION),),
+        attention_to_ssm_ratio=1.0,
+        attention_profile=JAMBA_MINI_ATTN,
+        ssm_profile=JAMBA_MINI_SSM,
+        dtype=DType.BF16,
+    )
+    variant = AllocatorVariant(
+        label="x",
+        allocator_name="avmp_triton_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("unknown_knob", 1.0)),
+    )
+    with pytest.raises(ValueError, match="unsupported kwargs"):
+        sweep_mod._build_allocator(
+            variant=variant,
+            model_spec=model_spec,
+            total_bytes=64 * 1024 * 1024,
+            device=torch.device("cpu"),
+        )
+
+
 def test_run_sweep_validates_inputs(tmp_path: Path) -> None:
     """Invalid configurations raise ValueError before any cells execute."""
 

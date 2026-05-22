@@ -41,7 +41,7 @@ import numpy
 import torch
 
 from cachepawl import __version__ as cachepawl_version
-from cachepawl.allocator.avmp import AsymmetricVirtualPool
+from cachepawl.allocator.avmp import AsymmetricVirtualPool, TritonAVMPAllocator
 from cachepawl.allocator.base import Allocator
 from cachepawl.allocator.baselines import FixedDualPool, PaddedUnifiedPool
 from cachepawl.benchmarks import PRESETS, BenchmarkRun, run_benchmark
@@ -407,6 +407,41 @@ SHAREGPT_VARIANTS: tuple[AllocatorVariant, ...] = (
 SHAREGPT_WORKLOAD_NAMES: tuple[str, ...] = ("sharegpt_replay",)
 
 
+# v2 hardware-realization parity grid: the 5 throughput_v2 variants plus
+# avmp_dynamic_b128_triton (TritonAVMPAllocator at the same kwargs as
+# avmp_dynamic_b128). Defined as a fresh tuple per the CLAUDE.md
+# immutability rule rather than appending to THROUGHPUT_V2_VARIANTS, so
+# the existing committed sweep results stay byte-stable.
+TRITON_VALIDATION_VARIANTS: tuple[AllocatorVariant, ...] = (
+    AllocatorVariant(label="padded_unified", allocator_name="padded_unified", kwargs=()),
+    AllocatorVariant(
+        label="fixed_dual_mr05",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="fixed_dual_mr09",
+        allocator_name="fixed_dual",
+        kwargs=(("mamba_ratio", 0.9),),
+    ),
+    AllocatorVariant(
+        label="avmp_static_mr05",
+        allocator_name="avmp_static",
+        kwargs=(("mamba_ratio", 0.5),),
+    ),
+    AllocatorVariant(
+        label="avmp_dynamic_b128",
+        allocator_name="avmp_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("migration_batch_size", 128.0)),
+    ),
+    AllocatorVariant(
+        label="avmp_dynamic_b128_triton",
+        allocator_name="avmp_triton_dynamic",
+        kwargs=(("mamba_ratio", 0.5), ("migration_batch_size", 128.0)),
+    ),
+)
+
+
 DEFAULT_WORKLOAD_NAMES: tuple[str, ...] = ("uniform_short", "mixed_long", "agentic_burst")
 DEFAULT_MODEL_SPEC_NAMES: tuple[str, ...] = ("jamba_1_5_mini", "mamba2_1b3")
 DEFAULT_TOTAL_BYTES_OPTIONS: tuple[int, ...] = (
@@ -668,9 +703,31 @@ def _build_allocator(
             threshold_low=threshold_low,
             threshold_high=threshold_high,
         )
+    if variant.allocator_name == "avmp_triton_dynamic":
+        mamba_ratio = float(kwargs.pop("mamba_ratio", 0.5))
+        migration_batch_size = int(kwargs.pop("migration_batch_size", 1))
+        threshold_low = float(kwargs.pop("threshold_low", 0.05))
+        threshold_high = float(kwargs.pop("threshold_high", 0.30))
+        if kwargs:
+            raise ValueError(
+                f"avmp_triton_dynamic: unsupported kwargs {sorted(kwargs)}; "
+                "recognized: 'mamba_ratio', 'migration_batch_size', "
+                "'threshold_low', 'threshold_high'"
+            )
+        return TritonAVMPAllocator(
+            model_spec=model_spec,
+            total_bytes=total_bytes,
+            device=device,
+            mamba_ratio=mamba_ratio,
+            rebalance_enabled=True,
+            migration_batch_size=migration_batch_size,
+            threshold_low=threshold_low,
+            threshold_high=threshold_high,
+        )
     raise ValueError(
-        f"unknown allocator_name {variant.allocator_name!r}; "
-        "supported: 'padded_unified', 'fixed_dual', 'avmp_static', 'avmp_dynamic'"
+        f"unknown allocator_name {variant.allocator_name!r}; supported: "
+        "'padded_unified', 'fixed_dual', 'avmp_static', 'avmp_dynamic', "
+        "'avmp_triton_dynamic'"
     )
 
 
@@ -976,6 +1033,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             variants=SHAREGPT_VARIANTS,
             workload_names=SHAREGPT_WORKLOAD_NAMES,
         )
+    elif args.variant_set == "triton_validation":
+        config = dataclasses.replace(config, variants=TRITON_VALIDATION_VARIANTS)
 
     if args.max_total_bytes is not None:
         if args.max_total_bytes <= 0:
@@ -1124,6 +1183,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "threshold_sweep_stage2",
             "throughput_v2",
             "sharegpt_replay",
+            "triton_validation",
         ],
         default="baseline",
         help=(
@@ -1136,7 +1196,10 @@ def _build_parser() -> argparse.ArgumentParser:
             "'throughput_v2' is the Tier 1 PR B 5-variant grid "
             "(padded_unified, fixed_dual_mr05, fixed_dual_mr09, avmp_static_mr05, "
             "avmp_dynamic_b128), 'sharegpt_replay' pins the throughput_v2 grid "
-            "to the sharegpt_replay workload only."
+            "to the sharegpt_replay workload only, 'triton_validation' is the "
+            "throughput_v2 5-variant grid plus avmp_dynamic_b128_triton (the "
+            "TritonAVMPAllocator at the same kwargs) for the v2 hardware-realization "
+            "parity sweep."
         ),
     )
     return parser
@@ -1157,6 +1220,7 @@ __all__ = [
     "SHAREGPT_WORKLOAD_NAMES",
     "SMOKE_NUM_REQUESTS",
     "THROUGHPUT_V2_VARIANTS",
+    "TRITON_VALIDATION_VARIANTS",
     "AllocatorVariant",
     "CellFailure",
     "SweepConfig",
