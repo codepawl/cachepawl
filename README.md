@@ -82,8 +82,11 @@ The AVMP allocator is described in [arXiv:2605.22416](https://arxiv.org/abs/2605
 
 ## Status
 
-Pre-alpha. APIs may change without notice until the first concrete allocator
-lands. Track progress in the issues queue.
+- **v1** (Python prototype): published as [arXiv:2605.22416](https://arxiv.org/abs/2605.22416). Source under `research/avmp/`.
+- **v2** (Triton hardware realization): correctness oracle complete via PRs [#47](https://github.com/codepawl/cachepawl/pull/47) (kernel + smoke), [#48](https://github.com/codepawl/cachepawl/pull/48) (full 216-cell sweep at 0% parity drift). The performance investigation is closed: per-allocate Python orchestration overhead is documented in [`research/avmp/v2/SLOWDOWN_ROOT_CAUSE.md`](research/avmp/v2/SLOWDOWN_ROOT_CAUSE.md) (PR [#49](https://github.com/codepawl/cachepawl/pull/49)), and the CUDA graph replay mitigation is shown infeasible under PyTorch 2.12.0 in [`research/avmp/v2/GRAPH_REPLAY_FEASIBILITY.md`](research/avmp/v2/GRAPH_REPLAY_FEASIBILITY.md) (PR [#50](https://github.com/codepawl/cachepawl/pull/50)). The hardware-realization narrative for the v2 paper lives at [`research/avmp/v2/PAPER_SECTION_5_DRAFT.md`](research/avmp/v2/PAPER_SECTION_5_DRAFT.md). Production deployment of the per-allocate kernel via a batched/deferred allocator API is deferred to v2.1.
+- **vLLM integration**: in progress for the ML for Systems @ NeurIPS 2026 workshop. The v2 paper's core performance contribution.
+
+APIs may change without notice until the integration lands. Track progress in the issues queue.
 
 ## License
 
