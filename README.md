@@ -2,7 +2,8 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2605.22416-b31b1b.svg)](https://arxiv.org/abs/2605.22416)
 
-> Pre-alpha. Interfaces are stable enough to plan against; nothing inside is implemented yet.
+> Pre-alpha. Core allocator prototypes, benchmark harnesses, and research artifacts exist,
+> but runtime integrations and public APIs remain provisional.
 
 Cachepawl is a hybrid cache allocator for next-generation language models that
 mix attention, state-space (SSM/Mamba), and mixture-of-experts layers. Existing
@@ -53,10 +54,12 @@ import cachepawl
 print(cachepawl.__version__)
 ```
 
-The full allocator API is wired up but not implemented. Calls into
-`MemoryPool`, `KVCacheManager`, `StateCacheManager`, `HybridCacheCoordinator`,
-`vram_info`, and `cuda_capability` will raise `NotImplementedError` with a
-message pointing at the design milestone that unblocks them.
+The research allocator paths are implemented under `allocator/avmp/` and the
+benchmark harness is available under `benchmarks/`. Some public base interfaces
+are still placeholders: calls into `MemoryPool`, `KVCacheManager`,
+`StateCacheManager`, `HybridCacheCoordinator`, `vram_info`, and
+`cuda_capability` will raise `NotImplementedError` with a message pointing at
+the design milestone that unblocks them.
 
 ## Layout
 
@@ -65,6 +68,7 @@ src/cachepawl/
   allocator/   block pool and eviction policy interfaces
   cache/       KV, SSM state, and hybrid coordinator managers
   kernels/     reserved for Triton kernels
+  integrations/ optional runtime integration scaffolds
   models/      hybrid model layout descriptors
   quant/       cache element dtypes (FP16, BF16, INT8, FP8, FP4)
   utils/       device and VRAM helpers
