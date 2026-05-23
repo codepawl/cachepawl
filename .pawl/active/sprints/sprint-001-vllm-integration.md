@@ -31,6 +31,7 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Local WSL2 GPU/NVML repair path is recorded as the runtime baseline infrastructure decision
 - [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
 - [x] Bounded vanilla vLLM model-load smoke is captured for the target hybrid model
+- [x] Bounded vanilla vLLM one-prompt generation smoke is captured
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -85,3 +86,6 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
   `Zyphra/Zamba2-2.7B-instruct` with vanilla `vllm==0.21.0` on the local RTX
   3060. The baseline artifact is now `completed` for model-load smoke only;
   serving, generation, allocator replacement, and shim behavior remain pending.
+- 2026-05-23: Added bounded one-prompt generation capture and recorded
+  successful vanilla vLLM generation for `Zyphra/Zamba2-2.7B-instruct` with 13
+  prompt tokens, 8 generated tokens, and no long-lived serving or shim behavior.

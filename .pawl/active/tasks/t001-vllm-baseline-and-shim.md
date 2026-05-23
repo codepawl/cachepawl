@@ -80,6 +80,13 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   vLLM reporting 5.07 GiB model memory, 2.12 GiB available KV cache memory,
   11,442 GPU KV cache tokens, 2.79x max concurrency for 4,096-token requests,
   and 43.12% Mamba page-size padding.
+- 2026-05-23: Added bounded generation capture to the same baseline script and
+  captured one-prompt vanilla vLLM generation for
+  `Zyphra/Zamba2-2.7B-instruct` with `max_new_tokens=8`, `max_num_seqs=1`,
+  `max_model_len=4096`, and `gpu_memory_utilization=0.7`. The artifact keeps
+  the existing model-load smoke record and adds a generation record with 13
+  prompt tokens, 8 generated tokens, 43.399474 seconds elapsed, 0.184334
+  tokens/sec, and 10,905,399,296 bytes available GPU memory after generation.
 
 ## Anti-Bypass Constraints
 
@@ -102,6 +109,7 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Runtime baseline infrastructure decision is recorded
 - [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
 - [x] Bounded vanilla vLLM model-load smoke is captured for the target model
+- [x] Bounded vanilla vLLM one-prompt generation smoke is captured
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -261,6 +269,24 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
   - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
   - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 363 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+
+2026-05-23 bounded vLLM generation smoke:
+
+- Capture command: `PYTHONPATH=src /tmp/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_baseline.py --output-dir research/avmp/v2/results/vllm-baseline --model "Zyphra/Zamba2-2.7B-instruct" --fallback-model "tiiuae/Falcon-H1-1.5B-Instruct" --max-model-len 4096 --gpu-memory-utilization 0.7 --max-num-seqs 1 --gpu-total-bytes 12884901888 --gpu-name "NVIDIA GeForce RTX 3060" --generation-smoke --generation-timeout-seconds 1200 --generation-prompt "Cachepawl bounded vanilla vLLM baseline." --max-new-tokens 8` — passed
+- Capture artifact status: `completed`; reason: `bounded vanilla vLLM generation smoke completed`
+- Artifact layout: `baseline.jsonl` now contains the preserved model-load smoke record plus the bounded generation record; `manifest.json` separates `model_load_smoke` and `bounded_generation_smoke`.
+- Generation metrics: prompt tokens 13, generated tokens 8, elapsed 43.399474 seconds, 0.184334 tokens/sec, available GPU memory 10,905,399,296 bytes. Peak GPU memory is recorded as unavailable because vLLM runs the engine in a child process.
+- Runtime scope: one prompt and 8 generated tokens only; no long-lived `vllm serve`, quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, or LSDR.
+- Verification:
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs view` — passed
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_baseline_capture.py -q` — 4 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 364 passed, 12 skipped
   - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
   - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
 

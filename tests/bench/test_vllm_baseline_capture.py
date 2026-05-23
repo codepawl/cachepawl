@@ -2,12 +2,26 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 from cachepawl.bench.result_schema import CacheProbeResult
+
+
+def _load_capture_module() -> ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        "capture_vllm_baseline",
+        Path("benchmarks/scripts/capture_vllm_baseline.py"),
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_vllm_baseline_capture_writes_structured_not_runnable_result(
@@ -118,3 +132,38 @@ def test_vllm_baseline_capture_records_bounded_smoke_result(tmp_path: Path) -> N
     else:
         assert result.metadata["runtime_smoke_status"] is None
         assert manifest["runtime_smoke"] is None
+
+
+def test_vllm_baseline_generation_smoke_parser_records_metrics() -> None:
+    module = _load_capture_module()
+    result = module._run_generation_smoke(
+        model="unused",
+        max_model_len=128,
+        gpu_memory_utilization=0.1,
+        max_num_seqs=1,
+        timeout_seconds=5,
+        trust_remote_code=False,
+        prompt="hello",
+        max_new_tokens=2,
+        generation_command=(
+            f"{sys.executable} -c "
+            "\"print('CACHEPAWL_GENERATION_RESULT=' + "
+            "__import__('json').dumps({"
+            "'prompt_token_count': 3, "
+            "'generated_token_count': 2, "
+            "'elapsed_seconds': 0.5, "
+            "'tokens_per_second': 4.0, "
+            "'peak_gpu_memory_bytes': 100, "
+            "'available_gpu_memory_bytes': 200"
+            '}))"'
+        ),
+    )
+
+    assert result["status"] == "completed"
+    assert result["returncode"] == 0
+    assert result["prompt_token_count"] == 3
+    assert result["generated_token_count"] == 2
+    assert result["elapsed_seconds"] == 0.5
+    assert result["tokens_per_second"] == 4.0
+    assert result["peak_gpu_memory_bytes"] == 100
+    assert result["available_gpu_memory_bytes"] == 200

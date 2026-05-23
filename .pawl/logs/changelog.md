@@ -97,3 +97,12 @@
 - Updated `research/avmp/v2/results/vllm-baseline/` to `status=completed` for bounded model-load smoke
 - Recorded vLLM observations: 5.07 GiB model memory, 2.12 GiB available KV cache memory, 11,442 GPU KV cache tokens, 2.79x max concurrency for 4,096-token requests, and 43.12% Mamba page-size padding
 - Long-lived serving, generation, model-quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, and LSDR remain out of scope
+
+## 2026-05-23 — bounded vanilla vLLM generation smoke
+
+- Added one-prompt bounded generation capture to `benchmarks/scripts/capture_vllm_baseline.py`
+- Reused `/tmp/vllm-cachepawl-venv` with pinned `vllm==0.21.0` and `PYTHONPATH=src`; editable Cachepawl install was not needed
+- Captured vanilla generation for `Zyphra/Zamba2-2.7B-instruct` with `max_model_len=4096`, `gpu_memory_utilization=0.7`, `max_num_seqs=1`, and `max_new_tokens=8`
+- Preserved the existing model-load smoke evidence and added a second JSONL record for bounded generation
+- Recorded prompt tokens 13, generated tokens 8, elapsed 43.399474 seconds, 0.184334 tokens/sec, and 10,905,399,296 bytes available GPU memory after generation
+- Long-lived serving, model-quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, and LSDR remain out of scope
