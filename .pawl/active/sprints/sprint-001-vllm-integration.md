@@ -27,6 +27,7 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Planner comparison evidence exists for vLLM-style padded planning versus Cachepawl AVMP
 - [x] Planner benchmark memory metrics have unambiguous ratio and fraction names
 - [x] RTX 3060 planner-comparison artifact pack is generated and documented
+- [x] Vanilla vLLM baseline capture path records current not-runnable blocker
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -65,3 +66,6 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
   `overestimation_ratio` and `wasted_fraction` fields.
 - 2026-05-23: Generated the first committed-reference planner-comparison
   artifact pack at `benchmarks/results/rtx3060/planner-comparison/`.
+- 2026-05-23: Added pinned vanilla vLLM baseline capture path and recorded a
+  structured not-runnable result because vLLM is not installed, CUDA is
+  unavailable from torch, and `nvidia-smi` cannot initialize NVML.

@@ -57,3 +57,11 @@
 - Added a narrow `.gitignore` allowlist for the RTX 3060 planner-comparison reference pack
 - Added tests for deterministic artifact-pack generation
 - Runtime vLLM serving, monkeypatching, allocator replacement, Triton kernels, copy kernels, LSDR, and real inference remain out of scope
+
+## 2026-05-23 — vanilla vLLM runtime baseline capture
+
+- Added a pinned vLLM baseline capture runbook for the measurement-only runtime step
+- Added `benchmarks/scripts/capture_vllm_baseline.py` to record vLLM/CUDA/GPU availability and runtime blockers without requiring vLLM
+- Captured `research/avmp/v2/results/vllm-baseline/` with a structured `not_runnable` JSONL record and manifest
+- Recorded that vLLM is not installed in the active uv environment, torch reports CUDA unavailable, and `nvidia-smi` cannot initialize NVML
+- Runtime vLLM serving, monkeypatching, allocator replacement, Triton kernels, copy kernels, LSDR, and real inference remain out of scope
