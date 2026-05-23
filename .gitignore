@@ -45,6 +45,9 @@ benchmarks/results/*
 !benchmarks/results/avmp-v2-throughput/
 !benchmarks/results/avmp-v15-timedecomp/
 !benchmarks/results/avmp-v15-sharegpt/
+!benchmarks/results/rtx3060/
+!benchmarks/results/rtx3060/planner-comparison/
+!benchmarks/results/rtx3060/planner-comparison/**
 # Per-cell run JSONs under full/ are NOT committed; aggregated artifacts only.
 benchmarks/results/avmp-v1-preview/full/runs/
 benchmarks/results/avmp-v2/full/runs/

@@ -23,6 +23,10 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [ ] Vanilla vLLM baseline numbers are captured under `research/avmp/v2/results/`
 - [ ] AVMP integration path is implemented or the fallback path is documented with evidence
 - [x] New integration skeleton has focused tests and documented local verification
+- [x] Planner-only baseline measurement spine has focused tests and documented local verification
+- [x] Planner comparison evidence exists for vLLM-style padded planning versus Cachepawl AVMP
+- [x] Planner benchmark memory metrics have unambiguous ratio and fraction names
+- [x] RTX 3060 planner-comparison artifact pack is generated and documented
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -50,3 +54,14 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - 2026-05-23: Landed import-safe `cachepawl.integrations.vllm` skeleton and
   structural cache-plan translation records. Runtime vLLM serving, allocator
   replacement, and baseline metrics remain pending.
+- 2026-05-23: Landed planner-only baseline measurement spine for deterministic
+  synthetic cache-probe JSONL records. Runtime vLLM baseline capture remains
+  pending.
+- 2026-05-23: Landed planner-comparison path for vLLM-style padded modeling
+  baseline versus Cachepawl AVMP planning. The comparison is CPU-safe and does
+  not require vLLM.
+- 2026-05-23: Corrected planner benchmark metric semantics before committing
+  artifacts by replacing ambiguous `waste_ratio` wording with explicit
+  `overestimation_ratio` and `wasted_fraction` fields.
+- 2026-05-23: Generated the first committed-reference planner-comparison
+  artifact pack at `benchmarks/results/rtx3060/planner-comparison/`.

@@ -1,0 +1,23 @@
+# Cachepawl planner-probe config for an RTX 3060 12GB target.
+# This file is a reproducible config artifact. The lightweight probe
+# script is standard-library only and does not parse YAML yet.
+
+gpu:
+  name: NVIDIA GeForce RTX 3060
+  total_memory_bytes: 12884901888
+  compute_capability: [8, 6]
+
+model: jamba-1.5-mini
+workloads:
+  - short-heavy
+  - long-heavy
+  - mixed
+backends:
+  - padded-unified
+  - avmp-static
+  - fixed-dual
+seeds:
+  - 1
+num_requests: 128
+attention_page_tokens: 16
+fixed_dual_mamba_ratio: 0.5

@@ -1,0 +1,20 @@
+{
+  "artifact_name": "rtx3060-planner-comparison",
+  "backends": [
+    "vllm-style-padded",
+    "cachepawl-avmp"
+  ],
+  "generated_at": "1970-01-01T00:00:00Z",
+  "generation_command": "UV_CACHE_DIR=/tmp/uv-cache uv run python benchmarks/scripts/create_planner_comparison_pack.py --output-dir benchmarks/results/rtx3060/planner-comparison --seed 1 --num-requests 128 --gpu-name \"NVIDIA GeForce RTX 3060\" --gpu-total-bytes 12884901888",
+  "num_requests": 128,
+  "runtime_measurement_enabled": false,
+  "schema_version": "0.1.0",
+  "seed": 1,
+  "target_gpu_name": "NVIDIA GeForce RTX 3060",
+  "target_gpu_total_bytes": 12884901888,
+  "workloads": [
+    "short-heavy",
+    "long-heavy",
+    "mixed"
+  ]
+}

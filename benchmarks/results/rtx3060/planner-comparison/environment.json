@@ -1,0 +1,42 @@
+{
+  "artifact": "planner-comparison",
+  "backends": [
+    "vllm-style-padded",
+    "cachepawl-avmp"
+  ],
+  "captured_gpu": {
+    "compute_capability": null,
+    "cuda_available": false,
+    "device_count": 0,
+    "name": "NVIDIA GeForce RTX 3060",
+    "total_memory_bytes": 12884901888
+  },
+  "measure_runtime": false,
+  "model": "jamba-1.5-mini",
+  "notes": [
+    "vllm-style-padded is a modeling baseline, not exact vLLM internals.",
+    "cachepawl-avmp is planner-only evidence, not runtime serving evidence.",
+    "vLLM is not installed or required for this artifact."
+  ],
+  "num_requests": 128,
+  "runtime": {
+    "cachepawl_version": "0.1.0",
+    "cuda_version": "13.0",
+    "numpy_version": "2.2.6",
+    "platform": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python_version": "3.10.19",
+    "torch_version": "2.12.0+cu130",
+    "vllm_version": null
+  },
+  "seed": 1,
+  "target_gpu": {
+    "name": "NVIDIA GeForce RTX 3060",
+    "total_memory_bytes": 12884901888
+  },
+  "timestamp": "1970-01-01T00:00:00Z",
+  "workloads": [
+    "short-heavy",
+    "long-heavy",
+    "mixed"
+  ]
+}
