@@ -45,6 +45,11 @@ def test_vllm_baseline_capture_writes_structured_not_runnable_result(
     assert result.metadata["status"] in {"not_runnable", "ready"}
     assert "vllm_installed" in result.metadata
     assert "cuda_available" in result.metadata
+    assert "blocker_chain" in result.metadata
+    assert result.metadata["infrastructure_decision"] == "fix-local-wsl2-gpu-nvml-first"
+    assert "python_executable" in result.metadata
+    assert "pythonpath" in result.metadata
+    assert result.metadata["editable_install_used"] is False
     assert result.metadata["allocator_replacement"] is False
     assert result.metadata["monkeypatching"] is False
 
@@ -54,6 +59,12 @@ def test_vllm_baseline_capture_writes_structured_not_runnable_result(
     assert manifest["model"] == "Zyphra/Zamba2-2.7B-instruct"
     assert manifest["fallback_model"] == "tiiuae/Falcon-H1-1.5B-Instruct"
     assert manifest["schema_version"] == "0.1.0"
+    assert manifest["infrastructure_decision"] == "fix-local-wsl2-gpu-nvml-first"
+    assert "blocker_chain" in manifest
+    assert "runtime_gate" in manifest
+    assert "python_executable" in manifest
+    assert "pythonpath" in manifest
+    assert manifest["editable_install_used"] is False
     assert "capture_vllm_baseline.py" in manifest["generation_command"]
 
 
@@ -76,3 +87,34 @@ def test_vllm_baseline_capture_is_deterministic_with_fixed_timestamp(
     subprocess.run([*base_cmd, "--output-dir", str(second)], check=True)
 
     assert (first / "baseline.jsonl").read_text() == (second / "baseline.jsonl").read_text()
+
+
+def test_vllm_baseline_capture_records_bounded_smoke_result(tmp_path: Path) -> None:
+    output_dir = tmp_path / "smoke"
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/scripts/capture_vllm_baseline.py",
+            "--output-dir",
+            str(output_dir),
+            "--timestamp",
+            "1970-01-01T00:00:00Z",
+            "--runtime-smoke",
+            "--runtime-timeout-seconds",
+            "5",
+            "--smoke-command",
+            f"{sys.executable} -c \"print('smoke ok')\"",
+        ],
+        check=True,
+    )
+
+    result = CacheProbeResult.from_json_line((output_dir / "baseline.jsonl").read_text())
+    manifest = json.loads((output_dir / "manifest.json").read_text())
+    if result.metadata["status"] == "ready":
+        assert result.metadata["runtime_smoke_status"] == "completed"
+        assert result.metadata["runtime_smoke_returncode"] == 0
+        assert "smoke ok" in str(result.metadata["runtime_smoke_stdout"])
+        assert manifest["runtime_smoke"]["status"] == "completed"
+    else:
+        assert result.metadata["runtime_smoke_status"] is None
+        assert manifest["runtime_smoke"] is None

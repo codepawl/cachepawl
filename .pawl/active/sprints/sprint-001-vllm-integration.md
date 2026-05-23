@@ -28,6 +28,9 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Planner benchmark memory metrics have unambiguous ratio and fraction names
 - [x] RTX 3060 planner-comparison artifact pack is generated and documented
 - [x] Vanilla vLLM baseline capture path records current not-runnable blocker
+- [x] Local WSL2 GPU/NVML repair path is recorded as the runtime baseline infrastructure decision
+- [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
+- [x] Bounded vanilla vLLM model-load smoke is captured for the target hybrid model
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -69,3 +72,16 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - 2026-05-23: Added pinned vanilla vLLM baseline capture path and recorded a
   structured not-runnable result because vLLM is not installed, CUDA is
   unavailable from torch, and `nvidia-smi` cannot initialize NVML.
+- 2026-05-23: Accepted D004 to fix local WSL2 GPU/NVML access before creating
+  the pinned vLLM environment or moving the runtime baseline to another GPU
+  host.
+- 2026-05-23: Updated D004 after local WSL2 GPU/NVML visibility was restored.
+  The runtime baseline blocker artifact now records CUDA available on the RTX
+  3060, with missing vLLM as the remaining blocker.
+- 2026-05-23: Created the isolated `/tmp/vllm-cachepawl-venv`, installed
+  `vllm==0.21.0` there, validated CUDA visibility inside it, and updated the
+  baseline artifact to `ready` using `PYTHONPATH=src` without editable install.
+- 2026-05-23: Added bounded runtime smoke capture and loaded
+  `Zyphra/Zamba2-2.7B-instruct` with vanilla `vllm==0.21.0` on the local RTX
+  3060. The baseline artifact is now `completed` for model-load smoke only;
+  serving, generation, allocator replacement, and shim behavior remain pending.

@@ -58,6 +58,28 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   The active Cachepawl uv environment does not have vLLM installed, torch
   reports CUDA unavailable, and `nvidia-smi` cannot initialize NVML, so the
   first runtime baseline artifact is a structured `not_runnable` record.
+- 2026-05-23: Accepted D004 to fix local WSL2 GPU/NVML visibility before
+  creating the pinned vLLM environment or moving the runtime baseline to a
+  separate GPU host. Updated the blocker artifact with the full chain:
+  missing vLLM, torch CUDA unavailable, and `nvidia-smi` NVML initialization
+  failure.
+- 2026-05-23: Updated D004 and the runtime baseline artifact after local
+  WSL2 GPU/NVML visibility was restored. `nvidia-smi` reports the RTX 3060,
+  torch reports CUDA available with one device, and the remaining blocker is
+  that vLLM is not installed in the active Cachepawl environment.
+- 2026-05-23: Created `/tmp/vllm-cachepawl-venv`, installed pinned
+  `vllm==0.21.0` only inside that isolated environment with
+  `uv pip install "vllm==0.21.0" --torch-backend=auto`, validated vLLM import
+  and CUDA visibility there, and re-ran the baseline capture with
+  `PYTHONPATH=src` without installing Cachepawl editable into the vLLM env.
+- 2026-05-23: Added and ran the bounded runtime smoke path for the primary
+  hybrid target model. `Zyphra/Zamba2-2.7B-instruct` loaded successfully in
+  vanilla `vllm==0.21.0` on the local RTX 3060 with no serving process,
+  generation, monkeypatching, allocator replacement, or shim behavior. The
+  artifact now records `status=completed` for bounded model-load smoke, with
+  vLLM reporting 5.07 GiB model memory, 2.12 GiB available KV cache memory,
+  11,442 GPU KV cache tokens, 2.79x max concurrency for 4,096-token requests,
+  and 43.12% Mamba page-size padding.
 
 ## Anti-Bypass Constraints
 
@@ -77,6 +99,9 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Planner benchmark metrics use unambiguous ratio and fraction semantics
 - [x] Reproducible RTX 3060 planner-comparison artifact pack exists
 - [x] Pinned vanilla vLLM baseline capture path records current runtime blocker
+- [x] Runtime baseline infrastructure decision is recorded
+- [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
+- [x] Bounded vanilla vLLM model-load smoke is captured for the target model
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -166,6 +191,76 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
   - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
   - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 362 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+
+2026-05-23 vLLM runtime baseline infrastructure decision:
+
+- Decision: `.pawl/active/decisions/d004-fix-local-wsl2-gpu-first.md`
+- Selected path: fix local WSL2 GPU/NVML access first.
+- Alternatives deferred: separate Linux GPU machine, rented cloud GPU, or keeping T001 runtime baseline blocked without a repair path.
+- Runtime gate before pinned vLLM environment creation:
+  - `nvidia-smi --query-gpu=name,memory.free,memory.total,driver_version --format=csv,noheader` must exit 0 and report the RTX 3060.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import torch; print(torch.cuda.is_available(), torch.cuda.device_count())"` must report CUDA available with at least one device.
+- Restored gate check:
+  - `nvidia-smi --query-gpu=name,memory.free,memory.total,driver_version --format=csv,noheader` — `NVIDIA GeForce RTX 3060, 10054 MiB, 12288 MiB, 591.86`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import torch, importlib.util; ..."` — torch 2.12.0+cu130, CUDA build 13.0, CUDA available, one CUDA device, `NVIDIA GeForce RTX 3060`, `vllm_installed=False`
+- Updated capture command: `UV_CACHE_DIR=/tmp/uv-cache uv run python benchmarks/scripts/capture_vllm_baseline.py --output-dir research/avmp/v2/results/vllm-baseline --model "Zyphra/Zamba2-2.7B-instruct" --fallback-model "tiiuae/Falcon-H1-1.5B-Instruct" --max-model-len 4096 --gpu-memory-utilization 0.9 --max-num-seqs 32 --gpu-total-bytes 12884901888 --gpu-name "NVIDIA GeForce RTX 3060"`
+- Updated blocker chain: `vllm_installed=False`; GPU/NVML and torch CUDA visibility are restored.
+- Verification:
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_baseline_capture.py -q` — 2 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 362 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+
+2026-05-23 isolated pinned vLLM environment:
+
+- Environment path: `/tmp/vllm-cachepawl-venv`
+- Created with: `UV_CACHE_DIR=/tmp/uv-cache uv venv --python 3.10 /tmp/vllm-cachepawl-venv`
+- Install command: `env UV_CACHE_DIR=/tmp/uv-cache timeout 30m uv pip install --python /tmp/vllm-cachepawl-venv/bin/python "vllm==0.21.0" --torch-backend=auto` — passed
+- Installed vLLM: 0.21.0
+- Pinned env validation: Python 3.10.19, vLLM 0.21.0, torch 2.11.0+cu130, CUDA build 13.0, CUDA available, one CUDA device, `NVIDIA GeForce RTX 3060`
+- `nvidia-smi`: `NVIDIA GeForce RTX 3060, 10090 MiB, 12288 MiB, 591.86`
+- Capture command: `PYTHONPATH=src /tmp/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_baseline.py --output-dir research/avmp/v2/results/vllm-baseline --model "Zyphra/Zamba2-2.7B-instruct" --fallback-model "tiiuae/Falcon-H1-1.5B-Instruct" --max-model-len 4096 --gpu-memory-utilization 0.9 --max-num-seqs 32 --gpu-total-bytes 12884901888 --gpu-name "NVIDIA GeForce RTX 3060"` — passed
+- Cachepawl editable install into the vLLM env was not needed; `PYTHONPATH=src` was sufficient.
+- Capture artifact status: `ready`; no blocker chain remains for import/CUDA readiness.
+- Bounded runtime/model-load smoke was not attempted because `capture_vllm_baseline.py` does not support bounded model load or serving, and long-lived `vllm serve` is out of scope.
+- No vLLM dependency was added to the main Cachepawl environment.
+- Verification:
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util; print('main_vllm_installed=' + str(importlib.util.find_spec('vllm') is not None))"` — `main_vllm_installed=False`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_baseline_capture.py -q` — 2 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 362 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+- Verification:
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_baseline_capture.py -q` — 2 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 362 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+
+2026-05-23 bounded vLLM model-load smoke:
+
+- Capture command: `PYTHONPATH=src /tmp/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_baseline.py --output-dir research/avmp/v2/results/vllm-baseline --model "Zyphra/Zamba2-2.7B-instruct" --fallback-model "tiiuae/Falcon-H1-1.5B-Instruct" --max-model-len 4096 --gpu-memory-utilization 0.7 --max-num-seqs 16 --gpu-total-bytes 12884901888 --gpu-name "NVIDIA GeForce RTX 3060" --runtime-smoke --runtime-timeout-seconds 1200` — passed
+- Capture artifact status: `completed`; reason: `bounded vanilla vLLM model-load smoke completed`
+- Runtime scope: bounded `LLM(...)` model-load smoke only; no long-lived `vllm serve`, generation, model-quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, or LSDR.
+- Selected observations from vLLM logs: model loading used 5.07 GiB, available KV cache memory was 2.12 GiB, GPU KV cache size was 11,442 tokens, max concurrency for 4,096-token requests was 2.79x, and vLLM padded Mamba page size by 43.12%.
+- Cachepawl editable install into the vLLM env was not needed; `PYTHONPATH=src` was sufficient.
+- Verification:
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs view` — passed
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_baseline_capture.py -q` — 3 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 363 passed, 12 skipped
   - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
   - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
 

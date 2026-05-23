@@ -65,3 +65,35 @@
 - Captured `research/avmp/v2/results/vllm-baseline/` with a structured `not_runnable` JSONL record and manifest
 - Recorded that vLLM is not installed in the active uv environment, torch reports CUDA unavailable, and `nvidia-smi` cannot initialize NVML
 - Runtime vLLM serving, monkeypatching, allocator replacement, Triton kernels, copy kernels, LSDR, and real inference remain out of scope
+
+## 2026-05-23 — vLLM runtime baseline infrastructure decision
+
+- Added D004 choosing local WSL2 GPU/NVML repair before creating the pinned vLLM environment
+- Updated the runtime baseline blocker artifact with the full blocker chain and selected infrastructure path
+- Deferred separate Linux GPU and rented cloud GPU paths unless local WSL2 GPU access cannot be restored
+- Runtime vLLM serving, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, LSDR, and real inference remain out of scope
+
+## 2026-05-23 — WSL2 GPU visibility restored for vLLM baseline
+
+- Updated D004 to record restored local WSL2 GPU/NVML visibility
+- Re-ran the vLLM baseline capture; the artifact now records CUDA available on the NVIDIA GeForce RTX 3060 with one torch CUDA device
+- Updated the remaining blocker to missing vLLM in the active Cachepawl environment
+- Did not create the pinned vLLM environment or add vLLM to the main environment
+
+## 2026-05-23 — isolated pinned vLLM environment
+
+- Created `/tmp/vllm-cachepawl-venv` with Python 3.10
+- Installed pinned `vllm==0.21.0` inside the isolated environment with `uv pip install "vllm==0.21.0" --torch-backend=auto`
+- Validated vLLM import and CUDA visibility inside the pinned env on the local RTX 3060
+- Re-ran `capture_vllm_baseline.py` through the pinned env with `PYTHONPATH=src`; editable Cachepawl install was not needed
+- Updated `research/avmp/v2/results/vllm-baseline/` to `status=ready`
+- Runtime serving, model loading, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, LSDR, and model quality evaluation remain out of scope
+
+## 2026-05-23 — bounded vanilla vLLM model-load smoke
+
+- Added a bounded runtime smoke mode to `benchmarks/scripts/capture_vllm_baseline.py`
+- Ran the capture through `/tmp/vllm-cachepawl-venv` with `PYTHONPATH=src`; editable Cachepawl install was still not needed
+- Loaded `Zyphra/Zamba2-2.7B-instruct` with vanilla `vllm==0.21.0` on the local RTX 3060 using a 1200 second timeout
+- Updated `research/avmp/v2/results/vllm-baseline/` to `status=completed` for bounded model-load smoke
+- Recorded vLLM observations: 5.07 GiB model memory, 2.12 GiB available KV cache memory, 11,442 GPU KV cache tokens, 2.79x max concurrency for 4,096-token requests, and 43.12% Mamba page-size padding
+- Long-lived serving, generation, model-quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, and LSDR remain out of scope

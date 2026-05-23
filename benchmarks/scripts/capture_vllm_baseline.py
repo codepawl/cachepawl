@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
 import subprocess
 import sys
 from hashlib import sha256
@@ -22,6 +24,9 @@ DEFAULT_MODEL = "Zyphra/Zamba2-2.7B-instruct"
 DEFAULT_FALLBACK_MODEL = "tiiuae/Falcon-H1-1.5B-Instruct"
 PINNED_VLLM_VERSION = "0.21.0"
 PINNED_VENV_PATH = "/tmp/vllm-cachepawl-venv"
+INFRASTRUCTURE_DECISION = "fix-local-wsl2-gpu-nvml-first"
+MetadataValue = str | int | float | bool | None
+SmokeResult = dict[str, str | int | None]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,6 +40,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-num-seqs", type=int, default=32)
     parser.add_argument("--gpu-total-bytes", type=int, default=12 * 1024**3)
     parser.add_argument("--gpu-name", default="NVIDIA GeForce RTX 3060")
+    parser.add_argument(
+        "--runtime-smoke",
+        action="store_true",
+        help="attempt a bounded vanilla vLLM model-load smoke; no serving or generation",
+    )
+    parser.add_argument("--runtime-timeout-seconds", type=int, default=1200)
+    parser.add_argument("--trust-remote-code", action="store_true")
+    parser.add_argument("--smoke-command", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
 
     capture_baseline(
@@ -47,6 +60,10 @@ def main(argv: list[str] | None = None) -> int:
         max_num_seqs=args.max_num_seqs,
         gpu_total_bytes=args.gpu_total_bytes,
         gpu_name=args.gpu_name,
+        runtime_smoke=args.runtime_smoke,
+        runtime_timeout_seconds=args.runtime_timeout_seconds,
+        trust_remote_code=args.trust_remote_code,
+        smoke_command=args.smoke_command,
     )
     return 0
 
@@ -62,6 +79,10 @@ def capture_baseline(
     max_num_seqs: int,
     gpu_total_bytes: int,
     gpu_name: str,
+    runtime_smoke: bool = False,
+    runtime_timeout_seconds: int = 1200,
+    trust_remote_code: bool = False,
+    smoke_command: str | None = None,
 ) -> CacheProbeResult:
     """Write the current vanilla vLLM runtime baseline status."""
 
@@ -78,6 +99,21 @@ def capture_baseline(
         cuda_available=environment.gpu.cuda_available,
         nvidia_smi_status=nvidia_smi["status"],
     )
+    smoke_result = (
+        _run_runtime_smoke(
+            model=model,
+            max_model_len=max_model_len,
+            gpu_memory_utilization=gpu_memory_utilization,
+            max_num_seqs=max_num_seqs,
+            timeout_seconds=runtime_timeout_seconds,
+            trust_remote_code=trust_remote_code,
+            smoke_command=smoke_command,
+        )
+        if runtime_smoke and status == "ready"
+        else None
+    )
+    if smoke_result is not None:
+        status, reason = _status_from_smoke(smoke_result)
     result = _not_runnable_result(
         timestamp=timestamp,
         model=model,
@@ -91,6 +127,10 @@ def capture_baseline(
         max_model_len=max_model_len,
         gpu_memory_utilization=gpu_memory_utilization,
         max_num_seqs=max_num_seqs,
+        runtime_smoke=runtime_smoke,
+        runtime_timeout_seconds=runtime_timeout_seconds,
+        trust_remote_code=trust_remote_code,
+        smoke_result=smoke_result,
     )
     (output_dir / "baseline.jsonl").write_text(result.to_json_line() + "\n")
     generation_command = _generation_command(
@@ -103,6 +143,9 @@ def capture_baseline(
         max_num_seqs=max_num_seqs,
         gpu_total_bytes=gpu_total_bytes,
         gpu_name=gpu_name,
+        runtime_smoke=runtime_smoke,
+        runtime_timeout_seconds=runtime_timeout_seconds,
+        trust_remote_code=trust_remote_code,
     )
     (output_dir / "manifest.json").write_text(
         json.dumps(
@@ -115,10 +158,15 @@ def capture_baseline(
                 vllm_installed=vllm_installed,
                 vllm_version=vllm_version,
                 environment=environment,
+                nvidia_smi=nvidia_smi,
                 generation_command=generation_command,
                 max_model_len=max_model_len,
                 gpu_memory_utilization=gpu_memory_utilization,
                 max_num_seqs=max_num_seqs,
+                runtime_smoke=runtime_smoke,
+                runtime_timeout_seconds=runtime_timeout_seconds,
+                trust_remote_code=trust_remote_code,
+                smoke_result=smoke_result,
             ),
             indent=2,
             sort_keys=True,
@@ -132,6 +180,7 @@ def capture_baseline(
             reason=reason,
             model=model,
             fallback_model=fallback_model,
+            runtime_smoke=runtime_smoke,
         )
     )
     return result
@@ -151,8 +200,12 @@ def _not_runnable_result(
     max_model_len: int,
     gpu_memory_utilization: float,
     max_num_seqs: int,
+    runtime_smoke: bool,
+    runtime_timeout_seconds: int,
+    trust_remote_code: bool,
+    smoke_result: SmokeResult | None,
 ) -> CacheProbeResult:
-    metadata = {
+    metadata: dict[str, MetadataValue] = {
         **environment.metadata,
         "status": status,
         "reason": reason,
@@ -164,12 +217,29 @@ def _not_runnable_result(
         "max_model_len": max_model_len,
         "gpu_memory_utilization": gpu_memory_utilization,
         "max_num_seqs": max_num_seqs,
+        "runtime_smoke_enabled": runtime_smoke,
+        "runtime_timeout_seconds": runtime_timeout_seconds,
+        "trust_remote_code": trust_remote_code,
+        "runtime_smoke_status": (None if smoke_result is None else str(smoke_result["status"])),
+        "runtime_smoke_returncode": (None if smoke_result is None else smoke_result["returncode"]),
+        "runtime_smoke_command": (None if smoke_result is None else str(smoke_result["command"])),
+        "runtime_smoke_stdout": (None if smoke_result is None else str(smoke_result["stdout"])),
+        "runtime_smoke_stderr": (None if smoke_result is None else str(smoke_result["stderr"])),
         "cuda_available": environment.gpu.cuda_available,
         "nvidia_smi_status": nvidia_smi["status"],
         "nvidia_smi_returncode": nvidia_smi["returncode"],
         "nvidia_smi_stdout": nvidia_smi["stdout"],
         "nvidia_smi_stderr": nvidia_smi["stderr"],
         "measurement_kind": "vanilla-vllm-runtime-baseline",
+        "python_executable": sys.executable,
+        "pythonpath": os.environ.get("PYTHONPATH"),
+        "editable_install_used": False,
+        "blocker_chain": _blocker_chain_text(
+            vllm_installed=vllm_installed,
+            cuda_available=environment.gpu.cuda_available,
+            nvidia_smi_status=nvidia_smi["status"],
+        ),
+        "infrastructure_decision": INFRASTRUCTURE_DECISION,
         "allocator_replacement": False,
         "monkeypatching": False,
     }
@@ -206,6 +276,97 @@ def _runtime_status(
     return "ready", "vanilla vLLM baseline command can be attempted manually"
 
 
+def _run_runtime_smoke(
+    *,
+    model: str,
+    max_model_len: int,
+    gpu_memory_utilization: float,
+    max_num_seqs: int,
+    timeout_seconds: int,
+    trust_remote_code: bool,
+    smoke_command: str | None,
+) -> SmokeResult:
+    if timeout_seconds <= 0:
+        raise ValueError("runtime_timeout_seconds must be positive")
+    command = (
+        shlex.split(smoke_command)
+        if smoke_command is not None
+        else _runtime_smoke_command(
+            model=model,
+            max_model_len=max_model_len,
+            gpu_memory_utilization=gpu_memory_utilization,
+            max_num_seqs=max_num_seqs,
+            trust_remote_code=trust_remote_code,
+        )
+    )
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "status": "timeout",
+            "command": " ".join(shlex.quote(part) for part in command),
+            "returncode": None,
+            "stdout": _truncate_output(exc.stdout),
+            "stderr": _truncate_output(exc.stderr),
+            "timeout_seconds": timeout_seconds,
+        }
+    return {
+        "status": "completed" if completed.returncode == 0 else "failed",
+        "command": " ".join(shlex.quote(part) for part in command),
+        "returncode": completed.returncode,
+        "stdout": _truncate_output(completed.stdout),
+        "stderr": _truncate_output(completed.stderr),
+        "timeout_seconds": timeout_seconds,
+    }
+
+
+def _runtime_smoke_command(
+    *,
+    model: str,
+    max_model_len: int,
+    gpu_memory_utilization: float,
+    max_num_seqs: int,
+    trust_remote_code: bool,
+) -> list[str]:
+    code = "\n".join(
+        [
+            "from vllm import LLM",
+            "llm = LLM(",
+            f"    model={model!r},",
+            f"    max_model_len={max_model_len!r},",
+            f"    gpu_memory_utilization={gpu_memory_utilization!r},",
+            f"    max_num_seqs={max_num_seqs!r},",
+            f"    trust_remote_code={trust_remote_code!r},",
+            ")",
+            "print('vllm_model_load=ok')",
+            "del llm",
+        ]
+    )
+    return [sys.executable, "-c", code]
+
+
+def _status_from_smoke(smoke_result: SmokeResult) -> tuple[str, str]:
+    status = smoke_result["status"]
+    if status == "completed":
+        return "completed", "bounded vanilla vLLM model-load smoke completed"
+    if status == "timeout":
+        return "blocked", "bounded vanilla vLLM model-load smoke timed out"
+    return "blocked", "bounded vanilla vLLM model-load smoke failed"
+
+
+def _truncate_output(value: object, limit: int = 4000) -> str:
+    if value is None:
+        return ""
+    text = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
+    return text[-limit:]
+
+
 def _capture_nvidia_smi() -> dict[str, str | int | None]:
     command = [
         "nvidia-smi",
@@ -239,16 +400,26 @@ def _manifest_payload(
     vllm_installed: bool,
     vllm_version: str | None,
     environment: RuntimeEnvironment,
+    nvidia_smi: dict[str, str | int | None],
     generation_command: str,
     max_model_len: int,
     gpu_memory_utilization: float,
     max_num_seqs: int,
+    runtime_smoke: bool,
+    runtime_timeout_seconds: int,
+    trust_remote_code: bool,
+    smoke_result: SmokeResult | None,
 ) -> dict[str, object]:
     return {
         "artifact_name": "vllm-runtime-baseline",
         "generated_at": timestamp,
         "status": status,
         "reason": reason,
+        "blocker_chain": _blocker_chain(
+            vllm_installed=vllm_installed,
+            cuda_available=environment.gpu.cuda_available,
+            nvidia_smi_status=nvidia_smi["status"],
+        ),
         "schema_version": BENCH_RESULT_SCHEMA_VERSION,
         "model": model,
         "fallback_model": fallback_model,
@@ -259,10 +430,22 @@ def _manifest_payload(
         "cuda_available": environment.gpu.cuda_available,
         "gpu": environment.gpu.to_dict(),
         "runtime": dict(environment.metadata),
+        "python_executable": sys.executable,
+        "pythonpath": os.environ.get("PYTHONPATH"),
+        "editable_install_used": False,
         "max_model_len": max_model_len,
         "gpu_memory_utilization": gpu_memory_utilization,
         "max_num_seqs": max_num_seqs,
+        "runtime_smoke_enabled": runtime_smoke,
+        "runtime_timeout_seconds": runtime_timeout_seconds,
+        "trust_remote_code": trust_remote_code,
+        "runtime_smoke": smoke_result,
         "generation_command": generation_command,
+        "infrastructure_decision": INFRASTRUCTURE_DECISION,
+        "runtime_gate": {
+            "nvidia_smi": "must exit 0 and report the target GPU",
+            "torch_cuda": "torch.cuda.is_available() must be true with at least one device",
+        },
     }
 
 
@@ -273,6 +456,7 @@ def _readme(
     reason: str,
     model: str,
     fallback_model: str,
+    runtime_smoke: bool,
 ) -> str:
     return f"""# vLLM Runtime Baseline Capture
 
@@ -299,11 +483,44 @@ Sprint 1 / T001.
 - fallback model: `{fallback_model}`
 - pinned vLLM: `{PINNED_VLLM_VERSION}`
 - isolated venv: `{PINNED_VENV_PATH}`
+- infrastructure decision: `{INFRASTRUCTURE_DECISION}`
+- runtime smoke enabled: `{str(runtime_smoke).lower()}`
 
-This step does not install vLLM, serve a model, monkeypatch vLLM, replace
-allocators, add Triton kernels, add copy kernels, add LSDR, or run real model
-quality evaluation.
+This step does not add vLLM to the main Cachepawl environment, run long-lived
+serving, monkeypatch vLLM, replace allocators, add Triton kernels, add copy
+kernels, add LSDR, or run real model quality evaluation.
 """
+
+
+def _blocker_chain(
+    *,
+    vllm_installed: bool,
+    cuda_available: bool,
+    nvidia_smi_status: object,
+) -> list[str]:
+    blockers: list[str] = []
+    if not vllm_installed:
+        blockers.append("vllm is not installed in the active Python environment")
+    if not cuda_available:
+        blockers.append("torch reports CUDA unavailable")
+    if nvidia_smi_status != "ok":
+        blockers.append("nvidia-smi cannot initialize NVML successfully")
+    return blockers
+
+
+def _blocker_chain_text(
+    *,
+    vllm_installed: bool,
+    cuda_available: bool,
+    nvidia_smi_status: object,
+) -> str:
+    return " | ".join(
+        _blocker_chain(
+            vllm_installed=vllm_installed,
+            cuda_available=cuda_available,
+            nvidia_smi_status=nvidia_smi_status,
+        )
+    )
 
 
 def _generation_command(
@@ -317,10 +534,13 @@ def _generation_command(
     max_num_seqs: int,
     gpu_total_bytes: int,
     gpu_name: str,
+    runtime_smoke: bool,
+    runtime_timeout_seconds: int,
+    trust_remote_code: bool,
 ) -> str:
+    prefix = "PYTHONPATH=src " if os.environ.get("PYTHONPATH") == "src" else ""
     return (
-        "UV_CACHE_DIR=/tmp/uv-cache uv run python "
-        "benchmarks/scripts/capture_vllm_baseline.py "
+        f"{prefix}{sys.executable} benchmarks/scripts/capture_vllm_baseline.py "
         f"--output-dir {output_dir.as_posix()} "
         f"--model {json.dumps(model)} "
         f"--fallback-model {json.dumps(fallback_model)} "
@@ -330,6 +550,9 @@ def _generation_command(
         f"--max-num-seqs {max_num_seqs} "
         f"--gpu-total-bytes {gpu_total_bytes} "
         f"--gpu-name {json.dumps(gpu_name)}"
+        + (" --runtime-smoke" if runtime_smoke else "")
+        + f" --runtime-timeout-seconds {runtime_timeout_seconds}"
+        + (" --trust-remote-code" if trust_remote_code else "")
     )
 
 
