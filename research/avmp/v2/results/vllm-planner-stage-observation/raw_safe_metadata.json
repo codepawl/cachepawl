@@ -1,0 +1,37 @@
+{
+  "cuda_available": false,
+  "device_count": 0,
+  "device_name": null,
+  "environment_diagnosis": {
+    "main_uv_env_torch": {
+      "cuda_available": false,
+      "cuda_version": "13.0",
+      "device_count": 0,
+      "torch_version": "2.12.0+cu130"
+    },
+    "nvidia_smi": {
+      "status": "failed",
+      "stderr": "Failed to initialize NVML: GPU access blocked by the operating system"
+    },
+    "pinned_vllm_env_torch": {
+      "cuda_available": false,
+      "cuda_version": "13.0",
+      "device_count": 0,
+      "torch_version": "2.11.0+cu130"
+    },
+    "pinned_vllm_version": "0.21.0",
+    "scope": "host GPU/NVML access is unavailable to both Python environments in this session"
+  },
+  "planner_stage_static_metadata": {
+    "call_site_path": "vllm.v1.engine.core.EngineCore._initialize_kv_caches",
+    "call_site_signature": "(self, vllm_config: vllm.config.vllm.VllmConfig) -> vllm.v1.kv_cache_interface.KVCacheConfig",
+    "function_path": "vllm.v1.core.kv_cache_utils.get_kv_cache_configs",
+    "function_signature": "(vllm_config: vllm.config.vllm.VllmConfig, kv_cache_specs: list[dict[str, vllm.v1.kv_cache_interface.KVCacheSpec]], available_memory: list[int]) -> list[vllm.v1.kv_cache_interface.KVCacheConfig]",
+    "observed_input_paths_from_source": {
+      "available_memory": "self.model_executor.determine_available_memory()",
+      "kv_cache_specs": "self.model_executor.get_kv_cache_specs()",
+      "stored_available_memory": "self.available_gpu_memory_for_kv_cache",
+      "vllm_config": "EngineCore._initialize_kv_caches(vllm_config)"
+    }
+  }
+}

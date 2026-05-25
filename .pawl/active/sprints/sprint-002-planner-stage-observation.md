@@ -50,3 +50,14 @@ Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_c
 - 2026-05-25: Accepted D008 as a lightweight PawlKit dogfooding policy. Record
   PawlKit feedback only when normal Cachepawl tracker work creates real
   friction; do not block Cachepawl research unless PawlKit validation is broken.
+- 2026-05-25: Added the bounded planner-stage observation script and generated
+  `research/avmp/v2/results/vllm-planner-stage-observation/`. The artifact is
+  currently blocked by CUDA unavailability in `/tmp/vllm-cachepawl-venv`, so
+  `get_kv_cache_configs(...)` was not called with real runtime inputs in this
+  session. The artifact records safe static vLLM metadata and the real source
+  call-site paths needed for the next GPU-visible rerun.
+- 2026-05-25: Stabilized the T002 blocker diagnosis. CUDA is unavailable in
+  both `/tmp/vllm-cachepawl-venv` and the main uv environment, and `nvidia-smi`
+  reports host GPU access blocked by the operating system. The T002 artifact
+  remains blocked and should be rerun unchanged after GPU/NVML visibility is
+  restored.

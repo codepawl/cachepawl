@@ -1,0 +1,8 @@
+schema_version: 1
+policy_version: 1
+agents: {}
+modes: {review_only: Review-only audit, implementation: Implementation work}
+capabilities: {review_only: read_project read_policy release_preflight, implementation: read_project read_policy write_task write_handoff release_preflight}
+protected_paths: []
+state_transitions: {}
+release_rules: {}

@@ -1,0 +1,72 @@
+{
+  "artifact": "vllm-planner-stage-observation",
+  "function_path": "vllm.v1.core.kv_cache_utils.get_kv_cache_configs",
+  "gpu_memory_utilization": 0.7,
+  "input_availability": {
+    "available_memory": false,
+    "kv_cache_specs": false,
+    "vllm_config": false
+  },
+  "max_model_len": 4096,
+  "max_num_seqs": 1,
+  "metadata": {
+    "cuda_available": false,
+    "device_count": 0,
+    "device_name": null,
+    "environment_diagnosis": {
+      "main_uv_env_torch": {
+        "cuda_available": false,
+        "cuda_version": "13.0",
+        "device_count": 0,
+        "torch_version": "2.12.0+cu130"
+      },
+      "nvidia_smi": {
+        "status": "failed",
+        "stderr": "Failed to initialize NVML: GPU access blocked by the operating system"
+      },
+      "pinned_vllm_env_torch": {
+        "cuda_available": false,
+        "cuda_version": "13.0",
+        "device_count": 0,
+        "torch_version": "2.11.0+cu130"
+      },
+      "pinned_vllm_version": "0.21.0",
+      "scope": "host GPU/NVML access is unavailable to both Python environments in this session"
+    },
+    "planner_stage_static_metadata": {
+      "call_site_path": "vllm.v1.engine.core.EngineCore._initialize_kv_caches",
+      "call_site_signature": "(self, vllm_config: vllm.config.vllm.VllmConfig) -> vllm.v1.kv_cache_interface.KVCacheConfig",
+      "function_path": "vllm.v1.core.kv_cache_utils.get_kv_cache_configs",
+      "function_signature": "(vllm_config: vllm.config.vllm.VllmConfig, kv_cache_specs: list[dict[str, vllm.v1.kv_cache_interface.KVCacheSpec]], available_memory: list[int]) -> list[vllm.v1.kv_cache_interface.KVCacheConfig]",
+      "observed_input_paths_from_source": {
+        "available_memory": "self.model_executor.determine_available_memory()",
+        "kv_cache_specs": "self.model_executor.get_kv_cache_specs()",
+        "stored_available_memory": "self.available_gpu_memory_for_kv_cache",
+        "vllm_config": "EngineCore._initialize_kv_caches(vllm_config)"
+      }
+    }
+  },
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "object_access": {
+    "allocator_replacement": false,
+    "available_memory": false,
+    "get_kv_cache_configs_called": false,
+    "kv_cache_specs": false,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "scheduler_mutation": false,
+    "vllm_config": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "pinned_venv_path": "/tmp/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "python_executable": "/tmp/vllm-cachepawl-venv/bin/python",
+  "reason": "host GPU/NVML access is unavailable; torch reports CUDA unavailable in both the pinned vLLM environment and the main uv environment",
+  "status": "blocked",
+  "timeout_seconds": 1200,
+  "timestamp": "2026-05-25T00:00:00+00:00",
+  "trust_remote_code": false,
+  "vllm_version": "0.21.0"
+}
