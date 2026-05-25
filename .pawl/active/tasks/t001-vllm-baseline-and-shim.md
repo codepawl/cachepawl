@@ -611,6 +611,48 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `npx @codepawl/pawlkit@0.3.0 check` — failed in sandbox due npm DNS; passed after approved registry access, 0 warnings
   - `ruff`, `ruff format`, `mypy`, `pytest`, and `uv build` — skipped because this step changed only Markdown and PawlKit records
 
+2026-05-25 vLLM planner dry-run probe:
+
+- Added API:
+  - `dry_run_vllm_planner_probe(translated_or_observation, raw_safe_metadata=...)`
+  - `VllmPlannerDryRunResult`
+  - `VllmDryRunGroupProposal`
+- Added artifact generator:
+  `benchmarks/scripts/create_vllm_planner_dry_run_probe.py`.
+- Generated artifact directory:
+  `research/avmp/v2/results/vllm-planner-dry-run-probe/`.
+- Files: `README.md`, `manifest.json`, `dry_run_result.json`, `summary.md`.
+- Key metrics:
+  - `status`: `planner_dry_run_available`
+  - `safe_for_advisory_only`: `true`
+  - `returned_to_vllm`: `false`
+  - `vllm_behavior_changed`: `false`
+  - `vanilla_observed_reserved_bytes`: 2,910,781,440
+  - `vanilla_observed_useful_bytes`: 1,679,258,112
+  - `cachepawl_proposed_reserved_bytes`: 1,679,258,112
+  - `estimated_savings_bytes`: 1,231,523,328
+  - `overestimation_ratio`: 1.7333734577189286
+  - `wasted_fraction`: 0.4230902777777778
+- Missing fields for mutation: stable scheduler/planner construction hook,
+  allocator or `KVCacheManager` replacement control point, worker tensor layout
+  control point, runtime request-to-block assignment control, and Mamba
+  state-index plus attention view rewrite contract.
+- Runtime scope: planner dry-run artifact only; no vLLM source edits,
+  monkeypatching, allocator replacement, scheduler/manager/worker mutation,
+  Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR,
+  serving changes, quality evaluation, or model inference rerun.
+- Verification:
+  - `npx @codepawl/pawlkit@0.3.0 view` — failed in sandbox due npm DNS; passed after approved registry access
+  - `npx @codepawl/pawlkit@0.3.0 check` — failed in sandbox due npm DNS; passed after approved registry access, 0 warnings
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/vllm -q` — 24 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_planner_dry_run_probe.py -q` — 1 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 170 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py benchmarks/scripts/create_vllm_cache_diagnostic.py benchmarks/scripts/create_vllm_planner_dry_run_probe.py` — passed, 168 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util, cachepawl.integrations.vllm as v; ..."` — `main_vllm_installed=False`, `dry_run_export=True`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 385 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — failed in sandbox due DNS for `hatchling>=1.25`; passed after approved PyPI access
+
 ## Regression Coverage
 
 Added focused tests under `tests/integration/vllm/` for import safety, optional vLLM

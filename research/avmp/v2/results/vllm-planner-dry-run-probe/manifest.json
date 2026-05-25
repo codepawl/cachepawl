@@ -1,0 +1,13 @@
+{
+  "allocator_replacement": false,
+  "artifact": "vllm-planner-dry-run-probe",
+  "returned_to_vllm": false,
+  "safe_for_advisory_only": true,
+  "scheduler_mutation": false,
+  "source_raw_safe_metadata": "research/avmp/v2/results/vllm-runtime-cache-plan-observation/raw_safe_metadata.json",
+  "source_translated_cache_config": "research/avmp/v2/results/vllm-runtime-cache-plan-observation/translated_runtime_cache_config.json",
+  "status": "planner_dry_run_available",
+  "timestamp": "2026-05-25T00:00:00+00:00",
+  "vllm_behavior_changed": false,
+  "worker_layout_mutation": false
+}

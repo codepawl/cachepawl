@@ -188,3 +188,13 @@
 - Selected planner-level dry-run because it is the least invasive candidate that can test Cachepawl recommendation insertion before vLLM finalizes cache tensor sizes
 - Deferred scheduler construction and worker allocation hooks due higher correctness/private API risk and poorer fit for the next smallest probe
 - vLLM source edits, monkeypatching, allocator replacement, scheduler/manager/worker mutation, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope
+
+## 2026-05-25 — vLLM planner dry-run probe
+
+- Added `cachepawl.integrations.vllm.dry_run` with `dry_run_vllm_planner_probe(...)`
+- Added `benchmarks/scripts/create_vllm_planner_dry_run_probe.py`
+- Generated `research/avmp/v2/results/vllm-planner-dry-run-probe/` with `README.md`, `manifest.json`, `dry_run_result.json`, and `summary.md`
+- The dry-run artifact records `planner_dry_run_available`, `safe_for_advisory_only=true`, `returned_to_vllm=false`, and `vllm_behavior_changed=false`
+- The dry-run computes 2,910,781,440 vanilla observed reserved bytes, 1,679,258,112 vanilla useful bytes, 1,679,258,112 Cachepawl proposed reserved bytes, 1,231,523,328 estimated savings bytes, 1.733373 overestimation ratio, and 0.423090 wasted fraction
+- Added focused fake/config tests for dry-run metrics and artifact generation
+- vLLM source edits, monkeypatching, allocator replacement, scheduler/manager/worker mutation, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

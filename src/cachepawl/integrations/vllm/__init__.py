@@ -12,6 +12,11 @@ from cachepawl.integrations.vllm.advisory import (
     VllmCacheGroupAdvisory,
     advise_vllm_runtime_cache_plan,
 )
+from cachepawl.integrations.vllm.dry_run import (
+    VllmDryRunGroupProposal,
+    VllmPlannerDryRunResult,
+    dry_run_vllm_planner_probe,
+)
 from cachepawl.integrations.vllm.observer import (
     RUNTIME_KV_CACHE_CONFIG_PATH,
     VllmRuntimeCacheObservation,
@@ -47,7 +52,9 @@ __all__ = [
     "VllmCacheGroupAdvisory",
     "VllmCacheLayerSpec",
     "VllmCachePlan",
+    "VllmDryRunGroupProposal",
     "VllmIntegrationPlan",
+    "VllmPlannerDryRunResult",
     "VllmRuntimeCacheObservation",
     "VllmRuntimeObservationStatus",
     "VllmTranslatedCacheConfig",
@@ -56,6 +63,7 @@ __all__ = [
     "VllmTranslatedCacheTensor",
     "VllmTranslationError",
     "advise_vllm_runtime_cache_plan",
+    "dry_run_vllm_planner_probe",
     "get_vllm_version",
     "is_vllm_available",
     "observe_vllm_runtime_cache_plan",

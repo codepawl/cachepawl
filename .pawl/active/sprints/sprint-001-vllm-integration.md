@@ -40,6 +40,7 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Path C decision gate selects observer-in-the-loop advisory comparison before mutation
 - [x] Observer-in-the-loop advisory diagnostic emits vLLM-observed versus Cachepawl-recommended metrics
 - [x] Path C mutation-probe decision selects planner-level dry-run before mutation
+- [x] Planner-level dry-run probe artifact computes a Cachepawl proposed plan without returning it to vLLM
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -134,3 +135,8 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
   allocation probe paths. Accepted D007 to use a planner-level dry-run probe
   next because it is the least invasive candidate that can test insertion before
   vLLM finalizes cache tensor sizes.
+- 2026-05-25: Added the planner-level dry-run probe helper and generated
+  `research/avmp/v2/results/vllm-planner-dry-run-probe/`. The artifact keeps
+  `returned_to_vllm=false`, `vllm_behavior_changed=false`, and records
+  2,910,781,440 vanilla reserved bytes versus a 1,679,258,112 byte Cachepawl
+  proposed plan.

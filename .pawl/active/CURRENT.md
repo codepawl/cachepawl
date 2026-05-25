@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Implement a bounded planner-level dry-run probe that observes vLLM planning inputs/outputs and computes a Cachepawl proposed plan without returning it to vLLM.
+Use the planner dry-run artifact to decide whether to attempt a real planner-stage observation around `get_kv_cache_configs(...)` in the pinned vLLM environment.
