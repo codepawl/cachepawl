@@ -36,6 +36,7 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Observe-first vLLM cache-plan translator handles fake attention, Mamba, and hybrid configs without a vLLM dependency
 - [x] Direct real vLLM cache planning dataclasses are translated into a Cachepawl observation artifact
 - [x] Runtime-resolved vanilla vLLM `KVCacheConfig` is translated into a Cachepawl observation artifact
+- [x] Reusable observe-first runtime vLLM cache-plan helper exists without a vLLM dependency
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -112,3 +113,7 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
   `Zyphra/Zamba2-2.7B-instruct`. The translated artifact records 329 blocks,
   7 cache groups, and 9 cache tensors with no vLLM mutation or long-lived
   serving.
+- 2026-05-25: Promoted the bounded runtime cache-plan object walk into an
+  import-safe `observe_vllm_runtime_cache_plan` helper. The capture script now
+  uses the reusable helper while preserving artifact format and observe-only
+  behavior.

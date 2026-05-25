@@ -5,6 +5,12 @@ The runtime shim and allocator replacement are future Sprint 1 work; the
 current surface only records the cache-plan shape cachepawl will need.
 """
 
+from cachepawl.integrations.vllm.observer import (
+    RUNTIME_KV_CACHE_CONFIG_PATH,
+    VllmRuntimeCacheObservation,
+    VllmRuntimeObservationStatus,
+    observe_vllm_runtime_cache_plan,
+)
 from cachepawl.integrations.vllm.planning import (
     VllmCacheLayerSpec,
     VllmCachePlan,
@@ -27,9 +33,12 @@ from cachepawl.integrations.vllm.translator import (
 )
 
 __all__ = [
+    "RUNTIME_KV_CACHE_CONFIG_PATH",
     "VllmCacheLayerSpec",
     "VllmCachePlan",
     "VllmIntegrationPlan",
+    "VllmRuntimeCacheObservation",
+    "VllmRuntimeObservationStatus",
     "VllmTranslatedCacheConfig",
     "VllmTranslatedCacheGroup",
     "VllmTranslatedCacheSpec",
@@ -37,6 +46,7 @@ __all__ = [
     "VllmTranslationError",
     "get_vllm_version",
     "is_vllm_available",
+    "observe_vllm_runtime_cache_plan",
     "plan_vllm_integration",
     "translate_hybrid_model_spec",
     "translate_kv_cache_config",

@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Convert the bounded runtime cache-plan observer into a reusable observe-first helper around vanilla vLLM initialization, then decide whether Path C can proceed without scheduler or allocator mutation.
+Use the reusable observer helper to compare vanilla vLLM runtime cache plans against Cachepawl planner input needs, then decide whether Path C can proceed without scheduler or allocator mutation.

@@ -21,9 +21,12 @@ from cachepawl.quant.dtypes import DType
 
 def test_vllm_package_imports_without_vllm_dependency() -> None:
     assert vllm_integration.__all__ == [
+        "RUNTIME_KV_CACHE_CONFIG_PATH",
         "VllmCacheLayerSpec",
         "VllmCachePlan",
         "VllmIntegrationPlan",
+        "VllmRuntimeCacheObservation",
+        "VllmRuntimeObservationStatus",
         "VllmTranslatedCacheConfig",
         "VllmTranslatedCacheGroup",
         "VllmTranslatedCacheSpec",
@@ -31,6 +34,7 @@ def test_vllm_package_imports_without_vllm_dependency() -> None:
         "VllmTranslationError",
         "get_vllm_version",
         "is_vllm_available",
+        "observe_vllm_runtime_cache_plan",
         "plan_vllm_integration",
         "translate_hybrid_model_spec",
         "translate_kv_cache_config",

@@ -173,13 +173,18 @@ def _run_runtime_observation_child(command: list[str], *, timeout_seconds: int) 
         }
 
     payload = _parse_payload(completed.stdout)
-    status = "completed" if completed.returncode == 0 and payload is not None else "failed"
+    payload_status = payload.get("status") if payload is not None else None
+    status = (
+        "completed"
+        if completed.returncode == 0 and payload_status == "runtime_resolved_translation"
+        else "failed"
+    )
     return {
         "status": status,
         "reason": (
             "runtime vLLM observation completed"
             if status == "completed"
-            else "runtime vLLM observation failed before emitting a payload"
+            else _payload_failure_reason(payload)
         ),
         "command": _format_command(command),
         "returncode": completed.returncode,
@@ -200,7 +205,7 @@ def _runtime_observation_command(
     code = "\n".join(
         [
             "import json",
-            "from cachepawl.integrations.vllm import translate_kv_cache_config",
+            "from cachepawl.integrations.vllm import observe_vllm_runtime_cache_plan",
             "from vllm import LLM",
             "llm = LLM(",
             f"    model={model!r},",
@@ -209,43 +214,22 @@ def _runtime_observation_command(
             f"    max_num_seqs={max_num_seqs!r},",
             f"    trust_remote_code={trust_remote_code!r},",
             ")",
-            "engine_core_client = llm.llm_engine.engine_core",
-            "engine_core = engine_core_client.engine_core",
-            "scheduler = engine_core.scheduler",
-            "kv_cache_config = scheduler.kv_cache_config",
-            "manager_config = scheduler.kv_cache_manager.kv_cache_config",
-            "translated = translate_kv_cache_config(kv_cache_config).to_dict()",
-            "payload = {",
-            "    'status': 'runtime_resolved_translation',",
-            "    'runtime_path': (",
-            "        'LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config'",
-            "    ),",
-            "    'manager_path_matches_scheduler': kv_cache_config is manager_config,",
-            "    'translated_runtime_cache_config': translated,",
-            "    'raw_safe_metadata': {",
-            "        'engine_core_client_type': type(engine_core_client).__name__,",
-            "        'engine_core_type': type(engine_core).__name__,",
-            "        'scheduler_type': type(scheduler).__name__,",
-            "        'kv_cache_config_type': type(kv_cache_config).__name__,",
-            "        'num_blocks': kv_cache_config.num_blocks,",
-            "        'kv_cache_group_count': len(kv_cache_config.kv_cache_groups),",
-            "        'kv_cache_tensor_count': len(kv_cache_config.kv_cache_tensors),",
-            "        'available_gpu_memory_for_kv_cache': (",
-            "            engine_core.available_gpu_memory_for_kv_cache",
-            "        ),",
-            "        'cache_config_block_size': (",
-            "            llm.llm_engine.vllm_config.cache_config.block_size",
-            "        ),",
-            "        'cache_config_num_gpu_blocks': (",
-            "            llm.llm_engine.vllm_config.cache_config.num_gpu_blocks",
-            "        ),",
-            "    },",
-            "}",
+            "payload = observe_vllm_runtime_cache_plan(llm).to_dict()",
             f"print({OBSERVATION_PREFIX!r} + json.dumps(payload, sort_keys=True))",
             "del llm",
         ]
     )
     return [sys.executable, "-c", code]
+
+
+def _payload_failure_reason(payload: JsonObject | None) -> str:
+    if payload is None:
+        return "runtime vLLM observation failed before emitting a payload"
+    reason = payload.get("unsupported_reason")
+    if reason is not None:
+        return str(reason)
+    status = payload.get("status")
+    return f"runtime vLLM observation returned unsupported status {status!r}"
 
 
 def _success_payload(

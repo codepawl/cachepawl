@@ -120,6 +120,15 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   translator compatibility as the direct dataclass observation. No vLLM source
   edits, monkeypatching, allocator replacement, Path C mutation, or long-lived
   serving were performed.
+- 2026-05-25: Converted the bounded runtime object walk into
+  `observe_vllm_runtime_cache_plan(llm)` under
+  `src/cachepawl/integrations/vllm/observer.py`. The helper accepts a vanilla
+  vLLM `LLM` object or duck-typed equivalent, safely locates
+  `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config`,
+  translates it through the existing cache-plan translator, and returns a
+  deterministic serializable observation result. Unsupported runtime paths now
+  return a structured `unsupported` observation instead of leaking
+  `AttributeError`.
 
 ## Anti-Bypass Constraints
 
@@ -147,6 +156,7 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Observe-first cache-plan translator handles fake attention, Mamba, and hybrid vLLM-like configs
 - [x] Direct real vLLM cache planning dataclasses are translated and compared against fake-object assumptions
 - [x] Runtime-resolved vanilla vLLM `KVCacheConfig` is translated and compared against direct dataclass assumptions
+- [x] Reusable observe-first runtime vLLM cache-plan helper handles duck-typed vanilla `LLM` objects
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -468,6 +478,37 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py` — passed, 158 source files
   - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util; ..."` — `main_vllm_installed=False`
   - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 374 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — failed in sandbox due DNS for `hatchling>=1.25`; passed after approved PyPI access
+
+2026-05-25 reusable runtime vLLM cache-plan observer:
+
+- Added API:
+  - `observe_vllm_runtime_cache_plan(llm)`
+  - `VllmRuntimeCacheObservation`
+  - `RUNTIME_KV_CACHE_CONFIG_PATH`
+- Supported runtime path:
+  `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config`
+- Unsupported-path behavior: missing `llm_engine`, nested `engine_core`,
+  `scheduler`, or `kv_cache_config` returns a structured `unsupported`
+  observation with `runtime_resolved_kv_cache_config=false`.
+- Artifact compatibility: no committed runtime artifact files changed; the
+  capture script still writes `manifest.json`,
+  `translated_runtime_cache_config.json`, `raw_safe_metadata.json`, and
+  `README.md` with the existing schema.
+- Runtime scope: observe-only helper and script refactor; no vLLM source edits,
+  monkeypatching, allocator replacement, scheduler injection, Path C mutation,
+  long-lived serving, Triton kernels, copy kernels, LSDR, serving changes, or
+  quality evaluation.
+- Verification:
+  - `npx @codepawl/pawlkit@0.3.0 view` — failed in sandbox due npm DNS; passed after approved registry access
+  - `npx @codepawl/pawlkit@0.3.0 check` — failed in sandbox due npm DNS; passed after approved registry access, 0 warnings
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/vllm -q` — 18 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_runtime_cache_plan_observation.py -q` — 1 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 162 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py` — passed, 160 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util, cachepawl.integrations.vllm as v; ..."` — `main_vllm_installed=False`, `observer_export=True`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 377 passed, 12 skipped
   - `UV_CACHE_DIR=/tmp/uv-cache uv build` — failed in sandbox due DNS for `hatchling>=1.25`; passed after approved PyPI access
 
 ## Regression Coverage
