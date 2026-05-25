@@ -129,3 +129,14 @@
 - Documented the pinned command in `.pawl/README.md` and `.pawl/context/REPO_COMMANDS.md`
 - Validated current manual `.pawl/` edits with `view` and `check`; `check` passed with 0 warnings
 - Confirmed that unscoped `npx pawlkit` is the wrong package name for this repo's current tooling
+
+## 2026-05-25 — vLLM cache-plan observation
+
+- Recreated `/tmp/vllm-cachepawl-venv` and installed pinned `vllm==0.21.0` there only
+- Added `benchmarks/scripts/capture_vllm_cache_plan_observation.py`
+- Captured `research/avmp/v2/results/vllm-cache-plan-observation/` with direct real vLLM object translation
+- Reached real vLLM `AttentionSpec`, `MambaSpec`, `KVCacheGroupSpec`, `KVCacheTensor`, and `KVCacheConfig` dataclasses
+- Widened translator compatibility for real tuple-based `MambaSpec.shapes` and `MambaSpec.dtypes`
+- Recorded that `get_kv_cache_configs(...)` was not called because it needs runtime `VllmConfig`, per-worker spec maps, and available-memory inputs
+- Verified the main Cachepawl environment still has no vLLM dependency
+- vLLM source edits, monkeypatching, allocator replacement, Scheduler/KVCacheManager injection, model loading, serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

@@ -1,0 +1,50 @@
+{
+  "artifact": "vllm-cache-plan-observation",
+  "fake_vs_real_assumption_comparison": [
+    {
+      "detail": "real vLLM exposes page_size_bytes as an observable property",
+      "field": "AttentionSpec.page_size_bytes",
+      "result": "matches"
+    },
+    {
+      "detail": "real vLLM uses torch.dtype; translator stringifies it",
+      "field": "AttentionSpec.dtype",
+      "result": "compatible"
+    },
+    {
+      "detail": "fake tests used dicts; real vLLM uses tuple[tuple[int, ...], ...]",
+      "field": "MambaSpec.shapes",
+      "result": "fake assumption widened"
+    },
+    {
+      "detail": "fake tests used dicts; real vLLM uses tuple[torch.dtype, ...]",
+      "field": "MambaSpec.dtypes",
+      "result": "fake assumption widened"
+    },
+    {
+      "detail": "real vLLM uses lists; translator normalizes to tuples",
+      "field": "KVCacheGroupSpec.layer_names",
+      "result": "compatible"
+    },
+    {
+      "detail": "real vLLM 0.21.0 KVCacheConfig only has num_blocks, tensors, and groups",
+      "field": "KVCacheConfig.block_size/cache_dtype",
+      "result": "not present"
+    }
+  ],
+  "object_access": {
+    "allocator_replacement": false,
+    "direct_real_vllm_objects": true,
+    "get_kv_cache_configs_called": false,
+    "get_kv_cache_configs_skip_reason": "requires VllmConfig, per-worker KVCacheSpec dictionaries, and available-memory inputs; runtime-resolved config capture remains the next observe-first step",
+    "model_loaded": false,
+    "monkeypatching": false,
+    "vllm_source_modified": false
+  },
+  "pinned_venv_path": "/tmp/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "python_executable": "/tmp/vllm-cachepawl-venv/bin/python",
+  "status": "direct_real_object_translation",
+  "timestamp": "2026-05-25T14:41:31+00:00",
+  "vllm_version": "0.21.0"
+}

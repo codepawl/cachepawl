@@ -104,6 +104,12 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   `KVCacheTensor`, and `KVCacheConfig` objects, emits Cachepawl-owned
   serializable snapshot records, and raises typed translation errors for
   unsupported objects without importing or mutating vLLM.
+- 2026-05-25: Recreated `/tmp/vllm-cachepawl-venv`, installed pinned
+  `vllm==0.21.0` there, and captured a read-only direct real-object cache-plan
+  observation artifact. Reached real vLLM `AttentionSpec`, `MambaSpec`,
+  `KVCacheGroupSpec`, `KVCacheTensor`, and `KVCacheConfig` dataclasses; did not
+  call `get_kv_cache_configs` because it requires runtime `VllmConfig`,
+  per-worker spec maps, and available-memory inputs.
 
 ## Anti-Bypass Constraints
 
@@ -129,6 +135,7 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Bounded vanilla vLLM one-prompt generation smoke is captured
 - [x] Read-only Path C shim audit identifies vLLM 0.21.0 integration points
 - [x] Observe-first cache-plan translator handles fake attention, Mamba, and hybrid vLLM-like configs
+- [x] Direct real vLLM cache planning dataclasses are translated and compared against fake-object assumptions
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -373,6 +380,48 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
 - Verification:
   - `npx @codepawl/pawlkit@0.3.0 view` — passed
   - `npx @codepawl/pawlkit@0.3.0 check` — passed, 0 warnings
+
+2026-05-25 vLLM cache-plan observation:
+
+- Artifact directory:
+  `research/avmp/v2/results/vllm-cache-plan-observation/`
+- Files: `README.md`, `manifest.json`, `translated_cache_config.json`,
+  `raw_safe_metadata.json`
+- Environment setup:
+  - `UV_CACHE_DIR=/tmp/uv-cache uv venv --python 3.10 /tmp/vllm-cachepawl-venv` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache timeout 30m uv pip install --python /tmp/vllm-cachepawl-venv/bin/python "vllm==0.21.0" --torch-backend=auto` — failed in sandbox due DNS
+  - same install command with approved PyPI access — passed
+- Capture command:
+  `PYTHONPATH=src /tmp/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_cache_plan_observation.py --output-dir research/avmp/v2/results/vllm-cache-plan-observation`
+- Status: `direct_real_object_translation`
+- Real objects reached: vLLM 0.21.0 `AttentionSpec`, `MambaSpec`,
+  `KVCacheGroupSpec`, `KVCacheTensor`, and `KVCacheConfig`
+- `get_kv_cache_configs(...)`: not called; signature requires `VllmConfig`,
+  per-worker `dict[str, KVCacheSpec]` inputs, and available-memory inputs, so a
+  runtime-resolved config capture remains the next observe-first step.
+- Fake-vs-real comparison:
+  - `AttentionSpec.page_size_bytes` matches as an observable property.
+  - `AttentionSpec.dtype` is `torch.dtype`; the translator stringifies it.
+  - Real `MambaSpec.shapes` and `MambaSpec.dtypes` are tuples, so the
+    translator and tests were widened beyond dict-only fake assumptions.
+  - Real `KVCacheGroupSpec.layer_names` and `KVCacheTensor.shared_by` are
+    lists; the translator normalizes them.
+  - Real `KVCacheConfig` has only `num_blocks`, `kv_cache_tensors`, and
+    `kv_cache_groups`; top-level `block_size` and `cache_dtype` remain `null`.
+- Runtime scope: read-only direct object translation only; no model load,
+  tensors, vLLM source edits, monkeypatching, allocator replacement, scheduler
+  injection, Path C mutation, Triton kernels, copy kernels, LSDR, serving
+  changes, or quality evaluation.
+- Verification:
+  - `npx @codepawl/pawlkit@0.3.0 view` — passed
+  - `npx @codepawl/pawlkit@0.3.0 check` — passed, 0 warnings
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/vllm/test_translator.py tests/bench/test_vllm_cache_plan_observation.py -q` — 9 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 158 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py` — passed, 156 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util; ..."` — `main_vllm_installed=False`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 373 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — failed in sandbox due DNS for `hatchling>=1.25`; passed after approved PyPI access
 
 ## Regression Coverage
 

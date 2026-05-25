@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Run the vLLM development setup, capture the vanilla baseline, then implement the Path C shim or document the Path A fallback decision.
+Capture a read-only translated `KVCacheConfig` from the pinned vanilla vLLM environment, then decide whether Path C can proceed without scheduler or allocator mutation.

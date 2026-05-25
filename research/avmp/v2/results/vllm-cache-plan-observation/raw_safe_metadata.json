@@ -1,0 +1,65 @@
+{
+  "classes": {
+    "AttentionSpec": {
+      "fields": [
+        "block_size",
+        "dtype",
+        "head_size",
+        "kv_quant_mode",
+        "num_kv_heads",
+        "page_size_padded"
+      ],
+      "is_dataclass": true,
+      "signature": "(block_size: 'int', *, num_kv_heads: 'int', head_size: 'int', dtype: 'torch.dtype', kv_quant_mode: 'KVQuantMode' = <KVQuantMode.NONE: 0>, page_size_padded: 'int | None' = None) -> None"
+    },
+    "KVCacheConfig": {
+      "fields": [
+        "kv_cache_groups",
+        "kv_cache_tensors",
+        "num_blocks"
+      ],
+      "is_dataclass": true,
+      "signature": "(num_blocks: 'int', kv_cache_tensors: 'list[KVCacheTensor]', kv_cache_groups: 'list[KVCacheGroupSpec]') -> None"
+    },
+    "KVCacheGroupSpec": {
+      "fields": [
+        "is_eagle_group",
+        "kv_cache_spec",
+        "layer_names"
+      ],
+      "is_dataclass": true,
+      "signature": "(layer_names: 'list[str]', kv_cache_spec: 'KVCacheSpec', is_eagle_group: 'bool' = False) -> None"
+    },
+    "KVCacheTensor": {
+      "fields": [
+        "shared_by",
+        "size"
+      ],
+      "is_dataclass": true,
+      "signature": "(size: 'int', shared_by: 'list[str]') -> None"
+    },
+    "MambaSpec": {
+      "fields": [
+        "block_size",
+        "dtypes",
+        "mamba_cache_mode",
+        "mamba_type",
+        "num_speculative_blocks",
+        "page_size_padded",
+        "shapes"
+      ],
+      "is_dataclass": true,
+      "signature": "(block_size: 'int', shapes: 'tuple[tuple[int, ...], ...]', dtypes: 'tuple[torch.dtype]', page_size_padded: 'int | None' = None, mamba_type: 'MambaAttentionBackendEnum' = <MambaAttentionBackendEnum.MAMBA2: 'vllm.v1.attention.backends.mamba2_attn.Mamba2AttentionBackend'>, mamba_cache_mode: 'str' = 'none', num_speculative_blocks: 'int' = 0) -> None"
+    }
+  },
+  "direct_object_values": {
+    "attention_page_size_bytes": 65536,
+    "attention_real_page_size_bytes": 65536,
+    "kv_cache_group_layer_names_type": "list",
+    "kv_cache_tensor_shared_by_type": "list",
+    "mamba_dtypes_type": "tuple",
+    "mamba_page_size_bytes": 262144,
+    "mamba_shapes_type": "tuple"
+  },
+  "get_kv_cache_configs_signature": "(vllm_config: vllm.config.vllm.VllmConfig, kv_cache_specs: list[dict[str, vllm.v1.kv_cache_interface.KVCacheSpec]], available_memory: list[int]) -> list[vllm.v1.kv_cache_interface.KVCacheConfig]"
+}

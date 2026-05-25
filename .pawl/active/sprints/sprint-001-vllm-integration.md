@@ -2,7 +2,7 @@
 
 Status: In Progress
 Created: 2026-05-23
-Updated: 2026-05-23
+Updated: 2026-05-25
 Completed: N/A
 TTL: 30 days after completion or cancellation
 Archive After: N/A
@@ -32,6 +32,9 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
 - [x] Bounded vanilla vLLM model-load smoke is captured for the target hybrid model
 - [x] Bounded vanilla vLLM one-prompt generation smoke is captured
+- [x] Read-only Path C shim audit identifies vLLM 0.21.0 integration points
+- [x] Observe-first vLLM cache-plan translator handles fake attention, Mamba, and hybrid configs without a vLLM dependency
+- [x] Direct real vLLM cache planning dataclasses are translated into a Cachepawl observation artifact
 - [x] `ruff`, `ruff format --check`, `mypy`, and pytest status are recorded for the skeleton step
 
 ## Constraints
@@ -89,3 +92,16 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
 - 2026-05-23: Added bounded one-prompt generation capture and recorded
   successful vanilla vLLM generation for `Zyphra/Zamba2-2.7B-instruct` with 13
   prompt tokens, 8 generated tokens, and no long-lived serving or shim behavior.
+- 2026-05-23: Completed the read-only Path C shim audit against the installed
+  `vllm==0.21.0` package. Accepted D005 to observe and translate resolved vLLM
+  cache plans before mutating scheduler or allocator behavior.
+- 2026-05-25: Added the observe-first vLLM cache-plan translator for
+  duck-typed `AttentionSpec`, `MambaSpec`, `KVCacheGroupSpec`,
+  `KVCacheTensor`, and `KVCacheConfig`-like objects. The translator remains
+  import-safe without vLLM installed and performs no runtime mutation.
+- 2026-05-25: Recreated the isolated `/tmp/vllm-cachepawl-venv`, installed
+  pinned `vllm==0.21.0`, and captured a direct real-object cache-plan
+  translation artifact under
+  `research/avmp/v2/results/vllm-cache-plan-observation/`. This did not load a
+  model, call `get_kv_cache_configs`, modify vLLM, monkeypatch, replace
+  allocators, or implement Path C mutation.

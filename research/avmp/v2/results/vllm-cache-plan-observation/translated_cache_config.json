@@ -1,0 +1,90 @@
+{
+  "attention_group_count": 1,
+  "block_size": null,
+  "dtype": null,
+  "group_count": 2,
+  "groups": [
+    {
+      "cache_spec": {
+        "block_size": 16,
+        "cache_kind": "attention",
+        "dtype": "torch.bfloat16",
+        "layer_name": null,
+        "metadata": {
+          "head_size": 128,
+          "kv_quant_mode": 0,
+          "num_kv_heads": 8,
+          "storage_block_size": 16
+        },
+        "page_size_bytes": 65536,
+        "spec_type": "AttentionSpec",
+        "useful_bytes": 65536
+      },
+      "group_index": 0,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 2,
+      "layer_names": [
+        "layers.0.self_attn",
+        "layers.8.self_attn"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 1,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "align",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "shapes": [
+            [
+              8192,
+              16
+            ]
+          ],
+          "storage_block_size": 1
+        },
+        "page_size_bytes": 262144,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 262144
+      },
+      "group_index": 1,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 1,
+      "layer_names": [
+        "layers.1.mamba"
+      ],
+      "metadata": {}
+    }
+  ],
+  "layer_count": 3,
+  "mamba_group_count": 1,
+  "metadata": {},
+  "num_blocks": 32,
+  "tensors": [
+    {
+      "metadata": {},
+      "shared_by": [
+        "layers.0.self_attn"
+      ],
+      "size_bytes": 2097152
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "layers.1.mamba"
+      ],
+      "size_bytes": 8388608
+    }
+  ],
+  "total_page_size_bytes": 327680,
+  "total_useful_bytes": 327680
+}
