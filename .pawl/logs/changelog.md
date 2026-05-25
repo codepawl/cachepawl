@@ -160,3 +160,12 @@
 - Refactored `benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py` to call the reusable helper while preserving the runtime artifact schema
 - Added fake-object observer tests under `tests/integration/vllm/test_observer.py`
 - vLLM source edits, monkeypatching, allocator replacement, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope
+
+## 2026-05-25 — Path C decision gate
+
+- Added `research/avmp/v2/PATH_C_DECISION_GATE.md`
+- Added D006 choosing observer-in-the-loop advisory comparison before scheduler, manager, allocator, or worker allocation mutation
+- Classified translated runtime fields as sufficient for planner-only comparison, observer-in-the-loop logging, and future planner recommendations
+- Classified mutation control as still insufficient for replacing vLLM allocation, changing scheduler decisions, or changing tensor allocation layout
+- The next implementation step is an import-safe advisory comparison helper that consumes observer output and emits vLLM-observed versus Cachepawl-recommended metrics
+- vLLM source edits, monkeypatching, allocator replacement, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

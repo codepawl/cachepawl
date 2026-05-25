@@ -11,6 +11,7 @@ Keep this file short. Store decision details in separate files under this folder
 | D003 — Active files override archive | Accepted | `.pawl/active/decisions/d003-active-over-archive.md` | N/A |
 | D004 — Use restored local WSL2 GPU visibility for vLLM baseline | Accepted | `.pawl/active/decisions/d004-fix-local-wsl2-gpu-first.md` | N/A |
 | D005 — Observe vLLM cache plans before Path C mutation | Accepted | `.pawl/active/decisions/d005-path-c-observe-first.md` | N/A |
+| D006 — Keep Path C observer-in-the-loop before mutation | Accepted | `.pawl/active/decisions/d006-path-c-observer-in-loop-first.md` | N/A |
 
 ## TTL Warnings
 
