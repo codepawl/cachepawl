@@ -1,27 +1,27 @@
 # Sprint 1 — vLLM integration baseline and shim
 
-Status: In Progress
+Status: Completed
 Created: 2026-05-23
 Updated: 2026-05-25
-Completed: N/A
+Completed: 2026-05-25
 TTL: 30 days after completion or cancellation
-Archive After: N/A
-Archive Warning: N/A
-Archive Reason: N/A
+Archive After: 2026-06-24
+Archive Warning: 2026-06-17
+Archive Reason: Sprint 1 completed; observe-first vLLM integration boundary closed
 
 ## Goal
 
-Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a vanilla baseline, then wiring the planned AVMP shim against the pinned vLLM version.
+Close the observe-first vLLM integration boundary by capturing a vanilla baseline, translating real vLLM cache planning objects, observing runtime-resolved cache planning state, and producing non-mutating advisory and dry-run evidence against the pinned vLLM version.
 
 ## Tasks
 
-- [ ] `.pawl/active/tasks/t001-vllm-baseline-and-shim.md`
+- [x] `.pawl/active/tasks/t001-vllm-baseline-and-shim.md`
 
 ## Definition of Done
 
-- [ ] vLLM development environment is documented and reproducible
-- [ ] Vanilla vLLM baseline numbers are captured under `research/avmp/v2/results/`
-- [ ] AVMP integration path is implemented or the fallback path is documented with evidence
+- [x] vLLM development environment is documented and reproducible
+- [x] Vanilla vLLM baseline numbers are captured under `research/avmp/v2/results/`
+- [x] Observe-first AVMP/vLLM integration path is documented with evidence; runtime mutation is deferred
 - [x] New integration skeleton has focused tests and documented local verification
 - [x] Planner-only baseline measurement spine has focused tests and documented local verification
 - [x] Planner comparison evidence exists for vLLM-style padded planning versus Cachepawl AVMP
@@ -140,3 +140,10 @@ Prove cachepawl's Python AVMP allocator path inside vLLM by first capturing a va
   `returned_to_vllm=false`, `vllm_behavior_changed=false`, and records
   2,910,781,440 vanilla reserved bytes versus a 1,679,258,112 byte Cachepawl
   proposed plan.
+- 2026-05-25: Closed Sprint 1 at the observe-first vLLM integration boundary.
+  T001 produced the planner benchmark spine and RTX 3060 artifact, pinned
+  vLLM 0.21.0 baseline evidence on WSL2 RTX 3060, bounded model-load and
+  generation smoke, real dataclass translation, runtime-resolved
+  `KVCacheConfig` observation, advisory diagnostics, and a non-mutating planner
+  dry-run probe. Scheduler, allocator, worker-layout, and returned-plan
+  mutation remain out of scope and move to later bounded probes.

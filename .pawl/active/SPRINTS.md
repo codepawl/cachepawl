@@ -6,28 +6,19 @@ This file is a short compatibility index. Keep sprint bodies in `.pawl/active/sp
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
-| Sprint 1 — vLLM integration baseline and shim | In Progress | `.pawl/active/sprints/sprint-001-vllm-integration.md` | N/A |
+| Sprint 2 — Planner-stage vLLM observation | In Progress | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | N/A |
 
 ## Completed
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
+| Sprint 1 — vLLM integration baseline and shim | Completed | `.pawl/active/sprints/sprint-001-vllm-integration.md` | 2026-06-24 |
 | Sprint 0 — PawlKit setup | Completed | `.pawl/active/sprints/sprint-000-pawlkit-setup.md` | 2026-06-22 |
 
 ## Archive Pointers
 
 Archived sprint records live in `.pawl/archive/sprints/`.
 
-## Sprint 2 — TODO
+## Sprint 3 — TODO
 
-### Goal
-
-Define after Sprint 1 evidence is available.
-
-### Tasks
-
-- [ ] TODO
-
-### Definition of Done
-
-- [ ] TODO
+Define after Sprint 2 evidence is available.

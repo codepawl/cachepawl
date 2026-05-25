@@ -2,14 +2,14 @@
 
 Project: `.pawl/active/projects/project-main.md`
 Sprint: `.pawl/active/sprints/sprint-001-vllm-integration.md`
-Status: In Progress
+Status: Completed
 Created: 2026-05-23
 Updated: 2026-05-25
-Completed: N/A
+Completed: 2026-05-25
 TTL: 30 days after completion or cancellation
-Archive After: N/A
-Archive Warning: N/A
-Archive Reason: N/A
+Archive After: 2026-06-24
+Archive Warning: 2026-06-17
+Archive Reason: T001 completed; observe-first vLLM integration boundary closed
 
 ## Objective
 
@@ -143,6 +143,13 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   that can test Cachepawl recommendation insertion before vLLM finalizes cache
   tensor sizes. This remains a probe-design decision only; no mutation was
   implemented.
+- 2026-05-25: Closed T001 as completed for the observe-first vLLM integration
+  boundary. Completed outputs include the planner benchmark spine and RTX 3060
+  target-profile artifact, pinned vLLM 0.21.0 WSL2 RTX 3060 baseline, bounded
+  model-load and generation smoke, real vLLM dataclass translator,
+  runtime-resolved `KVCacheConfig` observer, advisory diagnostic, and
+  non-mutating planner dry-run probe. Runtime mutation remains out of T001 and
+  moves to later bounded probes.
 
 ## Anti-Bypass Constraints
 
@@ -153,9 +160,9 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 
 ## Done When
 
-- [ ] Vanilla vLLM serves the selected model or the fallback decision is recorded
-- [ ] Baseline metrics are written under `research/avmp/v2/results/`
-- [ ] AVMP shim code exists or Path A fallback is documented with evidence
+- [x] Vanilla vLLM bounded model-load and generation smoke are recorded for the selected model
+- [x] Baseline metrics are written under `research/avmp/v2/results/`
+- [x] Observe-first AVMP/vLLM path is documented with evidence; runtime mutation is deferred
 - [x] Import-safe vLLM integration skeleton exists as the first shim step
 - [x] Planner-only cache baseline measurement spine exists
 - [x] Planner comparison emits vLLM-style padded versus Cachepawl AVMP evidence

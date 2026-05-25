@@ -1,5 +1,20 @@
 # Work Log
 
+## 2026-05-25 — PawlKit dogfooding policy
+
+- Added D008 to record PawlKit feedback only when normal Cachepawl tracker work creates real friction
+- Documented that Cachepawl work should not proactively test PawlKit beyond normal `view`, `check`, and tracker update usage
+- Documented the required fields for any future PawlKit friction note: command used, expected behavior, actual behavior, impact, workaround, and suggested fix
+- Cachepawl product code and research direction remain unchanged
+
+## 2026-05-25 — Sprint 1 closeout and planner-stage observation task
+
+- Closed Sprint 1 / T001 as completed for the observe-first vLLM integration boundary
+- Recorded T001 outputs: planner benchmark spine and RTX 3060 target-profile artifact, pinned vLLM 0.21.0 baseline on WSL2 RTX 3060, bounded model-load and generation smoke, real vLLM dataclass translator, runtime-resolved `KVCacheConfig` observer, advisory diagnostic, and non-mutating planner dry-run probe
+- Opened Sprint 2 / T002 for real planner-stage observation around `get_kv_cache_configs(...)`
+- T002 remains observe-first and bounded: it may observe or safely call real planner-stage objects, but must produce a structured blocker instead of widening scope if private/runtime-only API access is unsafe
+- vLLM source edits, monkeypatching, returned plans, allocator replacement, scheduler or worker mutation, Triton kernels, copy kernels, LSDR, long-lived serving, and quality evaluation remain out of scope
+
 ## 2026-05-23 — PawlKit setup for cachepawl
 
 - Created `.pawl/` project operating folder

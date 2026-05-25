@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-`.pawl/active/sprints/sprint-001-vllm-integration.md`
+`.pawl/active/sprints/sprint-002-planner-stage-observation.md`
 
 ## Current Task
 
-`.pawl/active/tasks/t001-vllm-baseline-and-shim.md`
+`.pawl/active/tasks/t002-real-planner-stage-observation.md`
 
 ## Current Project
 
@@ -18,7 +18,7 @@ Cachepawl
 
 ## Current Goal
 
-Establish the vLLM baseline and implement the AVMP integration path described in `research/avmp/v2/VLLM_INTEGRATION_ROADMAP.md`.
+Observe whether real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` can be reached or reconstructed safely without mutating vLLM behavior.
 
 ## Required Reading Before Work
 
@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Use the planner dry-run artifact to decide whether to attempt a real planner-stage observation around `get_kv_cache_configs(...)` in the pinned vLLM environment.
+Implement a bounded read-only planner-stage observation around `get_kv_cache_configs(...)` in the pinned vLLM environment, producing either a translated observation artifact or a structured blocker.
