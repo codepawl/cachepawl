@@ -24,6 +24,12 @@
 
 `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .`
 
+## PawlKit
+
+`npx @codepawl/pawlkit@0.3.0 view`
+
+`npx @codepawl/pawlkit@0.3.0 check`
+
 ## Run
 
 No long-running app entrypoint is defined. Use benchmark and research scripts for targeted workflows.
@@ -31,5 +37,6 @@ No long-running app entrypoint is defined. Use benchmark and research scripts fo
 ## Notes
 
 - Use `UV_CACHE_DIR=/tmp/uv-cache` in this sandbox because the default uv cache under the home directory is read-only.
+- Use the pinned scoped PawlKit package when `pawlkit` is not on `PATH`; `npx pawlkit` is not the correct package.
 - CI runs unit tests with `uv run pytest tests/unit -v` on Python 3.10 and 3.12.
 - CUDA-dependent tests are expected to skip without a CUDA-capable GPU.

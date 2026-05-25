@@ -4,7 +4,7 @@ Project: `.pawl/active/projects/project-main.md`
 Sprint: `.pawl/active/sprints/sprint-001-vllm-integration.md`
 Status: In Progress
 Created: 2026-05-23
-Updated: 2026-05-23
+Updated: 2026-05-25
 Completed: N/A
 TTL: 30 days after completion or cancellation
 Archive After: N/A
@@ -17,7 +17,10 @@ Set up the pinned vLLM environment, capture the vanilla hybrid-cache baseline, a
 
 ## Current Behavior
 
-Cachepawl has Python AVMP prototypes, benchmark tooling, and v2 Triton correctness-oracle artifacts, but no committed `src/cachepawl/integrations/vllm/` implementation yet.
+Cachepawl has Python AVMP prototypes, benchmark tooling, v2 Triton
+correctness-oracle artifacts, and an import-safe
+`src/cachepawl/integrations/vllm/` skeleton. Runtime vLLM allocator/shim
+behavior is not implemented yet.
 
 ## Expected Behavior
 
@@ -87,6 +90,20 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   the existing model-load smoke record and adds a generation record with 13
   prompt tokens, 8 generated tokens, 43.399474 seconds elapsed, 0.184334
   tokens/sec, and 10,905,399,296 bytes available GPU memory after generation.
+- 2026-05-23: Completed the first read-only Path C shim audit against the
+  installed `vllm==0.21.0` package in `/tmp/vllm-cachepawl-venv`. The audit
+  identified `KVCacheSpec`, `MambaSpec`, `KVCacheConfig`,
+  `get_kv_cache_configs`, `Scheduler.__init__`, `KVCacheManager`,
+  `HybridKVCacheCoordinator`, `MambaManager`, and
+  `GPUModelRunner.initialize_kv_cache` as the key surfaces. Accepted D005 to
+  observe translated vLLM cache plans before mutating scheduler or allocator
+  behavior.
+- 2026-05-25: Added an import-safe observe-first translator under
+  `src/cachepawl/integrations/vllm/translator.py`. It accepts duck-typed
+  vLLM-like `AttentionSpec`, `MambaSpec`, `KVCacheGroupSpec`,
+  `KVCacheTensor`, and `KVCacheConfig` objects, emits Cachepawl-owned
+  serializable snapshot records, and raises typed translation errors for
+  unsupported objects without importing or mutating vLLM.
 
 ## Anti-Bypass Constraints
 
@@ -110,6 +127,8 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Isolated pinned vLLM environment imports vLLM and sees local CUDA device
 - [x] Bounded vanilla vLLM model-load smoke is captured for the target model
 - [x] Bounded vanilla vLLM one-prompt generation smoke is captured
+- [x] Read-only Path C shim audit identifies vLLM 0.21.0 integration points
+- [x] Observe-first cache-plan translator handles fake attention, Mamba, and hybrid vLLM-like configs
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -289,6 +308,71 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 364 passed, 12 skipped
   - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
   - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+
+2026-05-23 Path C shim audit:
+
+- Design note: `research/avmp/v2/PATH_C_SHIM_AUDIT.md`
+- Decision: `.pawl/active/decisions/d005-path-c-observe-first.md`
+- Audited package root: `/tmp/vllm-cachepawl-venv/lib/python3.10/site-packages/vllm`
+- Recommended next step: add import-safe translators for vLLM `KVCacheSpec`,
+  `KVCacheGroupSpec`, `KVCacheTensor`, and `KVCacheConfig` before scheduler or
+  allocator mutation.
+- Runtime scope: read-only source audit and design only; no vLLM source edits,
+  monkeypatching, allocator replacement, Path C shim behavior, Triton kernels,
+  copy kernels, LSDR, long-lived serving, or quality evaluation.
+- Verification:
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs view` — passed
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 154 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 152 source files
+  - `pytest` — skipped; this audit changed only docs and PawlKit records
+  - `uv build` — skipped; this audit changed only docs and PawlKit records
+
+2026-05-25 observe-first vLLM cache-plan translator:
+
+- Added translator API:
+  - `translate_kv_cache_spec(layer_name, spec)`
+  - `translate_kv_cache_group(group_index, group)`
+  - `translate_kv_cache_tensor(tensor)`
+  - `translate_kv_cache_config(config)`
+- Output records: `VllmTranslatedCacheSpec`, `VllmTranslatedCacheGroup`,
+  `VllmTranslatedCacheTensor`, and `VllmTranslatedCacheConfig`, each with
+  deterministic `to_dict()` output for later planner comparison.
+- Supported fake-object coverage: attention-only specs, Mamba/state specs,
+  hybrid cache configs with groups and tensors, layer-group name aliases, tensor
+  size aliases, deterministic JSON serialization, and typed unsupported-object
+  errors.
+- Runtime scope: observe-first translation only; no vLLM imports, source edits,
+  monkeypatching, allocator replacement, Scheduler/KVCacheManager injection,
+  Triton kernels, copy kernels, LSDR, serving changes, or quality evaluation.
+- Verification:
+  - `pawlkit view` — skipped, `pawlkit` command not found in this shell
+  - `pawlkit check` — skipped, `pawlkit` command not found in this shell
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs view` — skipped, previous fallback path no longer exists
+  - `node /tmp/pawlkit-0.3.0-inspect/package/scripts/init-pawlkit.mjs check` — skipped, previous fallback path no longer exists
+  - `npx pawlkit view` — skipped, npm reports no published versions for `pawlkit`
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/integration/vllm -q` — 14 passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util, cachepawl.integrations.vllm as v; ..."` — `vllm_installed=False`, translator export present
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 156 files already formatted
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py` — passed, 154 source files
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 371 passed, 12 skipped
+  - `UV_CACHE_DIR=/tmp/uv-cache uv build` — passed after approved PyPI access for build requirements
+
+2026-05-25 PawlKit validation path restore:
+
+- Restored reproducible PawlKit validation with the pinned scoped package:
+  - `npx @codepawl/pawlkit@0.3.0 view`
+  - `npx @codepawl/pawlkit@0.3.0 check`
+- Root cause of the temporary validation blocker: the working command was the
+  scoped package `@codepawl/pawlkit@0.3.0`; `npx pawlkit` targets an unscoped
+  package with no published versions, and the previous `/tmp` extraction path
+  was ephemeral.
+- Validation result: current manual `.pawl/` edits pass PawlKit validation.
+- Verification:
+  - `npx @codepawl/pawlkit@0.3.0 view` — passed
+  - `npx @codepawl/pawlkit@0.3.0 check` — passed, 0 warnings
 
 ## Regression Coverage
 

@@ -32,6 +32,14 @@
 
 ## Maintenance Commands
 
+Use the pinned package when `pawlkit` is not already on `PATH`:
+
+- `npx @codepawl/pawlkit@0.3.0 view`
+- `npx @codepawl/pawlkit@0.3.0 check`
+
+The unscoped package name `pawlkit` is not the published npm package for this
+repo's current tooling.
+
 - `pawlkit check` — validate structure, index size, `.pawl` links, and required metadata.
 - `pawlkit view` — print a read-only terminal dashboard of current records, statuses, and TTL labels.
 - `pawlkit integrate` — create or repair Claude, Codex, generic agent files, and `AGENTS.md`.

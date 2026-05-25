@@ -106,3 +106,26 @@
 - Preserved the existing model-load smoke evidence and added a second JSONL record for bounded generation
 - Recorded prompt tokens 13, generated tokens 8, elapsed 43.399474 seconds, 0.184334 tokens/sec, and 10,905,399,296 bytes available GPU memory after generation
 - Long-lived serving, model-quality evaluation, monkeypatching, allocator replacement, Path C shim work, Triton kernels, copy kernels, and LSDR remain out of scope
+
+## 2026-05-23 — Path C shim audit
+
+- Added `research/avmp/v2/PATH_C_SHIM_AUDIT.md`
+- Audited installed `vllm==0.21.0` cache planning, hybrid cache, Mamba cache, scheduler, manager, and GPU runner paths under `/tmp/vllm-cachepawl-venv`
+- Identified `KVCacheSpec`, `MambaSpec`, `KVCacheConfig`, `get_kv_cache_configs`, `Scheduler.__init__`, `KVCacheManager`, `HybridKVCacheCoordinator`, `MambaManager`, and `GPUModelRunner.initialize_kv_cache` as the key integration surfaces
+- Added D005 choosing observe-first translation of vLLM cache plans before any scheduler or allocator mutation
+- vLLM source edits, monkeypatching, allocator replacement, Path C shim behavior, Triton kernels, copy kernels, LSDR, long-lived serving, and quality evaluation remain out of scope
+
+## 2026-05-25 — observe-first vLLM cache-plan translator
+
+- Added `cachepawl.integrations.vllm.translator` with import-safe, duck-typed translation for vLLM-like cache planning objects
+- Added serializable Cachepawl-owned records for translated cache specs, groups, tensors, and full cache configs
+- Added fake-object tests for attention specs, Mamba/state specs, hybrid cache configs, alias handling, deterministic serialization, and typed unsupported-object errors
+- Updated the Path C audit limitations to record that this step observes cache plans only and performs no vLLM mutation
+- vLLM source edits, monkeypatching, allocator replacement, Scheduler/KVCacheManager injection, Triton kernels, copy kernels, LSDR, serving changes, and quality evaluation remain out of scope
+
+## 2026-05-25 — PawlKit validation path restore
+
+- Restored the reproducible PawlKit command as `npx @codepawl/pawlkit@0.3.0`
+- Documented the pinned command in `.pawl/README.md` and `.pawl/context/REPO_COMMANDS.md`
+- Validated current manual `.pawl/` edits with `view` and `check`; `check` passed with 0 warnings
+- Confirmed that unscoped `npx pawlkit` is the wrong package name for this repo's current tooling
