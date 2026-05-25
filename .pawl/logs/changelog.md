@@ -169,3 +169,13 @@
 - Classified mutation control as still insufficient for replacing vLLM allocation, changing scheduler decisions, or changing tensor allocation layout
 - The next implementation step is an import-safe advisory comparison helper that consumes observer output and emits vLLM-observed versus Cachepawl-recommended metrics
 - vLLM source edits, monkeypatching, allocator replacement, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope
+
+## 2026-05-25 — vLLM runtime cache diagnostic
+
+- Added `cachepawl.integrations.vllm.advisory` with `advise_vllm_runtime_cache_plan(...)`
+- Added `benchmarks/scripts/create_vllm_cache_diagnostic.py`
+- Generated `research/avmp/v2/results/vllm-runtime-cache-diagnostic/` with `report.json`, `summary.md`, and `manifest.json`
+- The diagnostic classifies the runtime observation as `planner_advisory_available` with `observe_only` and `mutation_required_for_runtime_effect` flags
+- The report records 329 blocks, 7 cache groups, 9 cache tensors, 63 layers, 2,910,781,440 observed reserved bytes, 1,679,258,112 advisory useful/recommended bytes, 1,231,523,328 advisory savings bytes, 1.733373 overestimation ratio, and 0.423090 wasted fraction
+- Added focused fake/config tests for advisory metrics and diagnostic artifact generation
+- vLLM source edits, monkeypatching, allocator replacement, scheduler/manager/worker mutation, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

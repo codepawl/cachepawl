@@ -1,0 +1,123 @@
+{
+  "advisory_savings_bytes": 1231523328,
+  "available_kv_cache_gpu_memory_bytes": 2915421184,
+  "cache_group_count": 7,
+  "cache_tensor_count": 9,
+  "cachepawl_recommended_bytes": 1679258112,
+  "classifications": [
+    "observe_only",
+    "planner_advisory_available",
+    "mutation_required_for_runtime_effect"
+  ],
+  "group_advisories": [
+    {
+      "block_size": 48,
+      "cache_kind": "attention",
+      "estimated_bytes": 2910781440,
+      "group_index": 0,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.0,
+      "page_size_bytes": 983040,
+      "useful_bytes": 983040,
+      "wasted_fraction": 0.0
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 1,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 2,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 3,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 4,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 5,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    },
+    {
+      "block_size": 4096,
+      "cache_kind": "mamba",
+      "estimated_bytes": 2910781440,
+      "group_index": 6,
+      "layer_count": 9,
+      "missing_fields": [],
+      "overestimation_ratio": 1.4312336936265375,
+      "page_size_bytes": 983040,
+      "useful_bytes": 686848,
+      "wasted_fraction": 0.30130208333333336
+    }
+  ],
+  "layer_count": 63,
+  "missing_fields_for_mutation": [
+    "stable scheduler or planner construction hook",
+    "allocator or KVCacheManager replacement control point",
+    "worker tensor allocation layout control point",
+    "runtime request-to-block assignment control",
+    "Mamba state-index and attention view rewrite contract"
+  ],
+  "num_blocks": 329,
+  "observed_reserved_bytes": 2910781440,
+  "observed_useful_bytes": 1679258112,
+  "overestimation_ratio": 1.7333734577189286,
+  "planner_input_coverage": {
+    "available_kv_cache_gpu_memory": true,
+    "cache_group_count": true,
+    "cache_tensor_count": true,
+    "layer_count": true,
+    "num_blocks": true,
+    "per_group_block_size": true,
+    "per_group_cache_kind": true,
+    "per_group_page_size_bytes": true,
+    "per_group_useful_bytes": true
+  },
+  "primary_classification": "planner_advisory_available",
+  "wasted_fraction": 0.4230902777777778
+}

@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Add an import-safe advisory comparison helper that consumes runtime observer output and emits vLLM observed versus Cachepawl recommended planner metrics without mutating vLLM.
+Use the advisory diagnostic output to choose the smallest future mutation probe: planner-level hook, scheduler construction hook, or worker allocation hook.
