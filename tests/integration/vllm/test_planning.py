@@ -24,10 +24,19 @@ def test_vllm_package_imports_without_vllm_dependency() -> None:
         "VllmCacheLayerSpec",
         "VllmCachePlan",
         "VllmIntegrationPlan",
+        "VllmTranslatedCacheConfig",
+        "VllmTranslatedCacheGroup",
+        "VllmTranslatedCacheSpec",
+        "VllmTranslatedCacheTensor",
+        "VllmTranslationError",
         "get_vllm_version",
         "is_vllm_available",
         "plan_vllm_integration",
         "translate_hybrid_model_spec",
+        "translate_kv_cache_config",
+        "translate_kv_cache_group",
+        "translate_kv_cache_spec",
+        "translate_kv_cache_tensor",
     ]
 
 

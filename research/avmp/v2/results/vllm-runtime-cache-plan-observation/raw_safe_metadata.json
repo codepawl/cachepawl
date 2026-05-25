@@ -1,0 +1,12 @@
+{
+  "available_gpu_memory_for_kv_cache": 2915421184,
+  "cache_config_block_size": 48,
+  "cache_config_num_gpu_blocks": 329,
+  "engine_core_client_type": "InprocClient",
+  "engine_core_type": "EngineCore",
+  "kv_cache_config_type": "KVCacheConfig",
+  "kv_cache_group_count": 7,
+  "kv_cache_tensor_count": 9,
+  "num_blocks": 329,
+  "scheduler_type": "AsyncScheduler"
+}

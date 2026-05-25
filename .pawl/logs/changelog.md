@@ -140,3 +140,13 @@
 - Recorded that `get_kv_cache_configs(...)` was not called because it needs runtime `VllmConfig`, per-worker spec maps, and available-memory inputs
 - Verified the main Cachepawl environment still has no vLLM dependency
 - vLLM source edits, monkeypatching, allocator replacement, Scheduler/KVCacheManager injection, model loading, serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope
+
+## 2026-05-25 — runtime vLLM cache-plan observation
+
+- Added `benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py`
+- Captured `research/avmp/v2/results/vllm-runtime-cache-plan-observation/` with a bounded runtime-resolved vanilla vLLM cache-plan translation
+- Reached `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config` after offline `LLM` initialization for `Zyphra/Zamba2-2.7B-instruct`
+- Translated the runtime `KVCacheConfig` with Cachepawl's import-safe translator; the artifact records 329 blocks, 7 cache groups, and 9 cache tensors
+- Compared runtime-resolved fields against the direct dataclass observation and recorded that the same translator assumptions remain compatible
+- Added a focused blocker-path test for environments without vLLM installed
+- vLLM source edits, monkeypatching, allocator replacement, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

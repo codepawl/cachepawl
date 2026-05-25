@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Capture a read-only translated `KVCacheConfig` from the pinned vanilla vLLM environment, then decide whether Path C can proceed without scheduler or allocator mutation.
+Convert the bounded runtime cache-plan observer into a reusable observe-first helper around vanilla vLLM initialization, then decide whether Path C can proceed without scheduler or allocator mutation.

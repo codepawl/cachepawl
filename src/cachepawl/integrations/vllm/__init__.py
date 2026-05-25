@@ -14,13 +14,33 @@ from cachepawl.integrations.vllm.planning import (
     plan_vllm_integration,
     translate_hybrid_model_spec,
 )
+from cachepawl.integrations.vllm.translator import (
+    VllmTranslatedCacheConfig,
+    VllmTranslatedCacheGroup,
+    VllmTranslatedCacheSpec,
+    VllmTranslatedCacheTensor,
+    VllmTranslationError,
+    translate_kv_cache_config,
+    translate_kv_cache_group,
+    translate_kv_cache_spec,
+    translate_kv_cache_tensor,
+)
 
 __all__ = [
     "VllmCacheLayerSpec",
     "VllmCachePlan",
     "VllmIntegrationPlan",
+    "VllmTranslatedCacheConfig",
+    "VllmTranslatedCacheGroup",
+    "VllmTranslatedCacheSpec",
+    "VllmTranslatedCacheTensor",
+    "VllmTranslationError",
     "get_vllm_version",
     "is_vllm_available",
     "plan_vllm_integration",
     "translate_hybrid_model_spec",
+    "translate_kv_cache_config",
+    "translate_kv_cache_group",
+    "translate_kv_cache_spec",
+    "translate_kv_cache_tensor",
 ]

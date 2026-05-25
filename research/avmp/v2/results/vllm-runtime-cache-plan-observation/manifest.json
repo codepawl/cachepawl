@@ -1,0 +1,54 @@
+{
+  "artifact": "vllm-runtime-cache-plan-observation",
+  "child_command": "/tmp/vllm-cachepawl-venv/bin/python -c 'import json\nfrom cachepawl.integrations.vllm import translate_kv_cache_config\nfrom vllm import LLM\nllm = LLM(\n    model='\"'\"'Zyphra/Zamba2-2.7B-instruct'\"'\"',\n    max_model_len=4096,\n    gpu_memory_utilization=0.7,\n    max_num_seqs=1,\n    trust_remote_code=False,\n)\nengine_core_client = llm.llm_engine.engine_core\nengine_core = engine_core_client.engine_core\nscheduler = engine_core.scheduler\nkv_cache_config = scheduler.kv_cache_config\nmanager_config = scheduler.kv_cache_manager.kv_cache_config\ntranslated = translate_kv_cache_config(kv_cache_config).to_dict()\npayload = {\n    '\"'\"'status'\"'\"': '\"'\"'runtime_resolved_translation'\"'\"',\n    '\"'\"'runtime_path'\"'\"': (\n        '\"'\"'LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config'\"'\"'\n    ),\n    '\"'\"'manager_path_matches_scheduler'\"'\"': kv_cache_config is manager_config,\n    '\"'\"'translated_runtime_cache_config'\"'\"': translated,\n    '\"'\"'raw_safe_metadata'\"'\"': {\n        '\"'\"'engine_core_client_type'\"'\"': type(engine_core_client).__name__,\n        '\"'\"'engine_core_type'\"'\"': type(engine_core).__name__,\n        '\"'\"'scheduler_type'\"'\"': type(scheduler).__name__,\n        '\"'\"'kv_cache_config_type'\"'\"': type(kv_cache_config).__name__,\n        '\"'\"'num_blocks'\"'\"': kv_cache_config.num_blocks,\n        '\"'\"'kv_cache_group_count'\"'\"': len(kv_cache_config.kv_cache_groups),\n        '\"'\"'kv_cache_tensor_count'\"'\"': len(kv_cache_config.kv_cache_tensors),\n        '\"'\"'available_gpu_memory_for_kv_cache'\"'\"': (\n            engine_core.available_gpu_memory_for_kv_cache\n        ),\n        '\"'\"'cache_config_block_size'\"'\"': (\n            llm.llm_engine.vllm_config.cache_config.block_size\n        ),\n        '\"'\"'cache_config_num_gpu_blocks'\"'\"': (\n            llm.llm_engine.vllm_config.cache_config.num_gpu_blocks\n        ),\n    },\n}\nprint('\"'\"'CACHEPAWL_RUNTIME_CACHE_PLAN='\"'\"' + json.dumps(payload, sort_keys=True))\ndel llm'",
+  "gpu_memory_utilization": 0.7,
+  "manager_path_matches_scheduler": true,
+  "max_model_len": 4096,
+  "max_num_seqs": 1,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "object_access": {
+    "allocator_replacement": false,
+    "long_lived_serve": false,
+    "model_loaded": true,
+    "monkeypatching": false,
+    "path_c_mutation": false,
+    "runtime_resolved_kv_cache_config": true,
+    "vllm_source_modified": false
+  },
+  "pinned_venv_path": "/tmp/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "python_executable": "/tmp/vllm-cachepawl-venv/bin/python",
+  "runtime_path": "LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config",
+  "runtime_vs_direct_observation_comparison": [
+    {
+      "detail": "scheduler.kv_cache_config is available after vanilla LLM initialization",
+      "field": "runtime_path",
+      "result": "new runtime-resolved object reached"
+    },
+    {
+      "detail": "runtime planner resolved num_blocks=329",
+      "field": "KVCacheConfig.num_blocks",
+      "result": "runtime value"
+    },
+    {
+      "detail": "runtime planner resolved group_count=7",
+      "field": "KVCacheConfig.kv_cache_groups",
+      "result": "runtime value"
+    },
+    {
+      "detail": "runtime worker plan exposed tensor_count=9",
+      "field": "KVCacheConfig.kv_cache_tensors",
+      "result": "runtime value"
+    },
+    {
+      "detail": "same translator handled real runtime KVCacheConfig without vLLM imports",
+      "field": "direct dataclass observation",
+      "result": "translator assumptions still compatible"
+    }
+  ],
+  "status": "runtime_resolved_translation",
+  "timeout_seconds": 1200,
+  "timestamp": "2026-05-25T15:01:26+00:00",
+  "trust_remote_code": false,
+  "vllm_version": "0.21.0"
+}
