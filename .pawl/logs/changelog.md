@@ -179,3 +179,12 @@
 - The report records 329 blocks, 7 cache groups, 9 cache tensors, 63 layers, 2,910,781,440 observed reserved bytes, 1,679,258,112 advisory useful/recommended bytes, 1,231,523,328 advisory savings bytes, 1.733373 overestimation ratio, and 0.423090 wasted fraction
 - Added focused fake/config tests for advisory metrics and diagnostic artifact generation
 - vLLM source edits, monkeypatching, allocator replacement, scheduler/manager/worker mutation, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope
+
+## 2026-05-25 — Path C mutation-probe decision
+
+- Added `research/avmp/v2/PATH_C_MUTATION_PROBE_DECISION.md`
+- Added D007 selecting a planner-level dry-run probe as the next Path C mutation-probe design
+- Compared planner-level, scheduler-construction, and worker allocation probe paths for control point, runtime effect, correctness risk, private API risk, RTX 3060 testability, code footprint, and fallback path
+- Selected planner-level dry-run because it is the least invasive candidate that can test Cachepawl recommendation insertion before vLLM finalizes cache tensor sizes
+- Deferred scheduler construction and worker allocation hooks due higher correctness/private API risk and poorer fit for the next smallest probe
+- vLLM source edits, monkeypatching, allocator replacement, scheduler/manager/worker mutation, Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR, and quality evaluation remain out of scope

@@ -12,6 +12,7 @@ This file is a short compatibility index. Keep decision bodies in `.pawl/active/
 | D004 — Use restored local WSL2 GPU visibility for vLLM baseline | Accepted | `.pawl/active/decisions/d004-fix-local-wsl2-gpu-first.md` | N/A |
 | D005 — Observe vLLM cache plans before Path C mutation | Accepted | `.pawl/active/decisions/d005-path-c-observe-first.md` | N/A |
 | D006 — Keep Path C observer-in-the-loop before mutation | Accepted | `.pawl/active/decisions/d006-path-c-observer-in-loop-first.md` | N/A |
+| D007 — Use a planner-level dry-run mutation probe next | Accepted | `.pawl/active/decisions/d007-use-planner-level-dry-run-probe.md` | N/A |
 
 ## Archive Pointers
 

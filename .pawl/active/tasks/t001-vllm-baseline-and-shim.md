@@ -136,6 +136,13 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
   replacing vLLM allocation, changing scheduler decisions, or changing tensor
   layout. Accepted D006 to implement observer-in-the-loop advisory comparison
   before any mutation.
+- 2026-05-25: Compared planner-level, scheduler-construction, and worker
+  allocation mutation-probe paths and added
+  `research/avmp/v2/PATH_C_MUTATION_PROBE_DECISION.md`. Accepted D007 to use a
+  planner-level dry-run probe next because it is the least invasive candidate
+  that can test Cachepawl recommendation insertion before vLLM finalizes cache
+  tensor sizes. This remains a probe-design decision only; no mutation was
+  implemented.
 
 ## Anti-Bypass Constraints
 
@@ -165,6 +172,7 @@ The repo has reproducible vLLM baseline evidence and a clear AVMP shim implement
 - [x] Runtime-resolved vanilla vLLM `KVCacheConfig` is translated and compared against direct dataclass assumptions
 - [x] Reusable observe-first runtime vLLM cache-plan helper handles duck-typed vanilla `LLM` objects
 - [x] Path C decision gate records observer-in-the-loop advisory comparison as the next direction
+- [x] Path C mutation-probe decision selects planner-level dry-run before mutation
 - [x] Verification commands and skipped checks are recorded
 - [x] `.pawl/logs/changelog.md` summarizes the skeleton work
 
@@ -575,6 +583,33 @@ Skipped checks are CUDA-dependent tests and the deferred v2.1 copy-region kernel
   - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import importlib.util, cachepawl.integrations.vllm as v; ..."` — `main_vllm_installed=False`, `advisory_export=True`
   - `UV_CACHE_DIR=/tmp/uv-cache uv run pytest -q` — 381 passed, 12 skipped
   - `UV_CACHE_DIR=/tmp/uv-cache uv build` — failed in sandbox due DNS for `hatchling>=1.25`; passed after approved PyPI access
+
+2026-05-25 Path C mutation-probe decision:
+
+- Added `research/avmp/v2/PATH_C_MUTATION_PROBE_DECISION.md`.
+- Added D007:
+  `.pawl/active/decisions/d007-use-planner-level-dry-run-probe.md`.
+- Compared:
+  - planner-level hook: earliest candidate to test insertion before finalized
+    `KVCacheConfig` tensor sizes; medium correctness risk, medium-high private
+    API risk, good RTX 3060 dry-run testability, small dry-run footprint.
+  - scheduler construction hook: can affect manager behavior but likely too
+    late for finalized padded tensor sizes; high correctness and private API
+    risk because vLLM directly constructs `KVCacheManager`.
+  - worker allocation hook: can affect tensor layout but has very high
+    correctness risk around attention views, Mamba state indices, block tables,
+    and backend metadata.
+- Decision: use a planner-level dry-run probe next. It should observe planner
+  inputs/outputs, compute a Cachepawl proposed alternate plan, and persist both
+  without returning the alternate plan to vLLM.
+- Runtime scope: decision/probe design only; no vLLM source edits,
+  monkeypatching, allocator replacement, scheduler/manager/worker mutation,
+  Path C mutation, long-lived serving, Triton kernels, copy kernels, LSDR,
+  serving changes, or quality evaluation.
+- Verification:
+  - `npx @codepawl/pawlkit@0.3.0 view` — failed in sandbox due npm DNS; passed after approved registry access
+  - `npx @codepawl/pawlkit@0.3.0 check` — failed in sandbox due npm DNS; passed after approved registry access, 0 warnings
+  - `ruff`, `ruff format`, `mypy`, `pytest`, and `uv build` — skipped because this step changed only Markdown and PawlKit records
 
 ## Regression Coverage
 

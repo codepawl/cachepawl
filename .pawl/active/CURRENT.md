@@ -44,4 +44,4 @@ Establish the vLLM baseline and implement the AVMP integration path described in
 
 ## Next Recommended Step
 
-Use the advisory diagnostic output to choose the smallest future mutation probe: planner-level hook, scheduler construction hook, or worker allocation hook.
+Implement a bounded planner-level dry-run probe that observes vLLM planning inputs/outputs and computes a Cachepawl proposed plan without returning it to vLLM.
