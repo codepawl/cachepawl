@@ -12,6 +12,7 @@ Keep this file short. Store sprint details in separate files under this folder.
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
+| Sprint 5 — Mutation-readiness compatibility checks | Completed | `.pawl/active/sprints/sprint-005-mutation-readiness.md` | 2026-06-25 |
 | Sprint 4 — Planner-stage advisory diff artifact | Completed | `.pawl/active/sprints/sprint-004-planner-stage-advisory-diff.md` | 2026-06-25 |
 | Sprint 3 — Path C mutation-hook design gate | Completed | `.pawl/active/sprints/sprint-003-path-c-mutation-hook-design.md` | 2026-06-25 |
 | Sprint 2 — Planner-stage observation and diagnose-vllm readiness | Completed | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | 2026-06-25 |

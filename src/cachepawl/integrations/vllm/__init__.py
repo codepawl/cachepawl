@@ -22,6 +22,11 @@ from cachepawl.integrations.vllm.dry_run import (
     VllmPlannerDryRunResult,
     dry_run_vllm_planner_probe,
 )
+from cachepawl.integrations.vllm.mutation_readiness import (
+    VllmMutationReadinessCheck,
+    VllmMutationReadinessReport,
+    check_vllm_mutation_readiness,
+)
 from cachepawl.integrations.vllm.observer import (
     RUNTIME_KV_CACHE_CONFIG_PATH,
     VllmRuntimeCacheObservation,
@@ -66,6 +71,8 @@ __all__ = [
     "VllmDiagnosticError",
     "VllmDryRunGroupProposal",
     "VllmIntegrationPlan",
+    "VllmMutationReadinessCheck",
+    "VllmMutationReadinessReport",
     "VllmPlannerDryRunResult",
     "VllmPlannerStageAdvisoryDiff",
     "VllmPlannerStageGroupDiff",
@@ -77,6 +84,7 @@ __all__ = [
     "VllmTranslatedCacheTensor",
     "VllmTranslationError",
     "advise_vllm_runtime_cache_plan",
+    "check_vllm_mutation_readiness",
     "create_vllm_artifact_diagnostic",
     "diff_vllm_planner_stage_advisory",
     "dry_run_vllm_planner_probe",

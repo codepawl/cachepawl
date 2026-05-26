@@ -1,0 +1,99 @@
+{
+  "advisory_only": true,
+  "blocked_invariants": [
+    "mutation_required_missing_fields"
+  ],
+  "checks": [
+    {
+      "details": "required serialized planner and diff fields are present",
+      "name": "planner_output_schema_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "planner num_blocks=329, diff num_blocks=329",
+      "name": "num_blocks_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "planner group_count=7, groups=7, diff cache_group_count=7, group_level_diff=7",
+      "name": "cache_group_count_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "planner tensors=9, diff cache_tensor_count=9",
+      "name": "cache_tensor_count_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "planner layer_count=63, diff layer_count=63, summed_layers=63, unique_named_layers=63",
+      "name": "layer_coverage_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "attention dtype and Mamba state dtypes are present",
+      "name": "dtype_state_dtype_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "block size, page size, and useful bytes are present and match group diff",
+      "name": "block_page_size_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "Mamba state shapes are present",
+      "name": "mamba_state_shape_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "attention_groups=1/1, mamba_groups=6/6",
+      "name": "attention_mamba_group_mapping_compatibility",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "reserved=2910781440, useful=1679258112, proposed=1679258112, savings=1231523328, group_level=True",
+      "name": "estimated_bytes_useful_bytes_consistency",
+      "required_for_mutation": true,
+      "status": "passed"
+    },
+    {
+      "details": "stable scheduler or planner construction hook; allocator or KVCacheManager replacement control point; worker tensor allocation layout control point; runtime request-to-block assignment control; Mamba state-index and attention view rewrite contract",
+      "name": "mutation_required_missing_fields",
+      "required_for_mutation": true,
+      "status": "blocked"
+    }
+  ],
+  "classification": "advisory_only_recommended",
+  "failed_invariants": [],
+  "mutation_required_missing_fields": [
+    "stable scheduler or planner construction hook",
+    "allocator or KVCacheManager replacement control point",
+    "worker tensor allocation layout control point",
+    "runtime request-to-block assignment control",
+    "Mamba state-index and attention view rewrite contract"
+  ],
+  "non_mutating": true,
+  "passed_invariants": [
+    "planner_output_schema_compatibility",
+    "num_blocks_compatibility",
+    "cache_group_count_compatibility",
+    "cache_tensor_count_compatibility",
+    "layer_coverage_compatibility",
+    "dtype_state_dtype_compatibility",
+    "block_page_size_compatibility",
+    "mamba_state_shape_compatibility",
+    "attention_mamba_group_mapping_compatibility",
+    "estimated_bytes_useful_bytes_consistency"
+  ],
+  "ready_for_controlled_substitution": false,
+  "returned_to_vllm": false,
+  "vllm_behavior_changed": false
+}

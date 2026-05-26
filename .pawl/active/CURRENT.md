@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-None. Sprint 4 is complete.
+None. Sprint 5 is complete.
 
 ## Current Task
 
-None. T006 is complete.
+None. T007 is complete.
 
 ## Current Project
 
@@ -18,8 +18,8 @@ None. T006 is complete.
 
 ## Current Goal
 
-Define the next Sprint 5 task from the completed T006 planner-stage
-advisory/diff artifact.
+Define the next Sprint 6 task from the completed T007 mutation-readiness
+artifact.
 
 ## Required Reading Before Work
 
@@ -45,5 +45,5 @@ advisory/diff artifact.
 
 ## Next Recommended Step
 
-Open Sprint 5 for the next bounded compatibility or mutation-readiness step
-using the T006 advisory/diff artifact.
+Open Sprint 6 to address the mutation-required missing control fields or to
+document why advisory-only should remain the product boundary.

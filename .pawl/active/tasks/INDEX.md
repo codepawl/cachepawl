@@ -12,6 +12,7 @@ Keep this file short. Store task details in separate files under this folder.
 
 | Task | Status | Sprint | File | Archive After |
 |---|---|---|---|---|
+| T007 — Mutation-readiness compatibility checks | Completed | Sprint 5 | `.pawl/active/tasks/t007-mutation-readiness-compatibility-checks.md` | 2026-06-25 |
 | T006 — Planner-stage post-call advisory diff artifact | Completed | Sprint 4 | `.pawl/active/tasks/t006-planner-stage-post-call-advisory-diff-artifact.md` | 2026-06-25 |
 | T005 — Mutation-hook design gate | Completed | Sprint 3 | `.pawl/active/tasks/t005-mutation-hook-design-gate.md` | 2026-06-25 |
 | T002 — Real planner-stage observation around get_kv_cache_configs | Completed | Sprint 2 | `.pawl/active/tasks/t002-real-planner-stage-observation.md` | 2026-06-25 |

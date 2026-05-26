@@ -1,0 +1,20 @@
+{
+  "artifact": "vllm-mutation-readiness",
+  "gpu_required": false,
+  "non_mutating": true,
+  "nvml_required": false,
+  "outputs": {
+    "manifest": "manifest.json",
+    "readiness_report": "readiness_report.json",
+    "readme": "README.md",
+    "summary": "summary.md"
+  },
+  "returned_to_vllm": false,
+  "source_diff_report": "research/avmp/v2/results/vllm-planner-stage-advisory-diff/diff_report.json",
+  "source_group_level_diff": "research/avmp/v2/results/vllm-planner-stage-advisory-diff/group_level_diff.json",
+  "source_translated_planner_stage_config": "research/avmp/v2/results/vllm-planner-stage-observation/translated_planner_stage_config.json",
+  "status": "advisory_only_recommended",
+  "timestamp": "2026-05-26T00:00:00+00:00",
+  "vllm_behavior_changed": false,
+  "vllm_required": false
+}

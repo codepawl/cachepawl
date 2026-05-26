@@ -1,5 +1,34 @@
 # Work Log
 
+## 2026-05-26 — T007 mutation-readiness compatibility checks completed
+
+- Added an import-safe mutation-readiness helper under
+  `cachepawl.integrations.vllm`
+- Added `benchmarks/scripts/create_vllm_mutation_readiness.py`
+- Added focused integration and benchmark tests for the readiness helper and
+  artifact script
+- Generated `research/avmp/v2/results/vllm-mutation-readiness/` with
+  `README.md`, `manifest.json`, `readiness_report.json`, and `summary.md`
+- The artifact classifies the current evidence as
+  `advisory_only_recommended`
+- Passed invariants: planner schema, `num_blocks`, cache group count, cache
+  tensor count, layer coverage, dtype/state dtype, block/page size, Mamba
+  state shape, attention/Mamba group mapping, and estimated-byte consistency
+- Failed invariants: none
+- Blocked invariant: mutation-required missing fields remain for a stable
+  scheduler or planner construction hook, allocator or KVCacheManager
+  replacement control point, worker tensor allocation layout control point,
+  runtime request-to-block assignment control, and Mamba state-index plus
+  attention view rewrite contract
+- Completed T007 and Sprint 5 without vLLM source edits, monkeypatching,
+  returned Cachepawl plans, allocator replacement, scheduler or worker layout
+  mutation, vLLM/GPU/NVML requirements, Triton kernels, copy kernels, LSDR,
+  serving changes, or quality evaluation
+- Verified focused tests, integration tests, ruff, format check, mypy, full
+  pytest, build, `git diff --check`, and PawlKit; sandboxed PawlKit and
+  initial build-backend resolution hit DNS failures, and approved network
+  reruns passed
+
 ## 2026-05-26 — T006 planner-stage advisory diff completed
 
 - Added an import-safe planner-stage advisory diff helper under
