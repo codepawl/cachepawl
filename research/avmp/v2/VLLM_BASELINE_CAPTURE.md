@@ -7,7 +7,7 @@ vanilla vLLM baseline status before any Cachepawl allocator shim work.
 
 - vLLM: `vllm==0.21.0`
 - Python: `3.10`
-- isolated venv: `/tmp/vllm-cachepawl-venv`
+- isolated venv: `~/.cache/cachepawl/vllm-cachepawl-venv`
 - primary model: `Zyphra/Zamba2-2.7B-instruct`
 - fallback model: `tiiuae/Falcon-H1-1.5B-Instruct`
 

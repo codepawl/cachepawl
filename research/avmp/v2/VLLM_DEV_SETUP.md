@@ -22,7 +22,7 @@ running AVMP inside a torch 2.11 venv works for the v2 paper's Python
 allocator path. (The Triton-backed correctness oracle is a separate concern
 and stays in the cachepawl venv where Triton 3.7.0 is installed.)
 
-## Isolation: separate venv at `/tmp/vllm-cachepawl-venv`
+## Isolation: separate venv at `~/.cache/cachepawl/vllm-cachepawl-venv`
 
 Do **NOT** install vLLM into the cachepawl venv. Two reasons:
 
@@ -35,9 +35,9 @@ Do **NOT** install vLLM into the cachepawl venv. Two reasons:
 Setup commands (for the roadmap to run at Week 1 start):
 
 ```bash
-# Create an isolated venv outside the cachepawl repo
-uv venv --python 3.10 /tmp/vllm-cachepawl-venv
-source /tmp/vllm-cachepawl-venv/bin/activate
+# Create an isolated durable venv outside the cachepawl repo
+uv venv --python 3.10 ~/.cache/cachepawl/vllm-cachepawl-venv
+source ~/.cache/cachepawl/vllm-cachepawl-venv/bin/activate
 
 # Install vLLM (pre-built wheel; no source build needed)
 uv pip install "vllm==0.21.0" torch==2.11.0
@@ -67,10 +67,9 @@ runtime that consumes it. The dependency direction is intentional.
 | Zamba2-2.7B-instruct weights (HF download) | ~6 GiB on disk (bf16 safetensors) |
 | Falcon-H1-1.5B-Instruct backup weights | ~3 GiB on disk |
 | HuggingFace transformers cache | ~0.5 GiB |
-| **Total budget** | **~15 GiB** under `~/.cache/` plus `/tmp/vllm-cachepawl-venv` |
+| **Total budget** | **~15 GiB** under `~/.cache/`, including the durable vLLM venv |
 
-Check `df -h ~` and `df -h /tmp` before Week 1 starts; ensure ≥ 20 GiB free
-on each.
+Check `df -h ~` before Week 1 starts; ensure ≥ 20 GiB free.
 
 ## WSL2 known issues (material risk for Week-1 GO/NO-GO)
 
@@ -111,8 +110,8 @@ df -h /tmp ~                                                       # expect ≥ 
 uname -a                                                           # confirm WSL2 (look for "WSL2" in release)
 
 # 2. Set up the isolated venv
-uv venv --python 3.10 /tmp/vllm-cachepawl-venv
-source /tmp/vllm-cachepawl-venv/bin/activate
+uv venv --python 3.10 ~/.cache/cachepawl/vllm-cachepawl-venv
+source ~/.cache/cachepawl/vllm-cachepawl-venv/bin/activate
 uv pip install "vllm==0.21.0" torch==2.11.0
 uv pip install -e /home/nxank4/personal/cachepawl
 

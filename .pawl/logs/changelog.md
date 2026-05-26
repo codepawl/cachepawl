@@ -1,5 +1,37 @@
 # Work Log
 
+## 2026-05-26 — T002 direct planner-stage replay completed
+
+- Removed deep-copying of real vLLM runtime objects before planner-stage replay
+  in `benchmarks/scripts/capture_vllm_planner_stage_observation.py`
+- Added structured child payloads for inputs-reached replay failures, including
+  `inputs_reached`, `replay_failed`, `deepcopy_failed`, and
+  `get_kv_cache_configs_called`
+- Added focused tests for deepcopy-failure classification, inputs-reached
+  replay failure metadata, and successful direct replay artifact writing
+- Reran the T002 observation through
+  `~/.cache/cachepawl/vllm-cachepawl-venv`; it reached real `VllmConfig`,
+  `KVCacheSpec` maps, and available-memory inputs, called
+  `get_kv_cache_configs(...)`, and wrote
+  `translated_planner_stage_config.json`
+- The planner-stage artifact records `planner_stage_translation`, one worker,
+  63 cache specs, available memory `2915421184`, planner output
+  `num_blocks=329`, runtime scheduler `num_blocks=329`, no scheduler config
+  change during replay, and `planner_matches_runtime_scheduler=true`
+- Completed T002 and Sprint 2; no vLLM source edits, monkeypatching, allocator
+  replacement, returned plans, scheduler mutation, worker layout mutation,
+  vLLM main-environment dependency, Triton kernels, copy kernels, LSDR, serving
+  changes, or quality evaluation were added
+
+## 2026-05-26 — durable vLLM env rerun for T002
+
+- Switched the primary pinned vLLM runtime path from `/tmp/vllm-cachepawl-venv` to `~/.cache/cachepawl/vllm-cachepawl-venv`
+- Updated T002 runbook references and benchmark-script pinned-env metadata constants to prefer the durable path
+- Verified the durable env with escalated GPU-visible execution: `vllm==0.21.0`, torch `2.11.0+cu130`, CUDA `13.0`, CUDA available, one device, `NVIDIA GeForce RTX 3060`
+- Reran `benchmarks/scripts/capture_vllm_planner_stage_observation.py` through the durable env with `PYTHONPATH=src`
+- The T002 artifact remains blocked, but the blocker changed: vLLM/FlashInfer sampling-op compilation references stale `/tmp/vllm-cachepawl-venv` source paths before `get_kv_cache_configs(...)` is reached
+- No vLLM source edits, monkeypatching, allocator replacement, scheduler mutation, worker layout mutation, vLLM main-environment dependency, Triton kernels, copy kernels, LSDR, serving changes, or quality evaluation were added
+
 ## 2026-05-26 — diagnose-vllm documentation completed
 
 - Added a compact README section for `cachepawl diagnose-vllm`

@@ -32,6 +32,9 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
 - v1 Python AVMP prototype is published as arXiv:2605.22416.
 - v2 Triton hardware realization is a correctness oracle; production batched/deferred deployment is v2.1.
 - The current implementation milestone is vLLM integration for the ML for Systems @ NeurIPS 2026 workshop path.
-- T002 remains blocked by host GPU/NVML access.
+- T002 completed after direct planner-stage replay through the durable pinned
+  vLLM env. The artifact reached real planner inputs, called
+  `get_kv_cache_configs(...)`, and confirmed the translated planner output
+  matches the runtime scheduler config without vLLM mutation.
 - T003 completed the GPU-free artifact-input `cachepawl diagnose-vllm` CLI.
 - T004 completed the release-readiness README documentation follow-up for the diagnostic CLI.

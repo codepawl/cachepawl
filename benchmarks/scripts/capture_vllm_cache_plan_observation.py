@@ -19,7 +19,7 @@ from cachepawl.integrations.vllm import translate_kv_cache_config
 
 DEFAULT_OUTPUT_DIR = Path("research/avmp/v2/results/vllm-cache-plan-observation")
 PINNED_VLLM_VERSION = "0.21.0"
-PINNED_VENV_PATH = "/tmp/vllm-cachepawl-venv"
+PINNED_VENV_PATH = "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv"
 JsonObject = dict[str, object]
 
 

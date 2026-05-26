@@ -6,12 +6,13 @@ Keep this file short. Store task details in separate files under this folder.
 
 | Task | Status | Sprint | File | Archive After |
 |---|---|---|---|---|
-| T002 — Real planner-stage observation around get_kv_cache_configs | Blocked | Sprint 2 | `.pawl/active/tasks/t002-real-planner-stage-observation.md` | N/A |
+| None | N/A | N/A | N/A | N/A |
 
 ## Completed
 
 | Task | Status | Sprint | File | Archive After |
 |---|---|---|---|---|
+| T002 — Real planner-stage observation around get_kv_cache_configs | Completed | Sprint 2 | `.pawl/active/tasks/t002-real-planner-stage-observation.md` | 2026-06-25 |
 | T004 — diagnose-vllm docs and smoke examples | Completed | Sprint 2 | `.pawl/active/tasks/t004-diagnose-vllm-docs-and-smoke-examples.md` | 2026-06-25 |
 | T003 — cachepawl diagnose-vllm CLI | Completed | Sprint 2 | `.pawl/active/tasks/t003-cachepawl-diagnose-vllm-cli.md` | 2026-06-25 |
 | T001 — Establish vLLM baseline and AVMP integration path | Completed | Sprint 1 | `.pawl/active/tasks/t001-vllm-baseline-and-shim.md` | 2026-06-24 |

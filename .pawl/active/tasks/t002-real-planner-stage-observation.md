@@ -2,26 +2,35 @@
 
 Project: `.pawl/active/projects/project-main.md`
 Sprint: `.pawl/active/sprints/sprint-002-planner-stage-observation.md`
-Status: Blocked
+Status: Completed
 Created: 2026-05-25
 Updated: 2026-05-26
-Completed: N/A
+Completed: 2026-05-26
 TTL: 30 days after completion or cancellation
-Archive After: N/A
-Archive Warning: N/A
-Archive Reason: N/A
+Archive After: 2026-06-25
+Archive Warning: 2026-06-18
+Archive Reason: Completed T002 planner-stage observation around get_kv_cache_configs
 
 ## Objective
 
 Determine whether Cachepawl can safely observe or call vLLM 0.21.0 planner-stage cache planning around `get_kv_cache_configs(...)` with real `VllmConfig`, `dict[str, KVCacheSpec]`, and available-memory inputs, without mutating vLLM behavior.
 
-## Blocker
+## Resolved Blocker
 
-This task is blocked by host GPU/NVML access in the current host/session. CUDA is unavailable in both the pinned vLLM environment and the main uv environment, and `nvidia-smi` reports GPU access blocked by the operating system. This is not evidence that `get_kv_cache_configs(...)` is unsafe or unavailable; it means the real runtime objects needed for the planner-stage call boundary cannot be reached in this session.
+The previous T002 blocker is resolved for the durable pinned vLLM environment at `~/.cache/cachepawl/vllm-cachepawl-venv`. Manual host validation and the escalated check in this session show `vllm==0.21.0`, torch `2.11.0+cu130`, CUDA build `13.0`, `torch.cuda.is_available() == True`, one CUDA device, and `NVIDIA GeForce RTX 3060`. Future pinned vLLM runtime work should prefer this durable environment over the ephemeral `/tmp/vllm-cachepawl-venv` path.
+
+## Result
+
+The 2026-05-26 durable-env rerun reached real planner-stage inputs and called
+`get_kv_cache_configs(...)` directly without deep-copying vLLM runtime objects.
+The artifact status is `planner_stage_translation`; it records one worker, 63
+cache specs, available memory `2915421184`, planner output `num_blocks=329`,
+runtime scheduler `num_blocks=329`, no scheduler config change during replay,
+and `planner_matches_runtime_scheduler=true`.
 
 ## Current Behavior
 
-T001 closed the observe-first runtime boundary. Cachepawl can translate real vLLM cache planning dataclasses, observe `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config`, emit advisory diagnostics, and create a non-mutating planner dry-run artifact. The actual planner-stage `get_kv_cache_configs(...)` call boundary has not yet been reached with real runtime inputs.
+T001 closed the observe-first runtime boundary. Cachepawl can translate real vLLM cache planning dataclasses, observe `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config`, emit advisory diagnostics, and create a non-mutating planner dry-run artifact. T002 now also reaches the planner-stage `get_kv_cache_configs(...)` call boundary with real runtime inputs and records the translated result without returning it to vLLM.
 
 ## Expected Behavior
 
@@ -32,7 +41,7 @@ The repo records a bounded planner-stage observation artifact showing either:
 
 ## Strategy
 
-- Use `/tmp/vllm-cachepawl-venv` with pinned `vllm==0.21.0`.
+- Use `~/.cache/cachepawl/vllm-cachepawl-venv` with pinned `vllm==0.21.0`.
 - Use `PYTHONPATH=src` so Cachepawl imports from the workspace without adding vLLM to the main environment.
 - Start from the already-proven runtime path `LLM.llm_engine.engine_core.engine_core.scheduler.kv_cache_config`.
 - Inspect only the minimum real vLLM objects needed to identify `VllmConfig`, per-worker `KVCacheSpec` maps, and available-memory inputs.
@@ -56,9 +65,9 @@ The repo records a bounded planner-stage observation artifact showing either:
 
 - [x] The planner-stage observation attempt is bounded and reproducible
 - [x] The artifact directory `research/avmp/v2/results/vllm-planner-stage-observation/` contains `README.md` and `manifest.json`
-- [ ] The artifact contains translated planner-stage output if real objects are reached
-- [x] The artifact contains `blocker.json` if safe planner-stage access is blocked
-- [ ] The result compares planner-stage fields against the runtime observer and dry-run assumptions
+- [x] The artifact contains translated planner-stage output if real objects are reached
+- [x] The artifact contains `blocker.json` if safe planner-stage access is blocked; the final successful artifact removes the stale blocker
+- [x] The result compares planner-stage fields against the runtime observer and dry-run assumptions
 - [x] PawlKit validation is recorded
 - [x] Focused tests or checks are recorded if code is added or changed
 
@@ -113,6 +122,24 @@ Use the commands in `.pawl/context/REPO_COMMANDS.md`. Product-code tests are req
   for rerun after GPU visibility is restored. This blocker does not invalidate
   the existing runtime observer, advisory diagnostic, dry-run artifact, or the
   safety of future `get_kv_cache_configs(...)` observation.
+- 2026-05-26: Switched the primary pinned vLLM environment path to
+  `~/.cache/cachepawl/vllm-cachepawl-venv`. Escalated validation of that env
+  reports `vllm==0.21.0`, torch `2.11.0+cu130`, CUDA `13.0`, CUDA available,
+  one CUDA device, and `NVIDIA GeForce RTX 3060`.
+- 2026-05-26: Reran the existing planner-stage observation through the durable
+  env with `PYTHONPATH=src`. The artifact remains blocked, but no longer by
+  GPU/NVML access. vLLM initializes far enough to load the model and begin
+  profiling, then fails before emitting the planner-stage payload because
+  FlashInfer sampling-op compilation references stale
+  `/tmp/vllm-cachepawl-venv` source paths. Therefore
+  `get_kv_cache_configs(...)` was not reached.
+- 2026-05-26: Removed the deep-copy step for real vLLM runtime objects before
+  planner replay. The rerun reached `vllm_config`, `kv_cache_specs`, and
+  `available_memory`, called `get_kv_cache_configs(...)` directly with
+  `list(available_memory)`, and wrote
+  `translated_planner_stage_config.json`. The translated planner output matches
+  the runtime scheduler config, and the scheduler config did not change during
+  replay.
 
 ## Verification Log
 
@@ -128,9 +155,30 @@ Use the commands in `.pawl/context/REPO_COMMANDS.md`. Product-code tests are req
 - `npx @codepawl/pawlkit@0.3.0 view` — passed after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`
 - `npx @codepawl/pawlkit@0.3.0 check` — passed with 0 warnings after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`
 
+2026-05-26 direct planner-stage replay:
+
+- `PYTHONPATH=src /home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_planner_stage_observation.py --output-dir research/avmp/v2/results/vllm-planner-stage-observation --timestamp 2026-05-26T00:00:00+00:00 --timeout-seconds 1200` — completed with `planner_stage_translation`; inputs reached, `get_kv_cache_configs(...)` called, no deepcopy used, no runtime scheduler config change during replay, translated planner output matches the runtime scheduler config
+- `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_planner_stage_observation.py -q` — 4 passed
+- `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+- `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 175 files already formatted
+- `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py benchmarks/scripts/create_vllm_cache_diagnostic.py benchmarks/scripts/create_vllm_planner_dry_run_probe.py benchmarks/scripts/capture_vllm_planner_stage_observation.py` — passed, 173 source files
+- `npx @codepawl/pawlkit@0.3.0 view` — passed after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`
+- `npx @codepawl/pawlkit@0.3.0 check` — passed with 0 warnings after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`
+
 2026-05-25 blocker stabilization:
 
 - `/tmp/vllm-cachepawl-venv/bin/python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.device_count())"` — `2.11.0+cu130 13.0 False 0`
 - `/tmp/vllm-cachepawl-venv/bin/python -c "import vllm; print(getattr(vllm, '__version__', 'unknown'))"` — `0.21.0`
 - `nvidia-smi --query-gpu=name,memory.free,memory.total,driver_version --format=csv,noheader` — failed: GPU access blocked by the operating system
 - `UV_CACHE_DIR=/tmp/uv-cache uv run python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.device_count())"` — `2.12.0+cu130 13.0 False 0`
+
+2026-05-26 durable-env rerun:
+
+- `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python -c "import torch, vllm; print(getattr(vllm, '__version__', 'unknown')); print(torch.__version__, torch.version.cuda, torch.cuda.is_available(), torch.cuda.device_count()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)"` — under escalated GPU-visible execution: `0.21.0`, `2.11.0+cu130 13.0 True 1`, `NVIDIA GeForce RTX 3060`
+- `PYTHONPATH=src /home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_planner_stage_observation.py --output-dir research/avmp/v2/results/vllm-planner-stage-observation --timestamp 2026-05-26T00:00:00+00:00 --timeout-seconds 1200` — completed with structured blocker: FlashInfer sampling op compilation references stale `/tmp/vllm-cachepawl-venv` source paths before `get_kv_cache_configs(...)` is reached
+- `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_vllm_planner_stage_observation.py -q` — 1 passed
+- `UV_CACHE_DIR=/tmp/uv-cache uv run ruff check .` — passed
+- `UV_CACHE_DIR=/tmp/uv-cache uv run ruff format --check .` — 175 files already formatted
+- `UV_CACHE_DIR=/tmp/uv-cache uv run mypy src/cachepawl tests research/avmp/scripts benchmarks/scripts/run_cache_probe.py benchmarks/scripts/compare_cache_planners.py benchmarks/scripts/create_planner_comparison_pack.py benchmarks/scripts/capture_vllm_baseline.py benchmarks/scripts/capture_vllm_cache_plan_observation.py benchmarks/scripts/capture_vllm_runtime_cache_plan_observation.py benchmarks/scripts/create_vllm_cache_diagnostic.py benchmarks/scripts/create_vllm_planner_dry_run_probe.py benchmarks/scripts/capture_vllm_planner_stage_observation.py` — passed, 173 source files
+- `npx @codepawl/pawlkit@0.3.0 view` — passed after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`
+- `npx @codepawl/pawlkit@0.3.0 check` — passed with 0 warnings after approved npm access; initial sandboxed attempt failed with registry DNS `EAI_AGAIN`

@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-`.pawl/active/sprints/sprint-002-planner-stage-observation.md`
+None. Sprint 2 is complete.
 
 ## Current Task
 
-`.pawl/active/tasks/t002-real-planner-stage-observation.md`
+None. T002 is complete.
 
 ## Current Project
 
@@ -18,7 +18,8 @@ Cachepawl
 
 ## Current Goal
 
-Wait for restored host GPU/NVML access so T002 can rerun the bounded planner-stage observation around `get_kv_cache_configs(...)`; T004 is complete.
+Define the next Sprint 3 task from the completed T002 planner-stage translation
+evidence and the existing diagnose-vllm CLI.
 
 ## Required Reading Before Work
 
@@ -44,4 +45,5 @@ Wait for restored host GPU/NVML access so T002 can rerun the bounded planner-sta
 
 ## Next Recommended Step
 
-Restore host GPU/NVML visibility, then rerun the existing T002 planner-stage observation without changing vLLM, monkeypatching, replacing allocators, or continuing Path C mutation.
+Open Sprint 3 for the next bounded mutation-probe or productization step using
+the successful T002 planner-stage observation artifact.

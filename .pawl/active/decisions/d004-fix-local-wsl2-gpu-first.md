@@ -2,7 +2,7 @@
 
 Status: Accepted
 Created: 2026-05-23
-Updated: 2026-05-23
+Updated: 2026-05-26
 Completed: N/A
 TTL: Keep while active
 Archive After: N/A
@@ -30,9 +30,15 @@ environment at `/tmp/vllm-cachepawl-venv` imports `vllm==0.21.0`, sees CUDA,
 and completed a bounded vanilla model-load smoke for
 `Zyphra/Zamba2-2.7B-instruct`.
 
+As of 2026-05-26, future pinned vLLM runtime work should prefer the durable
+environment at `~/.cache/cachepawl/vllm-cachepawl-venv`. The old `/tmp`
+environment path is no longer the primary runbook path and may leave stale
+compiled-extension/source-path state behind.
+
 ## Consequences
 
-- The runtime baseline path may continue using `/tmp/vllm-cachepawl-venv` with
+- Future runtime baseline and observation work should use
+  `~/.cache/cachepawl/vllm-cachepawl-venv` with
   the pinned vLLM environment documented in
   `research/avmp/v2/VLLM_DEV_SETUP.md`.
 - Do not add vLLM to the main Cachepawl environment.

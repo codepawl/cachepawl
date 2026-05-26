@@ -1,32 +1,32 @@
 # Sprint 2 — Planner-stage observation and diagnose-vllm readiness
 
-Status: In Progress
+Status: Completed
 Created: 2026-05-25
 Updated: 2026-05-26
-Completed: N/A
+Completed: 2026-05-26
 TTL: 30 days after completion or cancellation
-Archive After: N/A
-Archive Warning: N/A
-Archive Reason: N/A
+Archive After: 2026-06-25
+Archive Warning: 2026-06-18
+Archive Reason: Completed planner-stage observation and diagnose-vllm readiness
 
 ## Goal
 
-Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` without mutating vLLM behavior, then productize and document the existing observer/advisory diagnostic value while host GPU/NVML access blocks the planner-stage rerun.
+Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` without mutating vLLM behavior, then productize and document the existing observer/advisory diagnostic value.
 
 ## Tasks
 
 - [x] `.pawl/active/tasks/t004-diagnose-vllm-docs-and-smoke-examples.md`
 - [x] `.pawl/active/tasks/t003-cachepawl-diagnose-vllm-cli.md`
-- [ ] `.pawl/active/tasks/t002-real-planner-stage-observation.md` — blocked on host GPU/NVML access
+- [x] `.pawl/active/tasks/t002-real-planner-stage-observation.md`
 
 ## Definition of Done
 
-- [ ] A bounded planner-stage observation attempt runs in `/tmp/vllm-cachepawl-venv` with `PYTHONPATH=src`
-- [ ] The probe investigates real `VllmConfig`, `dict[str, KVCacheSpec]`, and available-memory inputs around `get_kv_cache_configs(...)`
-- [ ] The result is recorded under `research/avmp/v2/results/vllm-planner-stage-observation/`
-- [ ] Successful observations are translated through Cachepawl's import-safe vLLM translator
-- [ ] Unsafe or unstable private/runtime access produces a structured blocker artifact instead of wider scope
-- [ ] PawlKit validation and any focused code checks are recorded
+- [x] A bounded planner-stage observation attempt runs in `~/.cache/cachepawl/vllm-cachepawl-venv` with `PYTHONPATH=src`
+- [x] The probe investigates real `VllmConfig`, `dict[str, KVCacheSpec]`, and available-memory inputs around `get_kv_cache_configs(...)`
+- [x] The result is recorded under `research/avmp/v2/results/vllm-planner-stage-observation/`
+- [x] Successful observations are translated through Cachepawl's import-safe vLLM translator
+- [x] Unsafe or unstable private/runtime access produces a structured blocker artifact instead of wider scope
+- [x] PawlKit validation and any focused code checks are recorded
 - [x] The first user-facing diagnostic CLI mode can run from artifacts without vLLM, GPU, or NVML in the main environment
 - [x] The artifact-input diagnostic CLI is documented with a README usage snippet and smoke example
 
@@ -85,3 +85,15 @@ Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_c
   optional inputs, generated outputs, no-vLLM/no-GPU/no-NVML safety boundary,
   advisory-only behavior, and current diagnostic metrics. Sprint 2 remains in
   progress because T002 is still blocked by host GPU/NVML access.
+- 2026-05-26: Switched future pinned vLLM runtime work to the durable env
+  `~/.cache/cachepawl/vllm-cachepawl-venv` and reran T002. The previous
+  GPU/NVML blocker is resolved for that env, but the planner-stage observation
+  remains blocked before `get_kv_cache_configs(...)` because FlashInfer
+  sampling-op compilation references stale `/tmp/vllm-cachepawl-venv` source
+  paths.
+- 2026-05-26: Completed T002 after removing deep-copy of real vLLM runtime
+  objects before planner replay. The durable-env rerun reached real
+  `VllmConfig`, `KVCacheSpec` maps, and available-memory inputs, called
+  `get_kv_cache_configs(...)` directly, wrote the translated planner-stage
+  artifact, and confirmed the planner output matches the runtime scheduler
+  config without changing the observed scheduler config during replay.

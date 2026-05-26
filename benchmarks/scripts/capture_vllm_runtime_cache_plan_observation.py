@@ -19,7 +19,7 @@ from pathlib import Path
 DEFAULT_OUTPUT_DIR = Path("research/avmp/v2/results/vllm-runtime-cache-plan-observation")
 DEFAULT_MODEL = "Zyphra/Zamba2-2.7B-instruct"
 PINNED_VLLM_VERSION = "0.21.0"
-PINNED_VENV_PATH = "/tmp/vllm-cachepawl-venv"
+PINNED_VENV_PATH = "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv"
 OBSERVATION_PREFIX = "CACHEPAWL_RUNTIME_CACHE_PLAN="
 JsonObject = dict[str, object]
 

@@ -20,7 +20,7 @@ from pathlib import Path
 DEFAULT_OUTPUT_DIR = Path("research/avmp/v2/results/vllm-planner-stage-observation")
 DEFAULT_MODEL = "Zyphra/Zamba2-2.7B-instruct"
 PINNED_VLLM_VERSION = "0.21.0"
-PINNED_VENV_PATH = "/tmp/vllm-cachepawl-venv"
+PINNED_VENV_PATH = "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv"
 OBSERVATION_PREFIX = "CACHEPAWL_PLANNER_STAGE_OBSERVATION="
 JsonObject = dict[str, object]
 
@@ -110,6 +110,10 @@ def capture_planner_stage_observation(
     )
     result = _run_planner_stage_observation_child(command, timeout_seconds=timeout_seconds)
     if result["status"] != "completed":
+        result_with_static_metadata = {
+            **result,
+            "planner_stage_static_metadata": planner_stage_metadata,
+        }
         blocker = _blocker(
             timestamp=timestamp,
             model=model,
@@ -120,7 +124,7 @@ def capture_planner_stage_observation(
             max_num_seqs=max_num_seqs,
             timeout_seconds=timeout_seconds,
             trust_remote_code=trust_remote_code,
-            extra_metadata=result,
+            extra_metadata=result_with_static_metadata,
         )
         _write_blocker(output_dir, blocker)
         return blocker
@@ -137,6 +141,11 @@ def capture_planner_stage_observation(
         child_payload=_as_json_object(result["payload"]),
         child_metadata=result,
     )
+    _write_success(output_dir, payload)
+    return payload
+
+
+def _write_success(output_dir: Path, payload: JsonObject) -> None:
     (output_dir / "translated_planner_stage_config.json").write_text(
         json.dumps(payload["translated_planner_stage_config"], indent=2, sort_keys=True) + "\n"
     )
@@ -150,7 +159,6 @@ def capture_planner_stage_observation(
     blocker_path = output_dir / "blocker.json"
     if blocker_path.exists():
         blocker_path.unlink()
-    return payload
 
 
 def _run_planner_stage_observation_child(command: list[str], *, timeout_seconds: int) -> JsonObject:
@@ -187,7 +195,7 @@ def _run_planner_stage_observation_child(command: list[str], *, timeout_seconds:
         "reason": (
             "planner-stage vLLM observation completed"
             if status == "completed"
-            else _payload_failure_reason(payload)
+            else _child_failure_reason(payload, completed.stderr)
         ),
         "command": _format_command(command),
         "returncode": completed.returncode,
@@ -205,83 +213,176 @@ def _planner_stage_observation_command(
     max_num_seqs: int,
     trust_remote_code: bool,
 ) -> list[str]:
-    code = "\n".join(
-        [
-            "import copy",
-            "import inspect",
-            "import json",
-            "from cachepawl.integrations.vllm import translate_kv_cache_config",
-            "from vllm import LLM",
-            "from vllm.v1.core.kv_cache_utils import get_kv_cache_configs",
-            "llm = LLM(",
-            f"    model={model!r},",
-            f"    max_model_len={max_model_len!r},",
-            f"    gpu_memory_utilization={gpu_memory_utilization!r},",
-            f"    max_num_seqs={max_num_seqs!r},",
-            f"    trust_remote_code={trust_remote_code!r},",
-            ")",
-            "core = llm.llm_engine.engine_core.engine_core",
-            "vllm_config = core.vllm_config",
-            "kv_cache_specs = core.model_executor.get_kv_cache_specs()",
-            "available_scalar = int(core.available_gpu_memory_for_kv_cache)",
-            "if len(kv_cache_specs) != 1:",
-            "    raise RuntimeError(",
-            "        'safe exact available-memory reconstruction is only implemented '",
-            "        f'for one worker, got {len(kv_cache_specs)} workers'",
-            "    )",
-            "available_memory = [available_scalar]",
-            "planner_configs = get_kv_cache_configs(",
-            "    copy.deepcopy(vllm_config),",
-            "    copy.deepcopy(kv_cache_specs),",
-            "    list(available_memory),",
-            ")",
-            "runtime_config = core.scheduler.kv_cache_config",
-            "translated = translate_kv_cache_config(planner_configs[0]).to_dict()",
-            "runtime_translated = translate_kv_cache_config(runtime_config).to_dict()",
-            "spec_type_counts = {}",
-            "sample_layer_names = []",
-            "for worker_specs in kv_cache_specs:",
-            "    for layer_name, spec in worker_specs.items():",
-            "        spec_type = type(spec).__name__",
-            "        spec_type_counts[spec_type] = spec_type_counts.get(spec_type, 0) + 1",
-            "        if len(sample_layer_names) < 12:",
-            "            sample_layer_names.append(str(layer_name))",
-            "payload = {",
-            "    'status': 'planner_stage_translation',",
-            "    'function_path': 'vllm.v1.core.kv_cache_utils.get_kv_cache_configs',",
-            "    'input_paths': {",
-            "        'vllm_config': 'LLM.llm_engine.engine_core.engine_core.vllm_config',",
-            "        'kv_cache_specs': (",
-            "            'LLM.llm_engine.engine_core.engine_core.model_executor.'",
-            "            'get_kv_cache_specs()'",
-            "        ),",
-            "        'available_memory': (",
-            "            'LLM.llm_engine.engine_core.engine_core.'",
-            "            'available_gpu_memory_for_kv_cache'",
-            "        ),",
-            "    },",
-            "    'observation_mode': 'post_init_replay_on_copied_real_inputs',",
-            "    'get_kv_cache_configs_signature': str(inspect.signature(get_kv_cache_configs)),",
-            "    'vllm_config_type': type(vllm_config).__name__,",
-            "    'kv_cache_specs_worker_count': len(kv_cache_specs),",
-            "    'kv_cache_specs_layer_counts': [len(specs) for specs in kv_cache_specs],",
-            "    'kv_cache_spec_type_counts': spec_type_counts,",
-            "    'sample_layer_names': sample_layer_names,",
-            "    'available_memory': available_memory,",
-            "    'planner_output_config_count': len(planner_configs),",
-            "    'planner_output_num_blocks': [cfg.num_blocks for cfg in planner_configs],",
-            "    'runtime_num_blocks': runtime_config.num_blocks,",
-            "    'planner_matches_runtime_scheduler': translated == runtime_translated,",
-            "    'translated_planner_stage_config': translated,",
-            "}",
-            f"print({OBSERVATION_PREFIX!r} + json.dumps(payload, sort_keys=True))",
-            "del llm",
-        ]
-    )
+    code = f"""
+import inspect
+import json
+from cachepawl.integrations.vllm import translate_kv_cache_config
+from vllm import LLM
+from vllm.v1.core.kv_cache_utils import get_kv_cache_configs
+
+
+def emit(payload):
+    print({OBSERVATION_PREFIX!r} + json.dumps(payload, sort_keys=True))
+
+
+llm = LLM(
+    model={model!r},
+    max_model_len={max_model_len!r},
+    gpu_memory_utilization={gpu_memory_utilization!r},
+    max_num_seqs={max_num_seqs!r},
+    trust_remote_code={trust_remote_code!r},
+)
+core = llm.llm_engine.engine_core.engine_core
+vllm_config = core.vllm_config
+kv_cache_specs = core.model_executor.get_kv_cache_specs()
+available_scalar = int(core.available_gpu_memory_for_kv_cache)
+available_memory = [available_scalar]
+runtime_config_before = core.scheduler.kv_cache_config
+runtime_translated_before = translate_kv_cache_config(runtime_config_before).to_dict()
+spec_type_counts = {{}}
+sample_layer_names = []
+for worker_specs in kv_cache_specs:
+    for layer_name, spec in worker_specs.items():
+        spec_type = type(spec).__name__
+        spec_type_counts[spec_type] = spec_type_counts.get(spec_type, 0) + 1
+        if len(sample_layer_names) < 12:
+            sample_layer_names.append(str(layer_name))
+base_payload = {{
+    'function_path': 'vllm.v1.core.kv_cache_utils.get_kv_cache_configs',
+    'input_paths': {{
+        'vllm_config': 'LLM.llm_engine.engine_core.engine_core.vllm_config',
+        'kv_cache_specs': (
+            'LLM.llm_engine.engine_core.engine_core.model_executor.'
+            'get_kv_cache_specs()'
+        ),
+        'available_memory': (
+            'LLM.llm_engine.engine_core.engine_core.'
+            'available_gpu_memory_for_kv_cache'
+        ),
+    }},
+    'observation_mode': 'post_init_direct_replay_on_real_inputs',
+    'get_kv_cache_configs_signature': str(inspect.signature(get_kv_cache_configs)),
+    'vllm_config_type': type(vllm_config).__name__,
+    'kv_cache_specs_worker_count': len(kv_cache_specs),
+    'kv_cache_specs_layer_counts': [len(specs) for specs in kv_cache_specs],
+    'kv_cache_spec_type_counts': spec_type_counts,
+    'sample_layer_names': sample_layer_names,
+    'available_memory': available_memory,
+    'runtime_num_blocks': runtime_config_before.num_blocks,
+    'runtime_translated_before_replay': runtime_translated_before,
+    'input_availability': {{
+        'vllm_config': True,
+        'kv_cache_specs': True,
+        'available_memory': True,
+        'available_memory_exact_for_worker_count': len(kv_cache_specs) == 1,
+    }},
+    'object_access': {{
+        'vllm_config': True,
+        'kv_cache_specs': True,
+        'available_memory': True,
+        'get_kv_cache_configs_called': False,
+        'deepcopied_real_inputs': False,
+        'returned_to_vllm': False,
+        'long_lived_serve': False,
+        'allocator_replacement': False,
+        'monkeypatching': False,
+        'vllm_source_modified': False,
+        'scheduler_mutation': False,
+        'worker_layout_mutation': False,
+    }},
+}}
+if len(kv_cache_specs) != 1:
+    payload = {{
+        **base_payload,
+        'status': 'planner_stage_replay_failed',
+        'inputs_reached': True,
+        'replay_failed': True,
+        'deepcopy_failed': False,
+        'get_kv_cache_configs_called': False,
+        'unsupported_reason': (
+            'safe exact available-memory reconstruction is only implemented '
+            f'for one worker, got {{len(kv_cache_specs)}} workers'
+        ),
+    }}
+    emit(payload)
+else:
+    get_kv_cache_configs_called = False
+    try:
+        get_kv_cache_configs_called = True
+        planner_configs = get_kv_cache_configs(
+            vllm_config,
+            kv_cache_specs,
+            list(available_memory),
+        )
+        runtime_config_after = core.scheduler.kv_cache_config
+        runtime_translated_after = translate_kv_cache_config(runtime_config_after).to_dict()
+        translated = translate_kv_cache_config(planner_configs[0]).to_dict()
+        runtime_changed_during_replay = runtime_translated_before != runtime_translated_after
+        payload = {{
+            **base_payload,
+            'status': (
+                'planner_stage_replay_failed'
+                if runtime_changed_during_replay
+                else 'planner_stage_translation'
+            ),
+            'inputs_reached': True,
+            'replay_failed': runtime_changed_during_replay,
+            'deepcopy_failed': False,
+            'get_kv_cache_configs_called': get_kv_cache_configs_called,
+            'planner_output_config_count': len(planner_configs),
+            'planner_output_num_blocks': [cfg.num_blocks for cfg in planner_configs],
+            'runtime_num_blocks_after_replay': runtime_config_after.num_blocks,
+            'runtime_translated_after_replay': runtime_translated_after,
+            'runtime_changed_during_replay': runtime_changed_during_replay,
+            'planner_matches_runtime_scheduler': translated == runtime_translated_after,
+            'translated_planner_stage_config': translated,
+            'object_access': {{
+                **base_payload['object_access'],
+                'get_kv_cache_configs_called': get_kv_cache_configs_called,
+            }},
+        }}
+        if runtime_changed_during_replay:
+            payload['unsupported_reason'] = (
+                'direct planner replay changed the observed runtime scheduler '
+                'KV cache config'
+            )
+        emit(payload)
+    except Exception as exc:
+        payload = {{
+            **base_payload,
+            'status': 'planner_stage_replay_failed',
+            'inputs_reached': True,
+            'replay_failed': True,
+            'deepcopy_failed': False,
+            'get_kv_cache_configs_called': get_kv_cache_configs_called,
+            'replay_error_type': type(exc).__name__,
+            'replay_error': str(exc),
+            'unsupported_reason': (
+                'direct planner replay failed after real planner inputs were '
+                f'reached: {{type(exc).__name__}}: {{exc}}'
+            ),
+            'object_access': {{
+                **base_payload['object_access'],
+                'get_kv_cache_configs_called': get_kv_cache_configs_called,
+            }},
+        }}
+        emit(payload)
+del llm
+"""
     return [sys.executable, "-c", code]
 
 
-def _payload_failure_reason(payload: JsonObject | None) -> str:
+def _child_failure_reason(payload: JsonObject | None, stderr: str) -> str:
+    if (
+        "flashinfer" in stderr.lower()
+        and "No such file or directory" in stderr
+        and "/tmp/vllm-cachepawl-venv" in stderr
+    ):
+        return (
+            "planner-stage vLLM observation failed during vLLM initialization: "
+            "FlashInfer sampling op compilation references stale "
+            "/tmp/vllm-cachepawl-venv source paths"
+        )
     if payload is None:
         return "planner-stage vLLM observation failed before emitting a payload"
     reason = payload.get("unsupported_reason")
@@ -310,6 +411,9 @@ def _success_payload(
         "input_paths": child_payload["input_paths"],
         "observation_mode": child_payload["observation_mode"],
         "get_kv_cache_configs_signature": child_payload["get_kv_cache_configs_signature"],
+        "inputs_reached": child_payload["inputs_reached"],
+        "get_kv_cache_configs_called": child_payload["get_kv_cache_configs_called"],
+        "deepcopy_failed": child_payload["deepcopy_failed"],
         "vllm_config_type": child_payload["vllm_config_type"],
         "kv_cache_specs_worker_count": child_payload["kv_cache_specs_worker_count"],
         "kv_cache_specs_layer_counts": child_payload["kv_cache_specs_layer_counts"],
@@ -319,6 +423,8 @@ def _success_payload(
         "planner_output_config_count": child_payload["planner_output_config_count"],
         "planner_output_num_blocks": child_payload["planner_output_num_blocks"],
         "runtime_num_blocks": child_payload["runtime_num_blocks"],
+        "runtime_num_blocks_after_replay": child_payload["runtime_num_blocks_after_replay"],
+        "runtime_changed_during_replay": child_payload["runtime_changed_during_replay"],
         "planner_matches_runtime_scheduler": child_payload["planner_matches_runtime_scheduler"],
     }
     manifest: JsonObject = {
@@ -342,7 +448,8 @@ def _success_payload(
             "kv_cache_specs": True,
             "available_memory": True,
             "get_kv_cache_configs_called": True,
-            "copied_real_inputs": True,
+            "deepcopied_real_inputs": False,
+            "direct_real_inputs": True,
             "returned_to_vllm": False,
             "long_lived_serve": False,
             "allocator_replacement": False,
@@ -381,6 +488,8 @@ def _blocker(
     trust_remote_code: bool,
     extra_metadata: JsonObject | None = None,
 ) -> JsonObject:
+    object_access = _blocked_object_access(extra_metadata)
+    input_availability = _blocked_input_availability(extra_metadata)
     return {
         "manifest": {
             "artifact": "vllm-planner-stage-observation",
@@ -398,27 +507,72 @@ def _blocker(
             "timeout_seconds": timeout_seconds,
             "trust_remote_code": trust_remote_code,
             "function_path": "vllm.v1.core.kv_cache_utils.get_kv_cache_configs",
-            "object_access": {
-                "vllm_config": False,
-                "kv_cache_specs": False,
-                "available_memory": False,
-                "get_kv_cache_configs_called": False,
-                "returned_to_vllm": False,
-                "long_lived_serve": False,
-                "allocator_replacement": False,
-                "monkeypatching": False,
-                "vllm_source_modified": False,
-                "scheduler_mutation": False,
-                "worker_layout_mutation": False,
-            },
-            "input_availability": {
-                "vllm_config": False,
-                "kv_cache_specs": False,
-                "available_memory": False,
-            },
+            "object_access": object_access,
+            "input_availability": input_availability,
             "metadata": extra_metadata or {},
         }
     }
+
+
+def _blocked_object_access(extra_metadata: JsonObject | None) -> JsonObject:
+    payload = _payload_from_metadata(extra_metadata)
+    base: JsonObject = {
+        "vllm_config": False,
+        "kv_cache_specs": False,
+        "available_memory": False,
+        "get_kv_cache_configs_called": False,
+        "deepcopied_real_inputs": False,
+        "direct_real_inputs": False,
+        "returned_to_vllm": False,
+        "long_lived_serve": False,
+        "allocator_replacement": False,
+        "monkeypatching": False,
+        "vllm_source_modified": False,
+        "scheduler_mutation": False,
+        "worker_layout_mutation": False,
+    }
+    if payload is None:
+        return base
+    payload_access = payload.get("object_access")
+    if isinstance(payload_access, dict):
+        for key in base:
+            if key in payload_access:
+                base[key] = bool(payload_access[key])
+    if "get_kv_cache_configs_called" in payload:
+        base["get_kv_cache_configs_called"] = bool(payload["get_kv_cache_configs_called"])
+    if bool(payload.get("inputs_reached")):
+        base["vllm_config"] = True
+        base["kv_cache_specs"] = True
+        base["available_memory"] = True
+        base["direct_real_inputs"] = True
+    return base
+
+
+def _blocked_input_availability(extra_metadata: JsonObject | None) -> JsonObject:
+    payload = _payload_from_metadata(extra_metadata)
+    base: JsonObject = {
+        "vllm_config": False,
+        "kv_cache_specs": False,
+        "available_memory": False,
+    }
+    if payload is None:
+        return base
+    payload_availability = payload.get("input_availability")
+    if isinstance(payload_availability, dict):
+        for key, value in payload_availability.items():
+            base[str(key)] = bool(value)
+    if bool(payload.get("inputs_reached")):
+        base["vllm_config"] = True
+        base["kv_cache_specs"] = True
+        base["available_memory"] = True
+    return base
+
+
+def _payload_from_metadata(extra_metadata: JsonObject | None) -> JsonObject | None:
+    if extra_metadata is None:
+        return None
+    payload = extra_metadata.get("payload")
+    return payload if isinstance(payload, dict) else None
 
 
 def _write_blocker(output_dir: Path, blocker: JsonObject) -> None:
@@ -450,7 +604,7 @@ Status: `{manifest["status"]}`
 This artifact records a bounded, read-only planner-stage observation from
 vanilla `vllm=={manifest["vllm_version"]}` in `{PINNED_VENV_PATH}` with
 `PYTHONPATH=src`. It reaches `{manifest["function_path"]}` by replaying the
-planner on deep-copied real inputs observed after vanilla `LLM` initialization.
+planner directly on real inputs observed after vanilla `LLM` initialization.
 
 The computed Cachepawl translation is not returned to vLLM. No vLLM source
 edits, monkeypatching, allocator replacement, scheduler mutation, worker layout
@@ -477,19 +631,34 @@ evaluation were performed.
 - `available_memory`: {metadata["available_memory"]}
 - `planner_output_num_blocks`: {metadata["planner_output_num_blocks"]}
 - `runtime_num_blocks`: {metadata["runtime_num_blocks"]}
+- `runtime_num_blocks_after_replay`: {metadata["runtime_num_blocks_after_replay"]}
+- `runtime_changed_during_replay`: {metadata["runtime_changed_during_replay"]}
 - `planner_matches_runtime_scheduler`: {metadata["planner_matches_runtime_scheduler"]}
 
 ## Minimal Next Step
 
-Use this same copied-input planner-stage replay as the source for a dry-run
-comparison against Cachepawl recommendations. Runtime behavior remains unchanged
-until a later explicit mutation decision identifies a safe scheduler or
-allocator control point.
+Use this same direct planner-stage observation as the source for a dry-run
+comparison against Cachepawl recommendations. Runtime behavior remains
+unchanged until a later explicit mutation decision identifies a safe scheduler
+or allocator control point.
 """
 
 
 def _readme_blocker(blocker: JsonObject) -> str:
     manifest = _as_json_object(blocker["manifest"])
+    metadata = _as_json_object(manifest["metadata"])
+    payload = _payload_from_metadata(metadata)
+    replay_lines = ""
+    if payload is not None:
+        replay_lines = f"""
+
+## Replay Boundary
+
+- `inputs_reached`: {payload.get("inputs_reached")}
+- `replay_failed`: {payload.get("replay_failed")}
+- `deepcopy_failed`: {payload.get("deepcopy_failed")}
+- `get_kv_cache_configs_called`: {payload.get("get_kv_cache_configs_called")}
+"""
     return f"""# vLLM Planner-Stage Observation
 
 Status: `blocked`
@@ -501,6 +670,7 @@ This artifact attempted to reach
 No vLLM source edits, monkeypatching, returned plans, allocator replacement,
 scheduler mutation, worker layout mutation, long-lived serving, Triton kernels,
 copy kernels, LSDR, or quality evaluation were performed.
+{replay_lines}
 """
 
 
