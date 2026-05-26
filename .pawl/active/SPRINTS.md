@@ -12,6 +12,7 @@ This file is a short compatibility index. Keep sprint bodies in `.pawl/active/sp
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
+| Sprint 4 — Planner-stage advisory diff artifact | Completed | `.pawl/active/sprints/sprint-004-planner-stage-advisory-diff.md` | 2026-06-25 |
 | Sprint 3 — Path C mutation-hook design gate | Completed | `.pawl/active/sprints/sprint-003-path-c-mutation-hook-design.md` | 2026-06-25 |
 | Sprint 2 — Planner-stage observation and diagnose-vllm readiness | Completed | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | 2026-06-25 |
 | Sprint 1 — vLLM integration baseline and shim | Completed | `.pawl/active/sprints/sprint-001-vllm-integration.md` | 2026-06-24 |
@@ -21,6 +22,6 @@ This file is a short compatibility index. Keep sprint bodies in `.pawl/active/sp
 
 Archived sprint records live in `.pawl/archive/sprints/`.
 
-## Sprint 4 — TODO
+## Sprint 5 — TODO
 
-Open a planner-stage post-call advisory/diff artifact task based on D009.
+Define after reviewing the T006 planner-stage advisory/diff artifact.

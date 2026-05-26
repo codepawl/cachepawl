@@ -1,5 +1,49 @@
 # Work Log
 
+## 2026-05-26 — T006 planner-stage advisory diff completed
+
+- Added an import-safe planner-stage advisory diff helper under
+  `cachepawl.integrations.vllm`
+- Added `benchmarks/scripts/create_vllm_planner_stage_advisory_diff.py`
+- Added focused integration and benchmark tests for the planner-stage diff
+  helper and artifact script
+- Generated
+  `research/avmp/v2/results/vllm-planner-stage-advisory-diff/` with
+  `README.md`, `manifest.json`, `diff_report.json`, `summary.md`, and
+  `group_level_diff.json`
+- The artifact records vanilla reserved bytes `2910781440`, vanilla useful
+  bytes `1679258112`, Cachepawl proposed reserved bytes `1679258112`,
+  estimated savings `1231523328`, overestimation ratio
+  `1.7333734577189286`, wasted fraction `0.4230902777777778`, 7 cache groups,
+  9 cache tensors, 63 layers, and 329 blocks
+- Completed T006 and Sprint 4 without returning Cachepawl plans to vLLM,
+  modifying vLLM, monkeypatching, replacing allocators, altering scheduler
+  behavior or worker tensor layout, adding vLLM to main dependencies, adding
+  kernels, LSDR, serving changes, or quality evaluation
+- Verified focused tests, integration tests, ruff, format check, mypy, full
+  pytest, build, and PawlKit; sandboxed PawlKit and initial build-backend
+  resolution hit DNS failures, and approved network reruns passed
+
+## 2026-05-26 — Sprint 4 and T006 opened
+
+- Kept Sprint 3 and T005 completed after the mutation-hook design gate
+- Opened Sprint 4 for a planner-stage post-call advisory/diff artifact
+- Opened T006 to consume
+  `research/avmp/v2/results/vllm-planner-stage-observation/translated_planner_stage_config.json`
+  and produce `research/avmp/v2/results/vllm-planner-stage-advisory-diff/`
+- Scoped T006 outputs to `README.md`, `manifest.json`, `diff_report.json`,
+  `summary.md`, and optional `group_level_diff.json`
+- Required T006 to compare vanilla reserved bytes, vanilla useful bytes,
+  Cachepawl proposed reserved bytes, estimated savings, overestimation ratio,
+  wasted fraction, group-level differences where derivable, missing
+  mutation-blocking fields, and parity/non-mutation status
+- Kept returned Cachepawl plans, vLLM source edits, monkeypatching, allocator
+  replacement, scheduler or worker layout mutation, Triton kernels, copy
+  kernels, LSDR, serving changes, and quality evaluation out of scope
+- Validated the opened tracker with PawlKit `view` and `check`; sandboxed npm
+  access failed with DNS `EAI_AGAIN`, and approved network reruns passed with 0
+  warnings
+
 ## 2026-05-26 — T005 mutation-hook design gate completed
 
 - Added `research/avmp/v2/PATH_C_MUTATION_HOOK_DESIGN_GATE.md`

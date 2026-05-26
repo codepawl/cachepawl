@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-None. Sprint 3 is complete.
+None. Sprint 4 is complete.
 
 ## Current Task
 
-None. T005 is complete.
+None. T006 is complete.
 
 ## Current Project
 
@@ -18,7 +18,8 @@ None. T005 is complete.
 
 ## Current Goal
 
-Define the next Sprint 4 task from the completed T005 mutation-hook design gate.
+Define the next Sprint 5 task from the completed T006 planner-stage
+advisory/diff artifact.
 
 ## Required Reading Before Work
 
@@ -44,5 +45,5 @@ Define the next Sprint 4 task from the completed T005 mutation-hook design gate.
 
 ## Next Recommended Step
 
-Open Sprint 4 for a planner-stage post-call advisory/diff artifact that keeps
-normal operation non-mutating and does not return Cachepawl plans to vLLM.
+Open Sprint 5 for the next bounded compatibility or mutation-readiness step
+using the T006 advisory/diff artifact.

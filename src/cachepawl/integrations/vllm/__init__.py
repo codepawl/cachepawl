@@ -28,6 +28,11 @@ from cachepawl.integrations.vllm.observer import (
     VllmRuntimeObservationStatus,
     observe_vllm_runtime_cache_plan,
 )
+from cachepawl.integrations.vllm.planner_diff import (
+    VllmPlannerStageAdvisoryDiff,
+    VllmPlannerStageGroupDiff,
+    diff_vllm_planner_stage_advisory,
+)
 from cachepawl.integrations.vllm.planning import (
     VllmCacheLayerSpec,
     VllmCachePlan,
@@ -62,6 +67,8 @@ __all__ = [
     "VllmDryRunGroupProposal",
     "VllmIntegrationPlan",
     "VllmPlannerDryRunResult",
+    "VllmPlannerStageAdvisoryDiff",
+    "VllmPlannerStageGroupDiff",
     "VllmRuntimeCacheObservation",
     "VllmRuntimeObservationStatus",
     "VllmTranslatedCacheConfig",
@@ -71,6 +78,7 @@ __all__ = [
     "VllmTranslationError",
     "advise_vllm_runtime_cache_plan",
     "create_vllm_artifact_diagnostic",
+    "diff_vllm_planner_stage_advisory",
     "dry_run_vllm_planner_probe",
     "get_vllm_version",
     "is_vllm_available",

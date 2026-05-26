@@ -15,11 +15,11 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
 
 ## Current Sprint
 
-None. Sprint 3 is complete.
+None. Sprint 4 is complete.
 
 ## Current Task
 
-None. T005 is complete.
+None. T006 is complete.
 
 ## Active Constraints
 
@@ -42,3 +42,7 @@ None. T005 is complete.
   mutation-hook control points before any mutation was implemented.
 - T005 completed the design gate and D009 selected planner-stage post-call
   advisory/diff as the next bounded experiment before mutation.
+- Sprint 4 / T006 opened to produce a non-mutating planner-stage advisory/diff
+  artifact from the T002 translated planner output.
+- T006 completed the planner-stage post-call advisory/diff artifact under
+  `research/avmp/v2/results/vllm-planner-stage-advisory-diff/`.
