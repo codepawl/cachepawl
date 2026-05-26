@@ -34,3 +34,4 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
 - The current implementation milestone is vLLM integration for the ML for Systems @ NeurIPS 2026 workshop path.
 - T002 remains blocked by host GPU/NVML access.
 - T003 completed the GPU-free artifact-input `cachepawl diagnose-vllm` CLI.
+- T004 completed the release-readiness README documentation follow-up for the diagnostic CLI.

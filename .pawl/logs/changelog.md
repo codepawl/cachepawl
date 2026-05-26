@@ -1,5 +1,21 @@
 # Work Log
 
+## 2026-05-26 — diagnose-vllm documentation completed
+
+- Added a compact README section for `cachepawl diagnose-vllm`
+- Included the exact artifact-input command using `translated_runtime_cache_config.json`, optional `raw_safe_metadata.json`, and `research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli`
+- Documented generated `report.json`, `summary.md`, and `manifest.json`
+- Documented that artifact-input mode requires no vLLM, GPU, or NVML; does not rerun vLLM, load a model, monkeypatch, replace allocators, or change vLLM behavior; and is advisory-only until a future mutation hook exists
+- Recorded the current diagnostic result metrics in README
+- Completed T004; T002 remains blocked by host GPU/NVML access
+
+## 2026-05-26 — diagnose-vllm documentation task opened
+
+- Kept T002 blocked by host GPU/NVML access until GPU/NVML visibility is restored
+- Opened T004 for `cachepawl diagnose-vllm` CLI documentation and smoke examples
+- Scoped T004 to README usage text, an example command using the existing runtime observation artifact, no-vLLM/no-GPU/no-NVML explanation, advisory-only safety text, and references to `report.json`, `summary.md`, and `manifest.json`
+- Kept new runtime integration, T002 continuation, vLLM source edits, monkeypatching, allocator replacement, and vLLM dependency changes out of scope
+
 ## 2026-05-26 — diagnose-vllm CLI implemented
 
 - Added a `cachepawl` console script entrypoint with `cachepawl diagnose-vllm`

@@ -18,7 +18,7 @@ Cachepawl
 
 ## Current Goal
 
-Wait for restored host GPU/NVML access so T002 can rerun the bounded planner-stage observation around `get_kv_cache_configs(...)`; T003 is complete.
+Wait for restored host GPU/NVML access so T002 can rerun the bounded planner-stage observation around `get_kv_cache_configs(...)`; T004 is complete.
 
 ## Required Reading Before Work
 

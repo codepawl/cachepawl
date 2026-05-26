@@ -6,7 +6,7 @@ This file is a short compatibility index. Keep sprint bodies in `.pawl/active/sp
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
-| Sprint 2 — Planner-stage observation and diagnose-vllm CLI | In Progress | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | N/A |
+| Sprint 2 — Planner-stage observation and diagnose-vllm readiness | In Progress | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | N/A |
 
 ## Completed
 
@@ -21,4 +21,4 @@ Archived sprint records live in `.pawl/archive/sprints/`.
 
 ## Sprint 3 — TODO
 
-Define after T002 GPU/NVML rerun evidence and T003 CLI productization are available.
+Define after T002 GPU/NVML rerun evidence and T004 CLI documentation polish are available.

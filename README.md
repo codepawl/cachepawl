@@ -61,6 +61,37 @@ are still placeholders: calls into `MemoryPool`, `KVCacheManager`,
 `cuda_capability` will raise `NotImplementedError` with a message pointing at
 the design milestone that unblocks them.
 
+## vLLM Diagnostic CLI
+
+Use `cachepawl diagnose-vllm` to turn an existing translated vLLM runtime cache
+observation into an advisory report:
+
+```bash
+cachepawl diagnose-vllm \
+  --translated-cache-config research/avmp/v2/results/vllm-runtime-cache-plan-observation/translated_runtime_cache_config.json \
+  --raw-safe-metadata research/avmp/v2/results/vllm-runtime-cache-plan-observation/raw_safe_metadata.json \
+  --output-dir research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli
+```
+
+`--translated-cache-config` is required. `--raw-safe-metadata` is optional, but
+include it when available so the report can include safe runtime metadata. The
+command writes `report.json`, `summary.md`, and `manifest.json`.
+
+This artifact-input mode requires no vLLM dependency, CUDA, GPU, or NVML. It
+does not rerun vLLM, load a model, monkeypatch, replace allocators, or change
+vLLM behavior. Output is advisory-only; runtime memory savings require a future
+mutation hook.
+
+The current committed diagnostic example is classified as
+`planner_advisory_available` and reports:
+
+- `observed_reserved_bytes`: 2,910,781,440
+- `observed_useful_bytes`: 1,679,258,112
+- `cachepawl_recommended_bytes`: 1,679,258,112
+- `advisory_savings_bytes`: 1,231,523,328
+- `overestimation_ratio`: 1.7333734577189286
+- `wasted_fraction`: 0.4230902777777778
+
 ## Layout
 
 ```
