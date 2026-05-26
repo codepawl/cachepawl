@@ -15,11 +15,11 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
 
 ## Current Sprint
 
-`.pawl/active/sprints/sprint-002-planner-stage-observation.md`
+None. Sprint 3 is complete.
 
 ## Current Task
 
-`.pawl/active/tasks/t002-real-planner-stage-observation.md`
+None. T005 is complete.
 
 ## Active Constraints
 
@@ -38,3 +38,7 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
   matches the runtime scheduler config without vLLM mutation.
 - T003 completed the GPU-free artifact-input `cachepawl diagnose-vllm` CLI.
 - T004 completed the release-readiness README documentation follow-up for the diagnostic CLI.
+- Sprint 3 / T005 opened as a design-only gate for comparing bounded Path C
+  mutation-hook control points before any mutation was implemented.
+- T005 completed the design gate and D009 selected planner-stage post-call
+  advisory/diff as the next bounded experiment before mutation.

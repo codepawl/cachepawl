@@ -14,6 +14,7 @@ This file is a short compatibility index. Keep decision bodies in `.pawl/active/
 | D006 — Keep Path C observer-in-the-loop before mutation | Accepted | `.pawl/active/decisions/d006-path-c-observer-in-loop-first.md` | N/A |
 | D007 — Use a planner-level dry-run mutation probe next | Accepted | `.pawl/active/decisions/d007-use-planner-level-dry-run-probe.md` | N/A |
 | D008 — Dogfood PawlKit through Cachepawl only when friction appears | Accepted | `.pawl/active/decisions/d008-dogfood-pawlkit-through-cachepawl-only-when-friction-appears.md` | N/A |
+| D009 — Use post-call advisory diff before mutation | Accepted | `.pawl/active/decisions/d009-use-post-call-advisory-diff-before-mutation.md` | N/A |
 
 ## Archive Pointers
 

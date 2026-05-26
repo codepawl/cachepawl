@@ -1,5 +1,41 @@
 # Work Log
 
+## 2026-05-26 — T005 mutation-hook design gate completed
+
+- Added `research/avmp/v2/PATH_C_MUTATION_HOOK_DESIGN_GATE.md`
+- Compared pre-call wrapper, post-call advisory/diff only, controlled isolated
+  return-value substitution, and Scheduler/EngineCore hook paths
+- Accepted D009 selecting planner-stage post-call advisory/diff as the safest
+  next bounded experiment before any mutation
+- Required any future mutation to use a default-off feature flag, explicit
+  opt-in, no mutation in normal CLI/advisory mode, structured before/after
+  artifact, rollback path, and vanilla vLLM parity check
+- Completed T005 and Sprint 3 without vLLM source edits, monkeypatching,
+  allocator replacement, returned Cachepawl plans, scheduler or worker layout
+  mutation, vLLM main-environment dependency changes, Triton kernels, copy
+  kernels, LSDR, serving changes, or quality evaluation
+- Verified `git diff --check` and PawlKit `view`/`check`; sandboxed PawlKit
+  runs failed with npm DNS `EAI_AGAIN`, and approved network reruns passed with
+  0 warnings
+
+## 2026-05-26 — Sprint 3 and T005 opened
+
+- Kept Sprint 2 and T002 completed after successful direct planner-stage replay
+- Opened Sprint 3 for the next bounded Path C mutation-hook design gate
+- Opened T005 to compare pre-call wrapper, post-call advisory/diff only,
+  controlled isolated return-value substitution, and scheduler/EngineCore hook
+  options
+- Scoped T005 to design documentation only: required control point,
+  correctness risk, rollback strategy, advisory-mode unchanged-output
+  verification, later substitution changed-behavior verification, and required
+  pre-mutation tests
+- Kept vLLM source edits, monkeypatching, allocator replacement, returned
+  Cachepawl plans, scheduler or worker layout mutation, Triton kernels, copy
+  kernels, LSDR, serving changes, and quality evaluation out of scope
+- Validated the opened tracker with `npx @codepawl/pawlkit@0.3.0 view` and
+  `npx @codepawl/pawlkit@0.3.0 check`; initial sandboxed runs failed with npm
+  DNS `EAI_AGAIN`, and approved network reruns passed with 0 warnings
+
 ## 2026-05-26 — T002 direct planner-stage replay completed
 
 - Removed deep-copying of real vLLM runtime objects before planner-stage replay

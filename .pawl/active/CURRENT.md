@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-None. Sprint 2 is complete.
+None. Sprint 3 is complete.
 
 ## Current Task
 
-None. T002 is complete.
+None. T005 is complete.
 
 ## Current Project
 
@@ -18,8 +18,7 @@ None. T002 is complete.
 
 ## Current Goal
 
-Define the next Sprint 3 task from the completed T002 planner-stage translation
-evidence and the existing diagnose-vllm CLI.
+Define the next Sprint 4 task from the completed T005 mutation-hook design gate.
 
 ## Required Reading Before Work
 
@@ -45,5 +44,5 @@ evidence and the existing diagnose-vllm CLI.
 
 ## Next Recommended Step
 
-Open Sprint 3 for the next bounded mutation-probe or productization step using
-the successful T002 planner-stage observation artifact.
+Open Sprint 4 for a planner-stage post-call advisory/diff artifact that keeps
+normal operation non-mutating and does not return Cachepawl plans to vLLM.
