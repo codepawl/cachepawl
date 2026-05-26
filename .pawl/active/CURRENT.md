@@ -18,7 +18,7 @@ Cachepawl
 
 ## Current Goal
 
-Observe whether real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` can be reached or reconstructed safely without mutating vLLM behavior.
+Wait for restored host GPU/NVML access so T002 can rerun the bounded planner-stage observation around `get_kv_cache_configs(...)`; T003 is complete.
 
 ## Required Reading Before Work
 
@@ -44,4 +44,4 @@ Observe whether real vLLM 0.21.0 planner-stage cache inputs and outputs around `
 
 ## Next Recommended Step
 
-Implement a bounded read-only planner-stage observation around `get_kv_cache_configs(...)` in the pinned vLLM environment, producing either a translated observation artifact or a structured blocker.
+Restore host GPU/NVML visibility, then rerun the existing T002 planner-stage observation without changing vLLM, monkeypatching, replacing allocators, or continuing Path C mutation.

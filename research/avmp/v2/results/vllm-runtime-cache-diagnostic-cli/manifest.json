@@ -1,0 +1,23 @@
+{
+  "advisory_only": true,
+  "allocator_replacement": false,
+  "artifact": "vllm-runtime-cache-diagnostic-cli",
+  "cuda_required": false,
+  "gpu_required": false,
+  "mode": "artifact_input",
+  "model_loaded": false,
+  "nvml_required": false,
+  "outputs": {
+    "manifest": "manifest.json",
+    "report": "report.json",
+    "summary": "summary.md"
+  },
+  "returned_to_vllm": false,
+  "runtime_mutation": false,
+  "source_raw_safe_metadata": "research/avmp/v2/results/vllm-runtime-cache-plan-observation/raw_safe_metadata.json",
+  "source_translated_cache_config": "research/avmp/v2/results/vllm-runtime-cache-plan-observation/translated_runtime_cache_config.json",
+  "status": "planner_advisory_available",
+  "timestamp": "2026-05-26T00:00:00+00:00",
+  "vllm_behavior_changed": false,
+  "vllm_required": false
+}

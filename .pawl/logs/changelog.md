@@ -1,5 +1,26 @@
 # Work Log
 
+## 2026-05-26 — diagnose-vllm CLI implemented
+
+- Added a `cachepawl` console script entrypoint with `cachepawl diagnose-vllm`
+- Added import-safe artifact-input diagnostics under `cachepawl.integrations.vllm.diagnose`
+- Reused existing advisory and dry-run helpers to compute diagnostic metrics from translated runtime cache artifacts
+- Added focused no-vLLM CLI tests for success, missing translated config file, invalid JSON, unsupported schema, and deterministic output
+- Generated `research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli/` with `report.json`, `summary.md`, and `manifest.json`
+- The generated report records `planner_advisory_available`, 329 blocks, 7 cache groups, 9 cache tensors, 63 layers, 2,910,781,440 observed reserved bytes, 1,679,258,112 observed useful/recommended bytes, 1,231,523,328 advisory savings bytes, 1.733373 overestimation ratio, and 0.423090 wasted fraction
+- The CLI does not import vLLM, rerun vLLM, load a model, call `nvidia-smi`, require `/tmp/vllm-cachepawl-venv`, require GPU/NVML, modify vLLM, monkeypatch, replace allocators, add kernels, or continue T002
+- Completed T003; Sprint 2 remains in progress because T002 is still blocked by host GPU/NVML access
+
+## 2026-05-26 — diagnose-vllm CLI task opened
+
+- Marked T002 blocked by host GPU/NVML access while keeping it open for rerun after GPU visibility is restored
+- Recorded that the T002 blocker is not evidence that `get_kv_cache_configs(...)` is unsafe or unavailable
+- Added T003 for `cachepawl diagnose-vllm` CLI productization
+- Scoped the first CLI mode to artifact input: read `translated_runtime_cache_config.json`, read optional `raw_safe_metadata.json`, and emit `report.json` plus `summary.md`
+- Required T003 to reuse the existing translator, observer, advisory, dry-run, and runtime observation artifact format
+- Kept vLLM source edits, monkeypatching, allocator replacement, GPU/NVML requirements, Triton kernels, copy kernels, LSDR, serving changes, and quality evaluation out of scope
+- Preserved `.pawl/version`, `.pawl/policy.yaml`, and `.pawl/migration-report.md` as committed PawlKit migration metadata
+
 ## 2026-05-25 — PawlKit dogfooding policy
 
 - Added D008 to record PawlKit feedback only when normal Cachepawl tracker work creates real friction

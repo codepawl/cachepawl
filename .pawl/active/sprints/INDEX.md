@@ -6,7 +6,7 @@ Keep this file short. Store sprint details in separate files under this folder.
 
 | Sprint | Status | File | Archive After |
 |---|---|---|---|
-| Sprint 2 — Planner-stage vLLM observation | In Progress | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | N/A |
+| Sprint 2 — Planner-stage observation and diagnose-vllm CLI | In Progress | `.pawl/active/sprints/sprint-002-planner-stage-observation.md` | N/A |
 
 ## Completed
 

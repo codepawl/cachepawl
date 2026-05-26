@@ -2,9 +2,9 @@
 
 Project: `.pawl/active/projects/project-main.md`
 Sprint: `.pawl/active/sprints/sprint-002-planner-stage-observation.md`
-Status: In Progress
+Status: Blocked
 Created: 2026-05-25
-Updated: 2026-05-25
+Updated: 2026-05-26
 Completed: N/A
 TTL: 30 days after completion or cancellation
 Archive After: N/A
@@ -14,6 +14,10 @@ Archive Reason: N/A
 ## Objective
 
 Determine whether Cachepawl can safely observe or call vLLM 0.21.0 planner-stage cache planning around `get_kv_cache_configs(...)` with real `VllmConfig`, `dict[str, KVCacheSpec]`, and available-memory inputs, without mutating vLLM behavior.
+
+## Blocker
+
+This task is blocked by host GPU/NVML access in the current host/session. CUDA is unavailable in both the pinned vLLM environment and the main uv environment, and `nvidia-smi` reports GPU access blocked by the operating system. This is not evidence that `get_kv_cache_configs(...)` is unsafe or unavailable; it means the real runtime objects needed for the planner-stage call boundary cannot be reached in this session.
 
 ## Current Behavior
 
@@ -105,6 +109,10 @@ Use the commands in `.pawl/context/REPO_COMMANDS.md`. Product-code tests are req
   the current pinned PawlKit run; `.pawl/policy.yaml` is declared as the policy
   source of truth and the migration report says legacy `AGENTS.md` was
   preserved.
+- 2026-05-26: Marked T002 blocked on host GPU/NVML access while keeping it open
+  for rerun after GPU visibility is restored. This blocker does not invalidate
+  the existing runtime observer, advisory diagnostic, dry-run artifact, or the
+  safety of future `get_kv_cache_configs(...)` observation.
 
 ## Verification Log
 

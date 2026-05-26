@@ -32,6 +32,9 @@ Homepage = "https://github.com/codepawl/cachepawl"
 Repository = "https://github.com/codepawl/cachepawl"
 Issues = "https://github.com/codepawl/cachepawl/issues"
 
+[project.scripts]
+cachepawl = "cachepawl.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8",

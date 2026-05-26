@@ -12,6 +12,11 @@ from cachepawl.integrations.vllm.advisory import (
     VllmCacheGroupAdvisory,
     advise_vllm_runtime_cache_plan,
 )
+from cachepawl.integrations.vllm.diagnose import (
+    VllmArtifactDiagnostic,
+    VllmDiagnosticError,
+    create_vllm_artifact_diagnostic,
+)
 from cachepawl.integrations.vllm.dry_run import (
     VllmDryRunGroupProposal,
     VllmPlannerDryRunResult,
@@ -47,11 +52,13 @@ from cachepawl.integrations.vllm.translator import (
 __all__ = [
     "MISSING_FIELDS_FOR_MUTATION",
     "RUNTIME_KV_CACHE_CONFIG_PATH",
+    "VllmArtifactDiagnostic",
     "VllmCacheAdvisoryClassification",
     "VllmCacheAdvisoryReport",
     "VllmCacheGroupAdvisory",
     "VllmCacheLayerSpec",
     "VllmCachePlan",
+    "VllmDiagnosticError",
     "VllmDryRunGroupProposal",
     "VllmIntegrationPlan",
     "VllmPlannerDryRunResult",
@@ -63,6 +70,7 @@ __all__ = [
     "VllmTranslatedCacheTensor",
     "VllmTranslationError",
     "advise_vllm_runtime_cache_plan",
+    "create_vllm_artifact_diagnostic",
     "dry_run_vllm_planner_probe",
     "get_vllm_version",
     "is_vllm_available",

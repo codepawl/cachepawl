@@ -1,8 +1,8 @@
-# Sprint 2 — Planner-stage vLLM observation
+# Sprint 2 — Planner-stage observation and diagnose-vllm CLI
 
 Status: In Progress
 Created: 2026-05-25
-Updated: 2026-05-25
+Updated: 2026-05-26
 Completed: N/A
 TTL: 30 days after completion or cancellation
 Archive After: N/A
@@ -11,11 +11,12 @@ Archive Reason: N/A
 
 ## Goal
 
-Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` without mutating vLLM behavior, then record whether Cachepawl can compare against that stage directly or whether the private/runtime API boundary blocks the probe.
+Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_cache_configs(...)` without mutating vLLM behavior, then productize the existing observer/advisory diagnostic value while host GPU/NVML access blocks the planner-stage rerun.
 
 ## Tasks
 
-- [ ] `.pawl/active/tasks/t002-real-planner-stage-observation.md`
+- [x] `.pawl/active/tasks/t003-cachepawl-diagnose-vllm-cli.md`
+- [ ] `.pawl/active/tasks/t002-real-planner-stage-observation.md` — blocked on host GPU/NVML access
 
 ## Definition of Done
 
@@ -25,6 +26,7 @@ Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_c
 - [ ] Successful observations are translated through Cachepawl's import-safe vLLM translator
 - [ ] Unsafe or unstable private/runtime access produces a structured blocker artifact instead of wider scope
 - [ ] PawlKit validation and any focused code checks are recorded
+- [x] The first user-facing diagnostic CLI mode can run from artifacts without vLLM, GPU, or NVML in the main environment
 
 ## Constraints
 
@@ -61,3 +63,14 @@ Observe real vLLM 0.21.0 planner-stage cache inputs and outputs around `get_kv_c
   reports host GPU access blocked by the operating system. The T002 artifact
   remains blocked and should be rerun unchanged after GPU/NVML visibility is
   restored.
+- 2026-05-26: Kept T002 open but marked it blocked by host GPU/NVML access.
+  Opened T003 for the next productization step: a `cachepawl diagnose-vllm`
+  artifact-input CLI that reuses the existing translator, observer, advisory,
+  dry-run, and runtime observation artifact format without requiring vLLM or GPU
+  access in the main environment.
+- 2026-05-26: Completed T003. Added `cachepawl diagnose-vllm` artifact-input
+  mode, generated
+  `research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli/`, and verified
+  focused tests, full pytest, lint, format check, mypy, build, and PawlKit.
+  Sprint 2 remains in progress only because T002 is blocked by host GPU/NVML
+  access.
