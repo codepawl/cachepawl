@@ -1,0 +1,12 @@
+{
+  "advisory_only": true,
+  "artifact": "vllm-path-c-advisory-matrix-cell",
+  "gpu_memory_utilization": 0.6,
+  "max_model_len": 2048,
+  "max_num_seqs": 1,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "non_mutating": true,
+  "returned_to_vllm": false,
+  "status": "pending_not_run",
+  "vllm_behavior_changed": false
+}
