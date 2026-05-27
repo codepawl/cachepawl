@@ -13,26 +13,38 @@ but controlled substitution is not approved for this cycle.
 - vLLM version: `0.21.0`
 - Python executable: `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python`
 - Durable vLLM environment: `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv`
-- Max model length: `4096`
+- Max model lengths: `2048`, `4096`
 - Max number of sequences: `1`
-- GPU memory utilization: `0.7`
+- GPU memory utilization values: `0.6`, `0.7`
 - Observed tensor device: `cuda:0`
 
 ## Files
 
 - `metrics_table.md` - paper-readable metrics table.
 - `metrics_table.csv` - deterministic machine-readable metrics table.
+- `matrix_table.md` - 4-cell advisory matrix table.
+- `matrix_table.csv` - deterministic machine-readable matrix table.
+- `config_matrix.json` - bounded matrix definition.
 - `artifact_index.md` - source artifact index and what each artifact supports.
 - `methodology.md` - bounded observation and advisory methodology.
 - `limitations.md` - limitations and mutation blockers.
 
 ## Headline Result
 
-The planner-stage advisory estimates that vanilla vLLM reserves
-`2,910,781,440` bytes for the observed cache plan while the useful bytes are
-`1,679,258,112`. Cachepawl's advisory plan therefore reports
-`1,231,523,328` bytes of estimated savings, an overestimation ratio of
-`1.7333734577189286`, and a wasted fraction of `0.4230902777777778`.
+The planner-stage advisory matrix now covers four bounded configuration cells:
+`max_model_len` in `{2048, 4096}`, `gpu_memory_utilization` in `{0.6, 0.7}`,
+and `max_num_seqs=1` for the same model. Across all completed cells, the
+overestimation ratio stayed `1.7333734577189286` and the wasted fraction stayed
+`0.4230902777777778`.
+
+Estimated advisory savings varied by cell:
+
+- `2048 / 0.6 / 1`: `801,051,648` bytes
+- `2048 / 0.7 / 1`: `1,347,563,520` bytes
+- `4096 / 0.6 / 1`: `685,011,456` bytes
+- `4096 / 0.7 / 1`: `1,231,523,328` bytes
+
+These are planner-level advisory savings, not measured runtime VRAM reductions.
 
 The runtime evidence resolved request-to-block assignment, worker tensor layout,
 attention block-table/view metadata, and attention metadata builders. Mamba

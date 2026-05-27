@@ -10,10 +10,12 @@ cache artifacts for `Zyphra/Zamba2-2.7B-instruct`, translates them into a
 Cachepawl schema, replays the vLLM planner stage on real planner inputs, and
 emits an advisory report through `cachepawl diagnose-vllm`. The planner-stage
 replay matched the runtime scheduler cache configuration and did not change the
-runtime scheduler state. The observed plan reserved `2,910,781,440` bytes for
-`1,679,258,112` useful bytes, yielding `1,231,523,328` bytes of estimated
-advisory savings, `1.7333734577189286x` overestimation, and a `42.3%` wasted
-fraction.
+runtime scheduler state. Across a bounded four-cell matrix for one model
+(`max_model_len` in `{2048, 4096}`, `gpu_memory_utilization` in `{0.6, 0.7}`,
+and `max_num_seqs=1`), estimated advisory savings ranged from `685,011,456` to
+`1,347,563,520` bytes. The overestimation ratio stayed
+`1.7333734577189286x` and the wasted fraction stayed `42.3%` across completed
+cells.
 
 The artifact also records runtime contracts needed before any mutation attempt.
 Live request-to-block assignment, worker tensor layout, attention block-table

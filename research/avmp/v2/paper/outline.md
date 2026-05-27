@@ -23,10 +23,10 @@ VRAM reduction, throughput improvement, latency improvement, or quality impact.
   layouts.
 - Cachepawl Path C asks whether a non-invasive observe/advisory workflow can
   expose that overestimation in a real vLLM runtime.
-- Main result: the observed vLLM plan reserves `2,910,781,440` bytes for
-  `1,679,258,112` useful bytes, implying `1,231,523,328` bytes of advisory
-  savings, `1.7333734577189286x` overestimation, and `42.30902777777778%`
-  wasted fraction.
+- Main result: across a bounded 4-cell advisory matrix for one model,
+  estimated savings range from `685,011,456` to `1,347,563,520` bytes while
+  `overestimation_ratio=1.7333734577189286` and
+  `wasted_fraction=0.4230902777777778` remain constant.
 
 ## 2. Problem Statement
 
@@ -60,8 +60,13 @@ VRAM reduction, throughput improvement, latency improvement, or quality impact.
 
 - Model: `Zyphra/Zamba2-2.7B-instruct`
 - Runtime: vanilla `vllm==0.21.0`
-- Workload bounds: one sequence, `max_model_len=4096`,
-  `gpu_memory_utilization=0.7`
+- Workload bounds: one sequence, `max_model_len` in `{2048, 4096}`,
+  `gpu_memory_utilization` in `{0.6, 0.7}`
+- Matrix result:
+  - `2048 / 0.6`: `801,051,648` bytes advisory savings;
+  - `2048 / 0.7`: `1,347,563,520` bytes advisory savings;
+  - `4096 / 0.6`: `685,011,456` bytes advisory savings;
+  - `4096 / 0.7`: `1,231,523,328` bytes advisory savings.
 - Evidence:
   - planner-stage replay matched the runtime scheduler config;
   - `runtime_changed_during_replay=false`;
@@ -75,7 +80,8 @@ VRAM reduction, throughput improvement, latency improvement, or quality impact.
 
 - No runtime mutation claim.
 - No runtime VRAM, throughput, latency, or quality claim.
-- Single model/run/config.
+- Single model with four bounded config cells; no cross-model or workload
+  generalization claim.
 - Mamba state contracts are unresolved because `mamba_state_idx` was reachable
   but empty and no Mamba state tensors were safely reachable.
 - Observed runtime cache config reported `mamba_cache_mode: none`.

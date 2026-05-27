@@ -7,9 +7,9 @@ The evaluation uses existing observe/advisory artifacts from a vanilla
 
 Configuration:
 
-- Max model length: `4096`
+- Max model lengths: `2048`, `4096`
 - Max number of sequences: `1`
-- GPU memory utilization: `0.7`
+- GPU memory utilization values: `0.6`, `0.7`
 - Durable vLLM environment:
   `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv`
 - Observed tensor device: `cuda:0`
@@ -19,13 +19,15 @@ device identifier captured in safe tensor metadata.
 
 ## Method
 
-The evaluation has four stages:
+The evaluation has five stages:
 
 1. Observe the vanilla vLLM runtime cache plan and safe runtime metadata.
 2. Translate the vLLM cache plan into Cachepawl's schema.
 3. Replay `vllm.v1.core.kv_cache_utils.get_kv_cache_configs` on real planner
    inputs in a bounded post-initialization run.
 4. Run `cachepawl diagnose-vllm` on artifact inputs to produce advisory metrics.
+5. Repeat the planner-stage observation and advisory diff over the bounded
+   4-cell advisory matrix.
 
 All runtime observations were read-only. The workflow did not modify vLLM,
 monkeypatch private methods, replace allocators, return Cachepawl plans to vLLM,
@@ -40,25 +42,25 @@ translated planner output matched the runtime scheduler cache config:
 - `runtime_changed_during_replay=false`
 
 This establishes that the advisory comparison is grounded in the same cache
-configuration used by the runtime scheduler for the observed run.
+configuration used by the runtime scheduler for each observed planner-stage
+matrix cell.
 
 ## Advisory Metrics
 
-| Metric | Value |
-| --- | ---: |
-| Vanilla reserved bytes | `2,910,781,440` |
-| Vanilla useful bytes | `1,679,258,112` |
-| Cachepawl proposed reserved bytes | `1,679,258,112` |
-| Estimated advisory savings bytes | `1,231,523,328` |
-| Overestimation ratio | `1.7333734577189286` |
-| Wasted fraction | `0.4230902777777778` |
-| Cache groups | `7` |
-| Cache tensors | `9` |
-| Layers covered | `63` |
-| Num blocks | `329` |
+| max_model_len | gpu_memory_utilization | max_num_seqs | estimated advisory savings bytes | num_blocks |
+| ---: | ---: | ---: | ---: | ---: |
+| `2048` | `0.6` | `1` | `801,051,648` | `214` |
+| `2048` | `0.7` | `1` | `1,347,563,520` | `360` |
+| `4096` | `0.6` | `1` | `685,011,456` | `183` |
+| `4096` | `0.7` | `1` | `1,231,523,328` | `329` |
+
+Across all four completed cells, `overestimation_ratio` stayed
+`1.7333734577189286` and `wasted_fraction` stayed `0.4230902777777778`.
+Estimated advisory savings ranged from `685,011,456` to `1,347,563,520` bytes.
 
 The estimated savings are planner-level advisory savings. They are not measured
-runtime VRAM reductions.
+runtime VRAM reductions, and they do not support latency, throughput, or quality
+claims.
 
 ## Runtime Contract Observations
 
@@ -92,6 +94,7 @@ have vLLM, CUDA, GPU access, or NVML installed.
 ## Interpretation
 
 The evaluation supports a diagnostic claim: Cachepawl can expose and report
-planner-level cache overestimation for a real hybrid vLLM cache plan. It does
+planner-level cache overestimation for a real hybrid vLLM cache plan across a
+small bounded config matrix. It remains a single-model advisory result. It does
 not support a mutation claim. Controlled substitution requires stronger Mamba
 state-index and state tensor contracts, or a supported upstream integration seam.

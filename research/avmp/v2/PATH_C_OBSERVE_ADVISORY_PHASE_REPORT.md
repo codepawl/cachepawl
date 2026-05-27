@@ -21,8 +21,10 @@ or a supported vLLM integration seam that defines those rewrite contracts.
 3. Planner output matched the runtime scheduler cache config. The replay did
    not change the runtime scheduler config:
    `runtime_changed_during_replay=false`.
-4. Planner-stage advisory diff produced an advisory-only savings estimate from
-   the observed vLLM cache plan.
+4. Planner-stage advisory diff produced advisory-only savings estimates from
+   the observed vLLM cache plans, including a bounded 4-cell matrix over
+   `max_model_len` in `{2048, 4096}` and `gpu_memory_utilization` in
+   `{0.6, 0.7}` with `max_num_seqs=1`.
 5. Mutation-readiness checks passed all structural invariants but stayed
    `advisory_only_recommended` because mutation-control contracts were not all
    resolved.
@@ -38,19 +40,27 @@ or a supported vLLM integration seam that defines those rewrite contracts.
 
 - Model: `Zyphra/Zamba2-2.7B-instruct`
 - vLLM version: `0.21.0`
-- Max model length: `4096`
+- Max model lengths: `2048`, `4096`
 - Max number of sequences: `1`
-- GPU memory utilization: `0.7`
+- GPU memory utilization values: `0.6`, `0.7`
 - Cache groups: `7`
 - Cache tensors: `9`
 - Layers covered: `63`
-- Num blocks: `329`
-- Vanilla reserved bytes: `2,910,781,440`
-- Vanilla useful bytes: `1,679,258,112`
-- Cachepawl proposed reserved bytes: `1,679,258,112`
-- Estimated advisory savings bytes: `1,231,523,328`
+- Num blocks: `183` to `360` across completed cells
+- Estimated advisory savings bytes: `685,011,456` to `1,347,563,520`
 - Overestimation ratio: `1.7333734577189286`
 - Wasted fraction: `0.4230902777777778`
+
+Per-cell estimated advisory savings:
+
+- `2048 / 0.6 / 1`: `801,051,648` bytes
+- `2048 / 0.7 / 1`: `1,347,563,520` bytes
+- `4096 / 0.6 / 1`: `685,011,456` bytes
+- `4096 / 0.7 / 1`: `1,231,523,328` bytes
+
+The ratio and wasted fraction stayed constant across the completed cells. These
+are planner-level advisory estimates, not measured runtime VRAM, throughput,
+latency, or quality results.
 
 ## Resolved Contracts
 
@@ -134,7 +144,9 @@ replace allocators, or return plans to vLLM.
 
 The committed evidence supports an advisory value proposition: Cachepawl can
 identify cache-plan overestimation for hybrid workloads and report concrete
-planner-level memory savings while remaining non-invasive.
+planner-level memory savings while remaining non-invasive. The current evidence
+is still single-model and advisory-only, but it now covers four bounded config
+cells instead of a single planner-stage configuration.
 
 ## Recommended Next Product Task
 

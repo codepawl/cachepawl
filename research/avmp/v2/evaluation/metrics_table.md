@@ -1,5 +1,8 @@
 # vLLM Path C Metrics Table
 
+This table records the original `4096 / 0.7 / 1` baseline cell. The completed
+4-cell advisory matrix is recorded in `matrix_table.md` and `matrix_table.csv`.
+
 | Metric | Value |
 | --- | ---: |
 | `vanilla_reserved_bytes` | `2910781440` |

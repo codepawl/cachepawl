@@ -10,9 +10,9 @@ quality.
 - Runtime: vanilla `vllm==0.21.0`
 - Durable vLLM environment: `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv`
 - Python executable: `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python`
-- Max model length: `4096`
+- Max model lengths: `2048`, `4096`
 - Max number of sequences: `1`
-- GPU memory utilization: `0.7`
+- GPU memory utilization values: `0.6`, `0.7`
 - Observed tensor device: `cuda:0`
 
 The artifacts do not record a GPU model name, so this pack reports only the
@@ -26,12 +26,15 @@ device identifier that appears in the safe tensor metadata.
 3. Translate the planner output into Cachepawl's vLLM cache-plan schema.
 4. Compare vanilla reserved bytes with useful/proposed bytes to produce an
    advisory diff.
-5. Run mutation-readiness checks over the planner/runtime artifacts.
-6. Observe runtime contracts without modifying vLLM:
+5. Repeat the planner-stage observation and advisory diff over the bounded
+   4-cell config matrix: `max_model_len` in `{2048, 4096}`,
+   `gpu_memory_utilization` in `{0.6, 0.7}`, and `max_num_seqs=1`.
+6. Run mutation-readiness checks over the planner/runtime artifacts.
+7. Observe runtime contracts without modifying vLLM:
    scheduler/KVCacheManager structure, block usage, worker cache tensor layout,
    live request-to-block assignment, attention block tables, attention metadata
    builders, and Mamba state paths where safely reachable.
-7. Consolidate the result into an advisory-only phase report.
+8. Consolidate the result into an advisory-only phase report.
 
 ## Non-Mutation Controls
 

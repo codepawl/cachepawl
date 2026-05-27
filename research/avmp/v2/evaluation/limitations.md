@@ -10,7 +10,7 @@ vLLM.
   runtime scheduler config.
 - The observed planner output matches the runtime scheduler cache config.
 - The observed cache plan contains measurable reservation overestimation for
-  this hybrid workload.
+  this hybrid workload across four bounded config cells.
 - `cachepawl diagnose-vllm` can report useful artifact-input advisory metrics
   without importing vLLM in the main Cachepawl environment.
 - Request-to-block assignment, worker tensor layout, attention block-table/view
@@ -25,6 +25,10 @@ vLLM.
 - Latency or throughput claims.
 - Quality or accuracy claims.
 - Generalization to every vLLM model, backend, or cache mode.
+- Generalization beyond the single observed model,
+  `Zyphra/Zamba2-2.7B-instruct`.
+- Throughput, latency, quality, or actual serving-memory trends. The matrix is
+  planner-stage advisory evidence only.
 
 ## Remaining Blockers
 

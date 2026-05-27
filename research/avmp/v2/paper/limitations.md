@@ -20,18 +20,20 @@ The evidence does not include:
 - serving experiments,
 - model quality or accuracy evaluation.
 
-## Single Observed Configuration
+## Single Observed Model
 
-The current evidence is from one model and configuration:
+The current evidence is from one model and four bounded config cells:
 
 - `Zyphra/Zamba2-2.7B-instruct`
 - vanilla `vllm==0.21.0`
-- `max_model_len=4096`
+- `max_model_len` in `{2048, 4096}`
 - `max_num_seqs=1`
-- `gpu_memory_utilization=0.7`
+- `gpu_memory_utilization` in `{0.6, 0.7}`
 
 The result should not be generalized to all vLLM versions, models, backends,
-cache modes, or workloads without further evaluation.
+cache modes, or workloads without further evaluation. The matrix supports only
+planner-stage advisory claims; it does not include serving throughput, latency,
+quality, or actual runtime memory measurements.
 
 ## Mamba State Contract Blocker
 

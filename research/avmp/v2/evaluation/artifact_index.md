@@ -12,6 +12,9 @@ All paths are relative to the repository root.
 | `research/avmp/v2/results/vllm-runtime-contract-observation/runtime_contract_report.json` | Scheduler/KV manager, block usage, worker tensor layout, and initial contract blockers. |
 | `research/avmp/v2/results/vllm-live-request-contract-observation/live_request_contract_report.json` | Live request id, request-to-block assignment, scheduler request metadata, and block-pool before/after snapshots. |
 | `research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json` | Attention block-table/view metadata, attention group metadata, and remaining Mamba state blockers. |
+| `research/avmp/v2/results/vllm-path-c-matrix/` | Four bounded planner-stage advisory matrix cells for `max_model_len` in `{2048, 4096}` and `gpu_memory_utilization` in `{0.6, 0.7}`. |
+| `research/avmp/v2/evaluation/matrix_table.csv` | Deterministic consolidated matrix metrics table. |
+| `research/avmp/v2/evaluation/matrix_table.md` | Paper-readable consolidated matrix metrics table. |
 | `research/avmp/v2/PATH_C_OBSERVE_ADVISORY_PHASE_REPORT.md` | Cycle-closure interpretation and advisory-only recommendation. |
 
 ## Cross-Artifact Claims
@@ -22,6 +25,10 @@ All paths are relative to the repository root.
   `runtime_changed_during_replay=false`.
 - `cachepawl diagnose-vllm` reports the same headline advisory metrics as the
   planner-stage diff.
+- The 4-cell advisory matrix completed for one model and one sequence. Across
+  completed cells, `overestimation_ratio=1.7333734577189286` and
+  `wasted_fraction=0.4230902777777778`; estimated advisory savings ranged from
+  `685,011,456` to `1,347,563,520` bytes.
 - Live runtime observations are read-only and bounded. They do not modify vLLM,
   monkeypatch private methods, replace allocators, alter scheduler behavior, or
   return Cachepawl plans to vLLM.
