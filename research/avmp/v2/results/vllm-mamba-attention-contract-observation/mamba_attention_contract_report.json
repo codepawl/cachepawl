@@ -1,0 +1,2689 @@
+{
+  "classification": "mamba_attention_contract_observation_with_field_blockers",
+  "field_level_blockers": [
+    {
+      "blocker_reason": "mamba_state_idx was not reachable with the live request id",
+      "evidence": {
+        "max_state_index_entry_count": 0,
+        "phases_with_request_state_index": [],
+        "request_id": "0-a1ee70e3"
+      },
+      "name": "mamba_state_index_contract",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": "Mamba state tensors were not safely reachable by stable runtime attributes",
+      "evidence": {
+        "max_mamba_related_tensor_count": 0,
+        "phases_with_mamba_related_tensors": []
+      },
+      "name": "mamba_state_tensor_contract",
+      "status": "blocked"
+    }
+  ],
+  "fields": [
+    {
+      "blocker_reason": "mamba_state_idx was not reachable with the live request id",
+      "evidence": {
+        "max_state_index_entry_count": 0,
+        "phases_with_request_state_index": [],
+        "request_id": "0-a1ee70e3"
+      },
+      "name": "mamba_state_index_contract",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "max_block_table_tensor_count": 21,
+        "phases_with_block_table_tensors": [
+          "before_enqueue",
+          "after_enqueue_before_step",
+          "after_first_step",
+          "after_completion"
+        ]
+      },
+      "name": "attention_block_table_view_contract",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "max_attention_group_count": 7,
+        "phases_with_attention_groups": [
+          "before_enqueue",
+          "after_enqueue_before_step",
+          "after_first_step",
+          "after_completion"
+        ]
+      },
+      "name": "attention_metadata_builder_contract",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": "Mamba state tensors were not safely reachable by stable runtime attributes",
+      "evidence": {
+        "max_mamba_related_tensor_count": 0,
+        "phases_with_mamba_related_tensors": []
+      },
+      "name": "mamba_state_tensor_contract",
+      "status": "blocked"
+    }
+  ],
+  "max_new_tokens": 8,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "non_mutating": true,
+  "object_access": {
+    "allocator_replacement": false,
+    "controlled_substitution": false,
+    "live_request_scheduled": true,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "runtime_contract_objects_reached": true,
+    "scheduler_mutation": false,
+    "tensor_serialization": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "prompt": "Count from one to four:",
+  "request_id": "0-a1ee70e3",
+  "returned_to_vllm": false,
+  "runtime_path": "LLM.llm_engine.engine_core.engine_core",
+  "snapshots": [
+    {
+      "phase": "before_enqueue",
+      "request_id": null,
+      "root_summaries": [
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": false
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine",
+          "root_type": "LLMEngine"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor",
+          "root_type": "UniProcExecutor"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker",
+          "root_type": "WorkerWrapperBase"
+        },
+        {
+          "attention_groups": {
+            "groups": [
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {
+                      "block_size": 48
+                    },
+                    "type": "FlashAttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 0,
+                "safe_attrs": {
+                  "kv_cache_group_id": 0,
+                  "layer_names": [
+                    "model.attn.0",
+                    "model.attn.1",
+                    "model.attn.2",
+                    "model.attn.3",
+                    "model.attn.4",
+                    "model.attn.5",
+                    "model.attn.6",
+                    "model.attn.7",
+                    "model.attn.8"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 1,
+                "safe_attrs": {
+                  "kv_cache_group_id": 1,
+                  "layer_names": [
+                    "9.mixer",
+                    "15.mixer",
+                    "21.mixer",
+                    "27.mixer",
+                    "33.mixer",
+                    "39.mixer",
+                    "45.mixer",
+                    "51.mixer",
+                    "57.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 2,
+                "safe_attrs": {
+                  "kv_cache_group_id": 2,
+                  "layer_names": [
+                    "10.mixer",
+                    "16.mixer",
+                    "22.mixer",
+                    "28.mixer",
+                    "34.mixer",
+                    "40.mixer",
+                    "46.mixer",
+                    "52.mixer",
+                    "58.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 3,
+                "safe_attrs": {
+                  "kv_cache_group_id": 3,
+                  "layer_names": [
+                    "11.mixer",
+                    "17.mixer",
+                    "23.mixer",
+                    "29.mixer",
+                    "35.mixer",
+                    "41.mixer",
+                    "47.mixer",
+                    "53.mixer",
+                    "59.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 4,
+                "safe_attrs": {
+                  "kv_cache_group_id": 4,
+                  "layer_names": [
+                    "12.mixer",
+                    "18.mixer",
+                    "24.mixer",
+                    "30.mixer",
+                    "36.mixer",
+                    "42.mixer",
+                    "48.mixer",
+                    "54.mixer",
+                    "60.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 5,
+                "safe_attrs": {
+                  "kv_cache_group_id": 5,
+                  "layer_names": [
+                    "13.mixer",
+                    "19.mixer",
+                    "25.mixer",
+                    "31.mixer",
+                    "37.mixer",
+                    "43.mixer",
+                    "49.mixer",
+                    "55.mixer",
+                    "61.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 6,
+                "safe_attrs": {
+                  "kv_cache_group_id": 6,
+                  "layer_names": [
+                    "14.mixer",
+                    "20.mixer",
+                    "26.mixer",
+                    "32.mixer",
+                    "38.mixer",
+                    "44.mixer",
+                    "50.mixer",
+                    "56.mixer",
+                    "62.mixer"
+                  ]
+                }
+              }
+            ],
+            "outer_count": 7,
+            "reachable": true
+          },
+          "block_tables": {
+            "block_table_ptrs_reachable": false,
+            "block_table_reachable": false,
+            "block_table_strides_reachable": false,
+            "block_tables_count": 7,
+            "block_tables_reachable": true,
+            "block_tables_tensors": [
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.gpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.cpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[0].block_table.np",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[1].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[2].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[3].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[4].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[5].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[6].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              }
+            ],
+            "input_block_table_ptrs_reachable": false,
+            "input_block_tables_reachable": false,
+            "reachable": true,
+            "slot_mapping_reachable": false,
+            "slot_mappings_reachable": false,
+            "type": "MultiGroupBlockTable"
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "num_reqs": 0,
+            "reachable": true,
+            "req_id_to_index": {
+              "contains_request": false,
+              "count": 0,
+              "is_mapping": true,
+              "reachable": true,
+              "request_value": null,
+              "sample_items": [],
+              "type": "dict"
+            },
+            "req_ids": [],
+            "type": "InputBatch"
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "count": 0,
+            "is_mapping": true,
+            "reachable": true,
+            "request_value": null,
+            "sample_items": [],
+            "type": "dict"
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+          "root_type": "GPUModelRunner"
+        }
+      ],
+      "totals": {
+        "attention_group_count": 7,
+        "block_table_tensor_count": 21,
+        "mamba_related_tensor_count": 0,
+        "mamba_state_idx_contains_request": false,
+        "mamba_state_idx_entry_count": 0,
+        "request_id": null
+      }
+    },
+    {
+      "phase": "after_enqueue_before_step",
+      "request_id": "0-a1ee70e3",
+      "root_summaries": [
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": false
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine",
+          "root_type": "LLMEngine"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor",
+          "root_type": "UniProcExecutor"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker",
+          "root_type": "WorkerWrapperBase"
+        },
+        {
+          "attention_groups": {
+            "groups": [
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {
+                      "block_size": 48
+                    },
+                    "type": "FlashAttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 0,
+                "safe_attrs": {
+                  "kv_cache_group_id": 0,
+                  "layer_names": [
+                    "model.attn.0",
+                    "model.attn.1",
+                    "model.attn.2",
+                    "model.attn.3",
+                    "model.attn.4",
+                    "model.attn.5",
+                    "model.attn.6",
+                    "model.attn.7",
+                    "model.attn.8"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 1,
+                "safe_attrs": {
+                  "kv_cache_group_id": 1,
+                  "layer_names": [
+                    "9.mixer",
+                    "15.mixer",
+                    "21.mixer",
+                    "27.mixer",
+                    "33.mixer",
+                    "39.mixer",
+                    "45.mixer",
+                    "51.mixer",
+                    "57.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 2,
+                "safe_attrs": {
+                  "kv_cache_group_id": 2,
+                  "layer_names": [
+                    "10.mixer",
+                    "16.mixer",
+                    "22.mixer",
+                    "28.mixer",
+                    "34.mixer",
+                    "40.mixer",
+                    "46.mixer",
+                    "52.mixer",
+                    "58.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 3,
+                "safe_attrs": {
+                  "kv_cache_group_id": 3,
+                  "layer_names": [
+                    "11.mixer",
+                    "17.mixer",
+                    "23.mixer",
+                    "29.mixer",
+                    "35.mixer",
+                    "41.mixer",
+                    "47.mixer",
+                    "53.mixer",
+                    "59.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 4,
+                "safe_attrs": {
+                  "kv_cache_group_id": 4,
+                  "layer_names": [
+                    "12.mixer",
+                    "18.mixer",
+                    "24.mixer",
+                    "30.mixer",
+                    "36.mixer",
+                    "42.mixer",
+                    "48.mixer",
+                    "54.mixer",
+                    "60.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 5,
+                "safe_attrs": {
+                  "kv_cache_group_id": 5,
+                  "layer_names": [
+                    "13.mixer",
+                    "19.mixer",
+                    "25.mixer",
+                    "31.mixer",
+                    "37.mixer",
+                    "43.mixer",
+                    "49.mixer",
+                    "55.mixer",
+                    "61.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 6,
+                "safe_attrs": {
+                  "kv_cache_group_id": 6,
+                  "layer_names": [
+                    "14.mixer",
+                    "20.mixer",
+                    "26.mixer",
+                    "32.mixer",
+                    "38.mixer",
+                    "44.mixer",
+                    "50.mixer",
+                    "56.mixer",
+                    "62.mixer"
+                  ]
+                }
+              }
+            ],
+            "outer_count": 7,
+            "reachable": true
+          },
+          "block_tables": {
+            "block_table_ptrs_reachable": false,
+            "block_table_reachable": false,
+            "block_table_strides_reachable": false,
+            "block_tables_count": 7,
+            "block_tables_reachable": true,
+            "block_tables_tensors": [
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.gpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.cpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[0].block_table.np",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[1].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[2].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[3].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[4].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[5].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[6].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              }
+            ],
+            "input_block_table_ptrs_reachable": false,
+            "input_block_tables_reachable": false,
+            "reachable": true,
+            "slot_mapping_reachable": false,
+            "slot_mappings_reachable": false,
+            "type": "MultiGroupBlockTable"
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "num_reqs": 0,
+            "reachable": true,
+            "req_id_to_index": {
+              "contains_request": false,
+              "count": 0,
+              "is_mapping": true,
+              "reachable": true,
+              "request_value": null,
+              "sample_items": [],
+              "type": "dict"
+            },
+            "req_ids": [],
+            "type": "InputBatch"
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "count": 0,
+            "is_mapping": true,
+            "reachable": true,
+            "request_value": null,
+            "sample_items": [],
+            "type": "dict"
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+          "root_type": "GPUModelRunner"
+        }
+      ],
+      "totals": {
+        "attention_group_count": 7,
+        "block_table_tensor_count": 21,
+        "mamba_related_tensor_count": 0,
+        "mamba_state_idx_contains_request": false,
+        "mamba_state_idx_entry_count": 0,
+        "request_id": "0-a1ee70e3"
+      }
+    },
+    {
+      "phase": "after_first_step",
+      "request_id": "0-a1ee70e3",
+      "root_summaries": [
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": false
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine",
+          "root_type": "LLMEngine"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor",
+          "root_type": "UniProcExecutor"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker",
+          "root_type": "WorkerWrapperBase"
+        },
+        {
+          "attention_groups": {
+            "groups": [
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {
+                      "block_size": 48
+                    },
+                    "type": "FlashAttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 0,
+                "safe_attrs": {
+                  "kv_cache_group_id": 0,
+                  "layer_names": [
+                    "model.attn.0",
+                    "model.attn.1",
+                    "model.attn.2",
+                    "model.attn.3",
+                    "model.attn.4",
+                    "model.attn.5",
+                    "model.attn.6",
+                    "model.attn.7",
+                    "model.attn.8"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 1,
+                "safe_attrs": {
+                  "kv_cache_group_id": 1,
+                  "layer_names": [
+                    "9.mixer",
+                    "15.mixer",
+                    "21.mixer",
+                    "27.mixer",
+                    "33.mixer",
+                    "39.mixer",
+                    "45.mixer",
+                    "51.mixer",
+                    "57.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 2,
+                "safe_attrs": {
+                  "kv_cache_group_id": 2,
+                  "layer_names": [
+                    "10.mixer",
+                    "16.mixer",
+                    "22.mixer",
+                    "28.mixer",
+                    "34.mixer",
+                    "40.mixer",
+                    "46.mixer",
+                    "52.mixer",
+                    "58.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 3,
+                "safe_attrs": {
+                  "kv_cache_group_id": 3,
+                  "layer_names": [
+                    "11.mixer",
+                    "17.mixer",
+                    "23.mixer",
+                    "29.mixer",
+                    "35.mixer",
+                    "41.mixer",
+                    "47.mixer",
+                    "53.mixer",
+                    "59.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 4,
+                "safe_attrs": {
+                  "kv_cache_group_id": 4,
+                  "layer_names": [
+                    "12.mixer",
+                    "18.mixer",
+                    "24.mixer",
+                    "30.mixer",
+                    "36.mixer",
+                    "42.mixer",
+                    "48.mixer",
+                    "54.mixer",
+                    "60.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 5,
+                "safe_attrs": {
+                  "kv_cache_group_id": 5,
+                  "layer_names": [
+                    "13.mixer",
+                    "19.mixer",
+                    "25.mixer",
+                    "31.mixer",
+                    "37.mixer",
+                    "43.mixer",
+                    "49.mixer",
+                    "55.mixer",
+                    "61.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 6,
+                "safe_attrs": {
+                  "kv_cache_group_id": 6,
+                  "layer_names": [
+                    "14.mixer",
+                    "20.mixer",
+                    "26.mixer",
+                    "32.mixer",
+                    "38.mixer",
+                    "44.mixer",
+                    "50.mixer",
+                    "56.mixer",
+                    "62.mixer"
+                  ]
+                }
+              }
+            ],
+            "outer_count": 7,
+            "reachable": true
+          },
+          "block_tables": {
+            "block_table_ptrs_reachable": false,
+            "block_table_reachable": false,
+            "block_table_strides_reachable": false,
+            "block_tables_count": 7,
+            "block_tables_reachable": true,
+            "block_tables_tensors": [
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.gpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.cpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[0].block_table.np",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[1].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[2].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[3].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[4].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[5].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[6].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              }
+            ],
+            "input_block_table_ptrs_reachable": false,
+            "input_block_tables_reachable": false,
+            "reachable": true,
+            "slot_mapping_reachable": false,
+            "slot_mappings_reachable": false,
+            "type": "MultiGroupBlockTable"
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "num_reqs": 1,
+            "reachable": true,
+            "req_id_to_index": {
+              "contains_request": true,
+              "count": 1,
+              "is_mapping": true,
+              "reachable": true,
+              "request_value": 0,
+              "sample_items": [
+                [
+                  "0-a1ee70e3",
+                  0
+                ]
+              ],
+              "type": "dict"
+            },
+            "req_ids": [
+              "0-a1ee70e3"
+            ],
+            "type": "InputBatch"
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "count": 0,
+            "is_mapping": true,
+            "reachable": true,
+            "request_value": null,
+            "sample_items": [],
+            "type": "dict"
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+          "root_type": "GPUModelRunner"
+        }
+      ],
+      "totals": {
+        "attention_group_count": 7,
+        "block_table_tensor_count": 21,
+        "mamba_related_tensor_count": 0,
+        "mamba_state_idx_contains_request": false,
+        "mamba_state_idx_entry_count": 0,
+        "request_id": "0-a1ee70e3"
+      }
+    },
+    {
+      "phase": "after_completion",
+      "request_id": "0-a1ee70e3",
+      "root_summaries": [
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": false
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine",
+          "root_type": "LLMEngine"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor",
+          "root_type": "UniProcExecutor"
+        },
+        {
+          "attention_groups": {
+            "reachable": false
+          },
+          "block_tables": {
+            "reachable": false
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "reachable": false
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "reachable": false
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker",
+          "root_type": "WorkerWrapperBase"
+        },
+        {
+          "attention_groups": {
+            "groups": [
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {
+                      "block_size": 48
+                    },
+                    "type": "FlashAttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 0,
+                "safe_attrs": {
+                  "kv_cache_group_id": 0,
+                  "layer_names": [
+                    "model.attn.0",
+                    "model.attn.1",
+                    "model.attn.2",
+                    "model.attn.3",
+                    "model.attn.4",
+                    "model.attn.5",
+                    "model.attn.6",
+                    "model.attn.7",
+                    "model.attn.8"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 1,
+                "safe_attrs": {
+                  "kv_cache_group_id": 1,
+                  "layer_names": [
+                    "9.mixer",
+                    "15.mixer",
+                    "21.mixer",
+                    "27.mixer",
+                    "33.mixer",
+                    "39.mixer",
+                    "45.mixer",
+                    "51.mixer",
+                    "57.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 2,
+                "safe_attrs": {
+                  "kv_cache_group_id": 2,
+                  "layer_names": [
+                    "10.mixer",
+                    "16.mixer",
+                    "22.mixer",
+                    "28.mixer",
+                    "34.mixer",
+                    "40.mixer",
+                    "46.mixer",
+                    "52.mixer",
+                    "58.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 3,
+                "safe_attrs": {
+                  "kv_cache_group_id": 3,
+                  "layer_names": [
+                    "11.mixer",
+                    "17.mixer",
+                    "23.mixer",
+                    "29.mixer",
+                    "35.mixer",
+                    "41.mixer",
+                    "47.mixer",
+                    "53.mixer",
+                    "59.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 4,
+                "safe_attrs": {
+                  "kv_cache_group_id": 4,
+                  "layer_names": [
+                    "12.mixer",
+                    "18.mixer",
+                    "24.mixer",
+                    "30.mixer",
+                    "36.mixer",
+                    "42.mixer",
+                    "48.mixer",
+                    "54.mixer",
+                    "60.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 5,
+                "safe_attrs": {
+                  "kv_cache_group_id": 5,
+                  "layer_names": [
+                    "13.mixer",
+                    "19.mixer",
+                    "25.mixer",
+                    "31.mixer",
+                    "37.mixer",
+                    "43.mixer",
+                    "49.mixer",
+                    "55.mixer",
+                    "61.mixer"
+                  ]
+                }
+              },
+              {
+                "group_type": "AttentionGroup",
+                "inner_index": 0,
+                "metadata_builder_count": 1,
+                "metadata_builders": [
+                  {
+                    "index": 0,
+                    "safe_attrs": {},
+                    "type": "Mamba2AttentionMetadataBuilder"
+                  }
+                ],
+                "metadata_builders_reachable": true,
+                "outer_index": 6,
+                "safe_attrs": {
+                  "kv_cache_group_id": 6,
+                  "layer_names": [
+                    "14.mixer",
+                    "20.mixer",
+                    "26.mixer",
+                    "32.mixer",
+                    "38.mixer",
+                    "44.mixer",
+                    "50.mixer",
+                    "56.mixer",
+                    "62.mixer"
+                  ]
+                }
+              }
+            ],
+            "outer_count": 7,
+            "reachable": true
+          },
+          "block_tables": {
+            "block_table_ptrs_reachable": false,
+            "block_table_reachable": false,
+            "block_table_strides_reachable": false,
+            "block_tables_count": 7,
+            "block_tables_reachable": true,
+            "block_tables_tensors": [
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.gpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[0].block_table.cpu",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": [
+                  86,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[0].block_table.np",
+                "shape": [
+                  1,
+                  86
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[1].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[1].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[2].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[2].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[3].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[3].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[4].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[4].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[5].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[5].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              },
+              {
+                "device": "cuda:0",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.gpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "torch.int32",
+                "layout": "torch.strided",
+                "path": "block_tables.block_tables[6].block_table.cpu",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ],
+                "tensor_type": "Tensor"
+              },
+              {
+                "device": "cpu",
+                "dtype": "int32",
+                "layout": null,
+                "path": "block_tables.block_tables[6].block_table.np",
+                "shape": [
+                  1,
+                  1
+                ],
+                "stride": null,
+                "tensor_type": "ndarray"
+              }
+            ],
+            "input_block_table_ptrs_reachable": false,
+            "input_block_tables_reachable": false,
+            "reachable": true,
+            "slot_mapping_reachable": false,
+            "slot_mappings_reachable": false,
+            "type": "MultiGroupBlockTable"
+          },
+          "cache_config": {
+            "reachable": true,
+            "safe_attrs": {
+              "block_size": 48,
+              "mamba_block_size": 4096,
+              "mamba_cache_dtype": "auto",
+              "mamba_cache_mode": "none",
+              "mamba_ssm_cache_dtype": "auto"
+            },
+            "type": "CacheConfig"
+          },
+          "input_batch": {
+            "num_reqs": 0,
+            "reachable": true,
+            "req_id_to_index": {
+              "contains_request": false,
+              "count": 0,
+              "is_mapping": true,
+              "reachable": true,
+              "request_value": null,
+              "sample_items": [],
+              "type": "dict"
+            },
+            "req_ids": [],
+            "type": "InputBatch"
+          },
+          "mamba_related_tensors": [],
+          "mamba_state_idx": {
+            "contains_request": false,
+            "count": 0,
+            "is_mapping": true,
+            "reachable": true,
+            "request_value": null,
+            "sample_items": [],
+            "type": "dict"
+          },
+          "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+          "root_type": "GPUModelRunner"
+        }
+      ],
+      "totals": {
+        "attention_group_count": 7,
+        "block_table_tensor_count": 21,
+        "mamba_related_tensor_count": 0,
+        "mamba_state_idx_contains_request": false,
+        "mamba_state_idx_entry_count": 0,
+        "request_id": "0-a1ee70e3"
+      }
+    }
+  ],
+  "status": "mamba_attention_contract_observation_available",
+  "tensor_serialization": false,
+  "vllm_behavior_changed": false
+}

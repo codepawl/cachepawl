@@ -29,6 +29,13 @@ from cachepawl.integrations.vllm.live_request_contract import (
     VllmLiveRequestContractStatus,
     observe_vllm_live_request_contract,
 )
+from cachepawl.integrations.vllm.mamba_attention_contract import (
+    VllmMambaAttentionContractField,
+    VllmMambaAttentionContractFieldStatus,
+    VllmMambaAttentionContractObservation,
+    VllmMambaAttentionContractStatus,
+    observe_vllm_mamba_attention_contract,
+)
 from cachepawl.integrations.vllm.mutation_readiness import (
     VllmMutationReadinessCheck,
     VllmMutationReadinessReport,
@@ -91,6 +98,10 @@ __all__ = [
     "VllmLiveRequestContractFieldStatus",
     "VllmLiveRequestContractObservation",
     "VllmLiveRequestContractStatus",
+    "VllmMambaAttentionContractField",
+    "VllmMambaAttentionContractFieldStatus",
+    "VllmMambaAttentionContractObservation",
+    "VllmMambaAttentionContractStatus",
     "VllmMutationReadinessCheck",
     "VllmMutationReadinessReport",
     "VllmPlannerDryRunResult",
@@ -115,6 +126,7 @@ __all__ = [
     "get_vllm_version",
     "is_vllm_available",
     "observe_vllm_live_request_contract",
+    "observe_vllm_mamba_attention_contract",
     "observe_vllm_runtime_cache_plan",
     "observe_vllm_runtime_contracts",
     "plan_vllm_integration",

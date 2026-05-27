@@ -1,0 +1,8 @@
+{
+  "completion_error": null,
+  "engine_core_client_type": "InprocClient",
+  "engine_core_type": "EngineCore",
+  "first_step_error": null,
+  "llm_engine_type": "LLMEngine",
+  "scheduler_type": "AsyncScheduler"
+}

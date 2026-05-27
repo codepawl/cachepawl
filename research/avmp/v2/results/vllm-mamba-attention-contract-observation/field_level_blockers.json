@@ -1,0 +1,23 @@
+{
+  "field_level_blockers": [
+    {
+      "blocker_reason": "mamba_state_idx was not reachable with the live request id",
+      "evidence": {
+        "max_state_index_entry_count": 0,
+        "phases_with_request_state_index": [],
+        "request_id": "0-a1ee70e3"
+      },
+      "name": "mamba_state_index_contract",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": "Mamba state tensors were not safely reachable by stable runtime attributes",
+      "evidence": {
+        "max_mamba_related_tensor_count": 0,
+        "phases_with_mamba_related_tensors": []
+      },
+      "name": "mamba_state_tensor_contract",
+      "status": "blocked"
+    }
+  ]
+}
