@@ -6,11 +6,11 @@ Cachepawl
 
 ## Current Sprint
 
-None. Sprint 5 is complete.
+None. Sprint 6 is complete.
 
 ## Current Task
 
-None. T007 is complete.
+None. T008 is complete.
 
 ## Current Project
 
@@ -18,8 +18,8 @@ None. T007 is complete.
 
 ## Current Goal
 
-Define the next Sprint 6 task from the completed T007 mutation-readiness
-artifact.
+Define the next advisory-only task after the completed T008 control-field
+gate.
 
 ## Required Reading Before Work
 
@@ -45,5 +45,5 @@ artifact.
 
 ## Next Recommended Step
 
-Open Sprint 6 to address the mutation-required missing control fields or to
-document why advisory-only should remain the product boundary.
+Open T009 as a bounded read-only runtime contract observation task. Do not open
+controlled substitution this cycle.

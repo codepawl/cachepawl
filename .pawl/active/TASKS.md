@@ -12,6 +12,7 @@ This file is a short compatibility index. Keep task bodies in `.pawl/active/task
 
 | Task | Status | Sprint | File | Archive After |
 |---|---|---|---|---|
+| T008 — Mutation-control field resolution and gating | Completed | Sprint 6 | `.pawl/active/tasks/t008-mutation-control-field-resolution-gating.md` | 2026-06-26 |
 | T007 — Mutation-readiness compatibility checks | Completed | Sprint 5 | `.pawl/active/tasks/t007-mutation-readiness-compatibility-checks.md` | 2026-06-25 |
 | T006 — Planner-stage post-call advisory diff artifact | Completed | Sprint 4 | `.pawl/active/tasks/t006-planner-stage-post-call-advisory-diff-artifact.md` | 2026-06-25 |
 | T005 — Mutation-hook design gate | Completed | Sprint 3 | `.pawl/active/tasks/t005-mutation-hook-design-gate.md` | 2026-06-25 |

@@ -2,7 +2,7 @@
 
 Status: Active
 Created: 2026-05-23
-Updated: 2026-05-26
+Updated: 2026-05-27
 Completed: N/A
 TTL: 30 days after completion or cancellation
 Archive After: N/A
@@ -15,11 +15,11 @@ Cachepawl is a hybrid KV and SSM cache allocator for Mamba-Transformer-MoE langu
 
 ## Current Sprint
 
-None. Sprint 5 is complete.
+None. Sprint 6 is complete.
 
 ## Current Task
 
-None. T007 is complete.
+None. T008 is complete.
 
 ## Active Constraints
 
@@ -50,3 +50,10 @@ None. T007 is complete.
   `research/avmp/v2/results/vllm-mutation-readiness/`. The current evidence
   classifies as `advisory_only_recommended`; structural invariants pass, but
   mutation-required control fields remain missing.
+- Sprint 6 / T008 is open to resolve or formally gate those five
+  mutation-required control fields before any controlled substitution
+  experiment.
+- T008 completed the control-field gate in
+  `research/avmp/v2/PATH_C_CONTROL_FIELD_GATE.md`. D010 keeps Cachepawl
+  advisory-only for this cycle; the next task should be bounded read-only
+  runtime contract observation, not substitution.

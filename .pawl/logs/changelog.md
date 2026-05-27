@@ -1,5 +1,47 @@
 # Work Log
 
+## 2026-05-27 — T008 control-field gate completed
+
+- Added `research/avmp/v2/PATH_C_CONTROL_FIELD_GATE.md`
+- Classified the stable scheduler/planner construction hook and allocator or
+  KVCacheManager replacement control point as
+  `hard_blocker_for_current_cycle`
+- Classified worker tensor allocation layout, runtime request-to-block
+  assignment, and Mamba state-index plus attention view rewrite contract as
+  `resolvable_by_read_only_observation`
+- Accepted D010 with final result `stay_advisory_only_this_cycle`
+- Completed Sprint 6 / T008 and recommended the next task as bounded
+  read-only runtime contract observation, not controlled substitution
+- Preserved the no-substitution, no-vLLM-edit, no-monkeypatch,
+  no-allocator-replacement, no-scheduler-mutation, and no-worker-layout-mutation
+  constraints
+- Verified with `git diff --check`, `npx @codepawl/pawlkit@0.3.0 view`, and
+  `npx @codepawl/pawlkit@0.3.0 check`; PawlKit `check` passed with 0 warnings
+  after approved npm access
+
+## 2026-05-27 — Sprint 6 and T008 opened
+
+- Kept Sprint 5 and T007 completed after the mutation-readiness gate
+- Opened Sprint 6 for mutation-control field gating
+- Opened T008 to classify the five unresolved mutation-required control fields:
+  stable scheduler or planner construction hook, allocator or KVCacheManager
+  replacement control point, worker tensor allocation layout control point,
+  runtime request-to-block assignment control, and Mamba state-index plus
+  attention view rewrite contract
+- Required each field to be classified as `resolved_by_existing_evidence`,
+  `resolvable_by_read_only_observation`,
+  `requires_default_off_mutation_probe`, or
+  `hard_blocker_for_current_cycle`
+- Added proposed D010 as the go/no-go decision template for whether T009 can
+  be a default-off controlled substitution experiment or whether Cachepawl
+  should remain advisory-only for this cycle
+- Kept substitution, vLLM source edits, monkeypatching, allocator replacement,
+  scheduler or worker layout mutation, Triton kernels, copy kernels, LSDR,
+  serving changes, and quality evaluation out of scope
+- Verified the tracker with `npx @codepawl/pawlkit@0.3.0 view` and
+  `npx @codepawl/pawlkit@0.3.0 check`; `check` passed with 0 warnings after
+  approved npm access
+
 ## 2026-05-26 — T007 mutation-readiness compatibility checks completed
 
 - Added an import-safe mutation-readiness helper under
