@@ -1,0 +1,45 @@
+{
+  "artifact": "vllm-path-c-observe-advisory-phase-summary",
+  "classification": "advisory_only_for_current_cycle",
+  "controlled_substitution_approved": false,
+  "diagnostic_path_valid": true,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "vllm_version": "0.21.0",
+  "key_metrics": {
+    "vanilla_reserved_bytes": 2910781440,
+    "vanilla_useful_bytes": 1679258112,
+    "cachepawl_proposed_reserved_bytes": 1679258112,
+    "estimated_advisory_savings_bytes": 1231523328,
+    "overestimation_ratio": 1.7333734577189286,
+    "wasted_fraction": 0.4230902777777778,
+    "cache_group_count": 7,
+    "cache_tensor_count": 9,
+    "layer_count": 63,
+    "num_blocks": 329
+  },
+  "resolved_contracts": [
+    "planner_stage_replay",
+    "planner_matches_runtime_scheduler",
+    "scheduler_kv_cache_manager_structure",
+    "block_usage_metadata",
+    "worker_cache_tensor_layout",
+    "request_to_block_assignment",
+    "attention_block_table_view_contract",
+    "attention_metadata_builder_contract"
+  ],
+  "remaining_blockers": [
+    {
+      "name": "mamba_state_index_contract",
+      "reason": "mamba_state_idx was reachable but empty for the live request"
+    },
+    {
+      "name": "mamba_state_tensor_contract",
+      "reason": "no Mamba state tensors were safely reachable by stable runtime attributes"
+    }
+  ],
+  "runtime_cache_config": {
+    "mamba_cache_mode": "none"
+  },
+  "recommendation": "stay_advisory_only_this_cycle",
+  "next_product_task": "Package the observe/advisory path with collection docs and cachepawl diagnose-vllm artifact-input guidance."
+}
