@@ -7,6 +7,6 @@
   "model": "Zyphra/Zamba2-2.7B-instruct",
   "non_mutating": true,
   "returned_to_vllm": false,
-  "status": "pending_not_run",
+  "status": "completed",
   "vllm_behavior_changed": false
 }

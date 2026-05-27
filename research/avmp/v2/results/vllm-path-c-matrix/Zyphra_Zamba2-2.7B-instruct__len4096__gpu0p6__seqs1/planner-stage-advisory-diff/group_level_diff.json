@@ -1,0 +1,93 @@
+[
+  {
+    "block_size": 48,
+    "cache_kind": "attention",
+    "cachepawl_proposed_reserved_bytes": 1619066880,
+    "estimated_savings_bytes": 0,
+    "group_index": 0,
+    "layer_count": 9,
+    "overestimation_ratio": 1.0,
+    "page_size_bytes": 983040,
+    "useful_bytes": 983040,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.0
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 1,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 2,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 3,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 4,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 5,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  },
+  {
+    "block_size": 4096,
+    "cache_kind": "mamba",
+    "cachepawl_proposed_reserved_bytes": 1131238656,
+    "estimated_savings_bytes": 487828224,
+    "group_index": 6,
+    "layer_count": 9,
+    "overestimation_ratio": 1.4312336936265375,
+    "page_size_bytes": 983040,
+    "useful_bytes": 686848,
+    "vanilla_reserved_bytes": 1619066880,
+    "wasted_fraction": 0.30130208333333336
+  }
+]

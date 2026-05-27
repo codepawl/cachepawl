@@ -1,0 +1,47 @@
+{
+  "available_memory": [
+    1896991744
+  ],
+  "deepcopy_failed": false,
+  "function_path": "vllm.v1.core.kv_cache_utils.get_kv_cache_configs",
+  "get_kv_cache_configs_called": true,
+  "get_kv_cache_configs_signature": "(vllm_config: vllm.config.vllm.VllmConfig, kv_cache_specs: list[dict[str, vllm.v1.kv_cache_interface.KVCacheSpec]], available_memory: list[int]) -> list[vllm.v1.kv_cache_interface.KVCacheConfig]",
+  "input_paths": {
+    "available_memory": "LLM.llm_engine.engine_core.engine_core.available_gpu_memory_for_kv_cache",
+    "kv_cache_specs": "LLM.llm_engine.engine_core.engine_core.model_executor.get_kv_cache_specs()",
+    "vllm_config": "LLM.llm_engine.engine_core.engine_core.vllm_config"
+  },
+  "inputs_reached": true,
+  "kv_cache_spec_type_counts": {
+    "FullAttentionSpec": 9,
+    "MambaSpec": 54
+  },
+  "kv_cache_specs_layer_counts": [
+    63
+  ],
+  "kv_cache_specs_worker_count": 1,
+  "observation_mode": "post_init_direct_replay_on_real_inputs",
+  "planner_matches_runtime_scheduler": true,
+  "planner_output_config_count": 1,
+  "planner_output_num_blocks": [
+    214
+  ],
+  "runtime_changed_during_replay": false,
+  "runtime_num_blocks": 214,
+  "runtime_num_blocks_after_replay": 214,
+  "sample_layer_names": [
+    "model.attn.0",
+    "model.attn.1",
+    "model.attn.2",
+    "model.attn.3",
+    "model.attn.4",
+    "model.attn.5",
+    "model.attn.6",
+    "model.attn.7",
+    "model.attn.8",
+    "9.mixer",
+    "10.mixer",
+    "11.mixer"
+  ],
+  "vllm_config_type": "VllmConfig"
+}

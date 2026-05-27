@@ -4,8 +4,8 @@
 - `max_model_len`: `2048`
 - `gpu_memory_utilization`: `0.7`
 - `max_num_seqs`: `1`
-- Status: `pending_not_run`
-- Blocker: `matrix point not run`
+- Status: `completed`
+- Blocker: `none`
 
 This cell is part of the advisory-only vLLM Path C evaluation matrix. It does
 not modify vLLM, replace allocators, monkeypatch scheduler behavior, or return a

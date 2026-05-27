@@ -115,13 +115,20 @@ def main(argv: list[str] | None = None) -> int:
         help="Existing single-config diff report used only when its matrix point matches.",
     )
     parser.add_argument("--run-observations", action="store_true")
+    parser.add_argument("--pending-only", action="store_true")
     parser.add_argument("--timestamp", default=_timestamp())
     args = parser.parse_args(argv)
 
     config = load_matrix_config(args.config)
     results_dir = args.results_dir if args.results_dir is not None else config.results_dir
     if args.run_observations:
-        run_matrix_observations(config=config, results_dir=results_dir, timestamp=args.timestamp)
+        run_matrix_observations(
+            config=config,
+            results_dir=results_dir,
+            timestamp=args.timestamp,
+            pending_only=args.pending_only,
+            existing_baseline_diff_report=args.existing_baseline_diff_report,
+        )
     rows = matrix_rows_from_config(
         config=config,
         results_dir=results_dir,
@@ -184,6 +191,7 @@ def matrix_rows_from_config(
     for point in matrix_points(config):
         cell_dir = _cell_dir(results_dir, point)
         diff_report_path = cell_dir / "planner-stage-advisory-diff" / "diff_report.json"
+        cell_blocker_path = cell_dir / "blocker.json"
         blocker_path = cell_dir / "planner-stage-observation" / "blocker.json"
         if diff_report_path.exists():
             rows.append(
@@ -197,6 +205,9 @@ def matrix_rows_from_config(
                     "completed_existing_baseline",
                 )
             )
+        elif cell_blocker_path.exists():
+            blocker = _read_json_object(cell_blocker_path)
+            rows.append(_blocked_row(point, "blocked", _blocker_reason(blocker)))
         elif blocker_path.exists():
             blocker = _read_json_object(blocker_path)
             rows.append(_blocked_row(point, "blocked", _blocker_reason(blocker)))
@@ -210,50 +221,82 @@ def run_matrix_observations(
     config: MatrixConfig,
     results_dir: Path,
     timestamp: str,
+    pending_only: bool = False,
+    existing_baseline_diff_report: Path | None = DEFAULT_EXISTING_BASELINE_DIFF,
 ) -> None:
+    baseline = (
+        _read_json_object(existing_baseline_diff_report)
+        if _exists(existing_baseline_diff_report)
+        else None
+    )
     for point in matrix_points(config):
         point_dir = _cell_dir(results_dir, point)
         observation_dir = point_dir / "planner-stage-observation"
         advisory_dir = point_dir / "planner-stage-advisory-diff"
+        if pending_only and _cell_completed_or_baseline(
+            point=point,
+            advisory_dir=advisory_dir,
+            baseline=baseline,
+        ):
+            continue
         observation_dir.mkdir(parents=True, exist_ok=True)
         _write_cell_manifest(point_dir=point_dir, point=point, status="running")
-        _run_command(
-            [
-                sys.executable,
-                str(PLANNER_STAGE_SCRIPT),
-                "--output-dir",
-                str(observation_dir),
-                "--timestamp",
-                timestamp,
-                "--model",
-                point.model,
-                "--max-model-len",
-                str(point.max_model_len),
-                "--gpu-memory-utilization",
-                str(point.gpu_memory_utilization),
-                "--max-num-seqs",
-                str(point.max_num_seqs),
-                "--timeout-seconds",
-                str(config.timeout_seconds),
-            ]
-            + (["--trust-remote-code"] if config.trust_remote_code else [])
-        )
+        observation_command = [
+            sys.executable,
+            str(PLANNER_STAGE_SCRIPT),
+            "--output-dir",
+            str(observation_dir),
+            "--timestamp",
+            timestamp,
+            "--model",
+            point.model,
+            "--max-model-len",
+            str(point.max_model_len),
+            "--gpu-memory-utilization",
+            str(point.gpu_memory_utilization),
+            "--max-num-seqs",
+            str(point.max_num_seqs),
+            "--timeout-seconds",
+            str(config.timeout_seconds),
+        ] + (["--trust-remote-code"] if config.trust_remote_code else [])
+        observation_result = _run_command(observation_command)
+        if observation_result.returncode != 0:
+            _write_cell_blocker(
+                point_dir=point_dir,
+                point=point,
+                stage="planner_stage_observation",
+                reason="planner-stage observation command failed",
+                command=observation_command,
+                returncode=observation_result.returncode,
+            )
+            _write_cell_manifest(point_dir=point_dir, point=point, status="blocked")
+            continue
         translated_path = observation_dir / "translated_planner_stage_config.json"
         if translated_path.exists():
-            _run_command(
-                [
-                    sys.executable,
-                    str(ADVISORY_DIFF_SCRIPT),
-                    "--translated-planner-stage-config",
-                    str(translated_path),
-                    "--raw-safe-metadata",
-                    str(observation_dir / "raw_safe_metadata.json"),
-                    "--output-dir",
-                    str(advisory_dir),
-                    "--timestamp",
-                    timestamp,
-                ]
-            )
+            advisory_command = [
+                sys.executable,
+                str(ADVISORY_DIFF_SCRIPT),
+                "--translated-planner-stage-config",
+                str(translated_path),
+                "--raw-safe-metadata",
+                str(observation_dir / "raw_safe_metadata.json"),
+                "--output-dir",
+                str(advisory_dir),
+                "--timestamp",
+                timestamp,
+            ]
+            advisory_result = _run_command(advisory_command)
+            if advisory_result.returncode != 0:
+                _write_cell_blocker(
+                    point_dir=point_dir,
+                    point=point,
+                    stage="planner_stage_advisory_diff",
+                    reason="planner-stage advisory diff command failed",
+                    command=advisory_command,
+                    returncode=advisory_result.returncode,
+                )
+                _write_cell_manifest(point_dir=point_dir, point=point, status="blocked")
+                continue
             _write_cell_manifest(point_dir=point_dir, point=point, status="completed")
         else:
             _write_cell_manifest(point_dir=point_dir, point=point, status="blocked")
@@ -279,7 +322,7 @@ def write_matrix_artifacts(
 
 def _write_csv(path: Path, rows: list[MatrixRow]) -> None:
     with path.open("w", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=MATRIX_COLUMNS)
+        writer = csv.DictWriter(handle, fieldnames=MATRIX_COLUMNS, lineterminator="\n")
         writer.writeheader()
         for row in rows:
             writer.writerow(row.to_csv_dict())
@@ -334,6 +377,33 @@ def _write_cell_manifest(*, point_dir: Path, point: MatrixPoint, status: str) ->
     (point_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
 
+def _write_cell_blocker(
+    *,
+    point_dir: Path,
+    point: MatrixPoint,
+    stage: str,
+    reason: str,
+    command: list[str],
+    returncode: int,
+) -> None:
+    blocker: JsonObject = {
+        "artifact": "vllm-path-c-advisory-matrix-cell-blocker",
+        "model": point.model,
+        "max_model_len": point.max_model_len,
+        "gpu_memory_utilization": point.gpu_memory_utilization,
+        "max_num_seqs": point.max_num_seqs,
+        "stage": stage,
+        "reason": reason,
+        "returncode": returncode,
+        "command": _format_command(command),
+        "advisory_only": True,
+        "non_mutating": True,
+        "returned_to_vllm": False,
+        "vllm_behavior_changed": False,
+    }
+    (point_dir / "blocker.json").write_text(json.dumps(blocker, indent=2, sort_keys=True) + "\n")
+
+
 def _row_from_diff_report(point: MatrixPoint, diff: JsonObject, status: str) -> MatrixRow:
     return MatrixRow(
         point=point,
@@ -382,6 +452,15 @@ def _baseline_matches(point: MatrixPoint, baseline: JsonObject | None) -> bool:
     )
 
 
+def _cell_completed_or_baseline(
+    *,
+    point: MatrixPoint,
+    advisory_dir: Path,
+    baseline: JsonObject | None,
+) -> bool:
+    return (advisory_dir / "diff_report.json").exists() or _baseline_matches(point, baseline)
+
+
 def _blocker_reason(blocker: JsonObject) -> str:
     reason = blocker.get("reason", blocker.get("blocker", "observation blocked"))
     return str(reason)
@@ -393,16 +472,13 @@ def _cell_dir(results_dir: Path, point: MatrixPoint) -> Path:
     return results_dir / f"{model}__len{point.max_model_len}__gpu{gpu}__seqs{point.max_num_seqs}"
 
 
-def _run_command(command: list[str]) -> None:
-    completed = subprocess.run(
+def _run_command(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         command,
         check=False,
         env={**os.environ, "VLLM_ENABLE_V1_MULTIPROCESSING": "0"},
+        text=True,
     )
-    if completed.returncode != 0:
-        raise RuntimeError(
-            f"command failed with exit code {completed.returncode}: {_format_command(command)}"
-        )
 
 
 def _format_command(command: list[str]) -> str:

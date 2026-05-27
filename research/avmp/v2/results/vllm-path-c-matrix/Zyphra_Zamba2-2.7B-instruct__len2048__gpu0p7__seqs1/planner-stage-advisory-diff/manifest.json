@@ -1,0 +1,24 @@
+{
+  "advisory_only": true,
+  "allocator_replacement": false,
+  "artifact": "vllm-planner-stage-advisory-diff",
+  "gpu_required": false,
+  "non_mutating": true,
+  "nvml_required": false,
+  "outputs": {
+    "diff_report": "diff_report.json",
+    "group_level_diff": "group_level_diff.json",
+    "manifest": "manifest.json",
+    "readme": "README.md",
+    "summary": "summary.md"
+  },
+  "returned_to_vllm": false,
+  "scheduler_mutation": false,
+  "source_raw_safe_metadata": "research/avmp/v2/results/vllm-path-c-matrix/Zyphra_Zamba2-2.7B-instruct__len2048__gpu0p7__seqs1/planner-stage-observation/raw_safe_metadata.json",
+  "source_translated_planner_stage_config": "research/avmp/v2/results/vllm-path-c-matrix/Zyphra_Zamba2-2.7B-instruct__len2048__gpu0p7__seqs1/planner-stage-observation/translated_planner_stage_config.json",
+  "status": "planner_stage_advisory_diff_available",
+  "timestamp": "2026-05-27T00:00:00+00:00",
+  "vllm_behavior_changed": false,
+  "vllm_required": false,
+  "worker_layout_mutation": false
+}

@@ -1,0 +1,460 @@
+{
+  "attention_group_count": 1,
+  "block_size": null,
+  "dtype": null,
+  "group_count": 7,
+  "groups": [
+    {
+      "cache_spec": {
+        "block_size": 48,
+        "cache_kind": "attention",
+        "dtype": "torch.bfloat16",
+        "layer_name": null,
+        "metadata": {
+          "head_size": 160,
+          "kv_quant_mode": 0,
+          "num_kv_heads": 32,
+          "storage_block_size": 48
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "FullAttentionSpec",
+        "useful_bytes": 983040
+      },
+      "group_index": 0,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "model.attn.0",
+        "model.attn.1",
+        "model.attn.2",
+        "model.attn.3",
+        "model.attn.4",
+        "model.attn.5",
+        "model.attn.6",
+        "model.attn.7",
+        "model.attn.8"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 1,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "9.mixer",
+        "15.mixer",
+        "21.mixer",
+        "27.mixer",
+        "33.mixer",
+        "39.mixer",
+        "45.mixer",
+        "51.mixer",
+        "57.mixer"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 2,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "10.mixer",
+        "16.mixer",
+        "22.mixer",
+        "28.mixer",
+        "34.mixer",
+        "40.mixer",
+        "46.mixer",
+        "52.mixer",
+        "58.mixer"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 3,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "11.mixer",
+        "17.mixer",
+        "23.mixer",
+        "29.mixer",
+        "35.mixer",
+        "41.mixer",
+        "47.mixer",
+        "53.mixer",
+        "59.mixer"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 4,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "12.mixer",
+        "18.mixer",
+        "24.mixer",
+        "30.mixer",
+        "36.mixer",
+        "42.mixer",
+        "48.mixer",
+        "54.mixer",
+        "60.mixer"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 5,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "13.mixer",
+        "19.mixer",
+        "25.mixer",
+        "31.mixer",
+        "37.mixer",
+        "43.mixer",
+        "49.mixer",
+        "55.mixer",
+        "61.mixer"
+      ],
+      "metadata": {}
+    },
+    {
+      "cache_spec": {
+        "block_size": 2048,
+        "cache_kind": "mamba",
+        "dtype": null,
+        "layer_name": null,
+        "metadata": {
+          "dtypes": [
+            "torch.bfloat16",
+            "torch.bfloat16"
+          ],
+          "mamba_cache_mode": "none",
+          "mamba_type": "MambaAttentionBackendEnum.MAMBA2",
+          "num_speculative_blocks": 0,
+          "page_size_padded": 983040,
+          "shapes": [
+            [
+              3,
+              5248
+            ],
+            [
+              80,
+              64,
+              64
+            ]
+          ],
+          "storage_block_size": 2048
+        },
+        "page_size_bytes": 983040,
+        "spec_type": "MambaSpec",
+        "useful_bytes": 686848
+      },
+      "group_index": 6,
+      "group_name": null,
+      "is_eagle_group": false,
+      "layer_count": 9,
+      "layer_names": [
+        "14.mixer",
+        "20.mixer",
+        "26.mixer",
+        "32.mixer",
+        "38.mixer",
+        "44.mixer",
+        "50.mixer",
+        "56.mixer",
+        "62.mixer"
+      ],
+      "metadata": {}
+    }
+  ],
+  "layer_count": 63,
+  "mamba_group_count": 6,
+  "metadata": {},
+  "num_blocks": 214,
+  "tensors": [
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.0",
+        "9.mixer",
+        "10.mixer",
+        "11.mixer",
+        "12.mixer",
+        "13.mixer",
+        "14.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.1",
+        "15.mixer",
+        "16.mixer",
+        "17.mixer",
+        "18.mixer",
+        "19.mixer",
+        "20.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.2",
+        "21.mixer",
+        "22.mixer",
+        "23.mixer",
+        "24.mixer",
+        "25.mixer",
+        "26.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.3",
+        "27.mixer",
+        "28.mixer",
+        "29.mixer",
+        "30.mixer",
+        "31.mixer",
+        "32.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.4",
+        "33.mixer",
+        "34.mixer",
+        "35.mixer",
+        "36.mixer",
+        "37.mixer",
+        "38.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.5",
+        "39.mixer",
+        "40.mixer",
+        "41.mixer",
+        "42.mixer",
+        "43.mixer",
+        "44.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.6",
+        "45.mixer",
+        "46.mixer",
+        "47.mixer",
+        "48.mixer",
+        "49.mixer",
+        "50.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.7",
+        "51.mixer",
+        "52.mixer",
+        "53.mixer",
+        "54.mixer",
+        "55.mixer",
+        "56.mixer"
+      ],
+      "size_bytes": 210370560
+    },
+    {
+      "metadata": {},
+      "shared_by": [
+        "model.attn.8",
+        "57.mixer",
+        "58.mixer",
+        "59.mixer",
+        "60.mixer",
+        "61.mixer",
+        "62.mixer"
+      ],
+      "size_bytes": 210370560
+    }
+  ],
+  "total_page_size_bytes": 6881280,
+  "total_useful_bytes": 5104128
+}
