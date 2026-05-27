@@ -1,0 +1,40 @@
+{
+  "artifact": "vllm-live-request-contract-observation",
+  "child_command": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python -c 'import json\nfrom cachepawl.integrations.vllm import observe_vllm_live_request_contract\nfrom vllm import LLM, SamplingParams\nllm = LLM(\n    model='\"'\"'Zyphra/Zamba2-2.7B-instruct'\"'\"',\n    max_model_len=4096,\n    gpu_memory_utilization=0.7,\n    max_num_seqs=1,\n    trust_remote_code=False,\n)\nsampling_params = SamplingParams(\n    max_tokens=8,\n    temperature=0.0,\n    ignore_eos=True,\n)\npayload = observe_vllm_live_request_contract(\n    llm,\n    prompt='\"'\"'Count from one to four:'\"'\"',\n    sampling_params=sampling_params,\n    max_new_tokens=8,\n).to_dict()\nprint('\"'\"'CACHEPAWL_LIVE_REQUEST_CONTRACT_OBSERVATION='\"'\"' + json.dumps(payload, sort_keys=True))\ndel llm'",
+  "classification": "live_request_contract_observation_complete",
+  "field_blocker_count": 0,
+  "gpu_memory_utilization": 0.7,
+  "max_model_len": 4096,
+  "max_new_tokens": 8,
+  "max_num_seqs": 1,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "object_access": {
+    "allocator_replacement": false,
+    "controlled_substitution": false,
+    "live_request_scheduled": true,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "runtime_contract_objects_reached": true,
+    "scheduler_mutation": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "outputs": {
+    "field_level_blockers": "field_level_blockers.json",
+    "live_request_contract_report": "live_request_contract_report.json",
+    "manifest": "manifest.json",
+    "raw_safe_metadata": "raw_safe_metadata.json",
+    "readme": "README.md",
+    "summary": "summary.md"
+  },
+  "pinned_venv_path": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "prompt": "Count from one to four:",
+  "python_executable": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python",
+  "status": "live_request_contract_observation_available",
+  "timeout_seconds": 1200,
+  "timestamp": "2026-05-27T17:09:35+00:00",
+  "trust_remote_code": false,
+  "vllm_version": "0.21.0"
+}

@@ -22,6 +22,13 @@ from cachepawl.integrations.vllm.dry_run import (
     VllmPlannerDryRunResult,
     dry_run_vllm_planner_probe,
 )
+from cachepawl.integrations.vllm.live_request_contract import (
+    VllmLiveRequestContractField,
+    VllmLiveRequestContractFieldStatus,
+    VllmLiveRequestContractObservation,
+    VllmLiveRequestContractStatus,
+    observe_vllm_live_request_contract,
+)
 from cachepawl.integrations.vllm.mutation_readiness import (
     VllmMutationReadinessCheck,
     VllmMutationReadinessReport,
@@ -80,6 +87,10 @@ __all__ = [
     "VllmDiagnosticError",
     "VllmDryRunGroupProposal",
     "VllmIntegrationPlan",
+    "VllmLiveRequestContractField",
+    "VllmLiveRequestContractFieldStatus",
+    "VllmLiveRequestContractObservation",
+    "VllmLiveRequestContractStatus",
     "VllmMutationReadinessCheck",
     "VllmMutationReadinessReport",
     "VllmPlannerDryRunResult",
@@ -103,6 +114,7 @@ __all__ = [
     "dry_run_vllm_planner_probe",
     "get_vllm_version",
     "is_vllm_available",
+    "observe_vllm_live_request_contract",
     "observe_vllm_runtime_cache_plan",
     "observe_vllm_runtime_contracts",
     "plan_vllm_integration",

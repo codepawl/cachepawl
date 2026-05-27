@@ -1,0 +1,344 @@
+{
+  "classification": "live_request_contract_observation_complete",
+  "field_level_blockers": [],
+  "fields": [
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "completion_request_ids": [
+          "0"
+        ],
+        "request_id": "0-aaa14650"
+      },
+      "name": "live_request_id",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "active_sample_block_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "active_snapshot_phases": [
+          "after_first_step"
+        ],
+        "active_total_block_id_counts": [
+          7
+        ],
+        "post_completion_total_block_id_count": 0,
+        "request_id": "0-aaa14650"
+      },
+      "name": "request_to_block_assignment",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "phases_with_request": [
+          "after_enqueue_before_step",
+          "after_first_step",
+          "after_completion"
+        ],
+        "request_id": "0-aaa14650"
+      },
+      "name": "scheduler_request_metadata",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "after_completion": {
+          "block_pool_free_blocks": 328,
+          "block_pool_num_gpu_blocks": 329
+        },
+        "before_enqueue": {
+          "block_pool_free_blocks": 328,
+          "block_pool_num_gpu_blocks": 329
+        },
+        "usage_changed": false
+      },
+      "name": "before_after_block_pool_usage",
+      "status": "observed"
+    }
+  ],
+  "max_new_tokens": 8,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "non_mutating": true,
+  "object_access": {
+    "allocator_replacement": false,
+    "controlled_substitution": false,
+    "live_request_scheduled": true,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "runtime_contract_objects_reached": true,
+    "scheduler_mutation": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "output_metadata": {
+    "completion_error": null,
+    "completion_finished_count": 1,
+    "completion_generated_token_counts": [
+      8
+    ],
+    "completion_output_count": 1,
+    "completion_request_ids": [
+      "0"
+    ],
+    "first_step_error": null,
+    "first_step_finished_count": 0,
+    "first_step_generated_token_counts": [],
+    "first_step_output_count": 0,
+    "first_step_request_ids": []
+  },
+  "prompt": "Count from one to four:",
+  "request_id": "0-aaa14650",
+  "returned_to_vllm": false,
+  "runtime_path": "LLM.llm_engine.engine_core.engine_core",
+  "snapshots": [
+    {
+      "block_usage": {
+        "block_pool_free_blocks": 328,
+        "block_pool_num_gpu_blocks": 329
+      },
+      "has_unfinished_requests": false,
+      "phase": "before_enqueue",
+      "request_block_ids": {
+        "block_group_count": 0,
+        "error": null,
+        "get_block_ids_callable": true,
+        "request_id": null,
+        "sample_block_ids": [],
+        "status": "missing_request_id",
+        "total_block_id_count": 0
+      },
+      "request_id": null,
+      "scheduler_request_metadata": {
+        "finished_req_ids_contains_request": false,
+        "finished_req_ids_count": 0,
+        "finished_req_ids_reachable": true,
+        "finished_req_ids_sample_request_ids": [],
+        "prev_step_scheduled_req_ids_contains_request": false,
+        "prev_step_scheduled_req_ids_count": 0,
+        "prev_step_scheduled_req_ids_reachable": true,
+        "prev_step_scheduled_req_ids_sample_request_ids": [],
+        "request_id": null,
+        "requests_contains_request": false,
+        "requests_count": 0,
+        "requests_reachable": true,
+        "requests_sample_request_ids": [],
+        "running_contains_request": false,
+        "running_count": 0,
+        "running_reachable": true,
+        "running_sample_request_ids": [],
+        "scheduler_type": "AsyncScheduler",
+        "skipped_waiting_contains_request": false,
+        "skipped_waiting_count": 0,
+        "skipped_waiting_reachable": true,
+        "skipped_waiting_sample_request_ids": [],
+        "waiting_contains_request": false,
+        "waiting_count": 0,
+        "waiting_reachable": true,
+        "waiting_sample_request_ids": []
+      },
+      "unfinished_request_count": 0
+    },
+    {
+      "block_usage": {
+        "block_pool_free_blocks": 328,
+        "block_pool_num_gpu_blocks": 329
+      },
+      "has_unfinished_requests": true,
+      "phase": "after_enqueue_before_step",
+      "request_block_ids": {
+        "block_group_count": 7,
+        "block_id_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "error": null,
+        "get_block_ids_callable": true,
+        "request_id": "0-aaa14650",
+        "sample_block_ids": [],
+        "status": "observed",
+        "total_block_id_count": 0
+      },
+      "request_id": "0-aaa14650",
+      "scheduler_request_metadata": {
+        "finished_req_ids_contains_request": false,
+        "finished_req_ids_count": 0,
+        "finished_req_ids_reachable": true,
+        "finished_req_ids_sample_request_ids": [],
+        "prev_step_scheduled_req_ids_contains_request": false,
+        "prev_step_scheduled_req_ids_count": 0,
+        "prev_step_scheduled_req_ids_reachable": true,
+        "prev_step_scheduled_req_ids_sample_request_ids": [],
+        "request_id": "0-aaa14650",
+        "requests_contains_request": true,
+        "requests_count": 1,
+        "requests_reachable": true,
+        "requests_sample_request_ids": [
+          "0-aaa14650"
+        ],
+        "running_contains_request": false,
+        "running_count": 0,
+        "running_reachable": true,
+        "running_sample_request_ids": [],
+        "scheduler_type": "AsyncScheduler",
+        "skipped_waiting_contains_request": false,
+        "skipped_waiting_count": 0,
+        "skipped_waiting_reachable": true,
+        "skipped_waiting_sample_request_ids": [],
+        "waiting_contains_request": true,
+        "waiting_count": 1,
+        "waiting_reachable": true,
+        "waiting_sample_request_ids": [
+          "0-aaa14650"
+        ]
+      },
+      "unfinished_request_count": 1
+    },
+    {
+      "block_usage": {
+        "block_pool_free_blocks": 321,
+        "block_pool_num_gpu_blocks": 329
+      },
+      "has_unfinished_requests": true,
+      "phase": "after_first_step",
+      "request_block_ids": {
+        "block_group_count": 7,
+        "block_id_counts": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "error": null,
+        "get_block_ids_callable": true,
+        "request_id": "0-aaa14650",
+        "sample_block_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "status": "observed",
+        "total_block_id_count": 7
+      },
+      "request_id": "0-aaa14650",
+      "scheduler_request_metadata": {
+        "finished_req_ids_contains_request": false,
+        "finished_req_ids_count": 0,
+        "finished_req_ids_reachable": true,
+        "finished_req_ids_sample_request_ids": [],
+        "prev_step_scheduled_req_ids_contains_request": true,
+        "prev_step_scheduled_req_ids_count": 1,
+        "prev_step_scheduled_req_ids_reachable": true,
+        "prev_step_scheduled_req_ids_sample_request_ids": [
+          "0-aaa14650"
+        ],
+        "request_id": "0-aaa14650",
+        "requests_contains_request": true,
+        "requests_count": 1,
+        "requests_reachable": true,
+        "requests_sample_request_ids": [
+          "0-aaa14650"
+        ],
+        "running_contains_request": true,
+        "running_count": 1,
+        "running_reachable": true,
+        "running_sample_request_ids": [
+          "0-aaa14650"
+        ],
+        "scheduler_type": "AsyncScheduler",
+        "skipped_waiting_contains_request": false,
+        "skipped_waiting_count": 0,
+        "skipped_waiting_reachable": true,
+        "skipped_waiting_sample_request_ids": [],
+        "waiting_contains_request": false,
+        "waiting_count": 0,
+        "waiting_reachable": true,
+        "waiting_sample_request_ids": []
+      },
+      "unfinished_request_count": 1
+    },
+    {
+      "block_usage": {
+        "block_pool_free_blocks": 328,
+        "block_pool_num_gpu_blocks": 329
+      },
+      "has_unfinished_requests": false,
+      "phase": "after_completion",
+      "request_block_ids": {
+        "block_group_count": 7,
+        "block_id_counts": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "error": null,
+        "get_block_ids_callable": true,
+        "request_id": "0-aaa14650",
+        "sample_block_ids": [],
+        "status": "observed",
+        "total_block_id_count": 0
+      },
+      "request_id": "0-aaa14650",
+      "scheduler_request_metadata": {
+        "finished_req_ids_contains_request": true,
+        "finished_req_ids_count": 1,
+        "finished_req_ids_reachable": true,
+        "finished_req_ids_sample_request_ids": [
+          "0-aaa14650"
+        ],
+        "prev_step_scheduled_req_ids_contains_request": false,
+        "prev_step_scheduled_req_ids_count": 0,
+        "prev_step_scheduled_req_ids_reachable": true,
+        "prev_step_scheduled_req_ids_sample_request_ids": [],
+        "request_id": "0-aaa14650",
+        "requests_contains_request": false,
+        "requests_count": 0,
+        "requests_reachable": true,
+        "requests_sample_request_ids": [],
+        "running_contains_request": false,
+        "running_count": 0,
+        "running_reachable": true,
+        "running_sample_request_ids": [],
+        "scheduler_type": "AsyncScheduler",
+        "skipped_waiting_contains_request": false,
+        "skipped_waiting_count": 0,
+        "skipped_waiting_reachable": true,
+        "skipped_waiting_sample_request_ids": [],
+        "waiting_contains_request": false,
+        "waiting_count": 0,
+        "waiting_reachable": true,
+        "waiting_sample_request_ids": []
+      },
+      "unfinished_request_count": 0
+    }
+  ],
+  "status": "live_request_contract_observation_available",
+  "vllm_behavior_changed": false
+}
