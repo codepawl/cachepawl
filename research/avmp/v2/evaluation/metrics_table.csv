@@ -1,0 +1,11 @@
+metric,value
+vanilla_reserved_bytes,2910781440
+vanilla_useful_bytes,1679258112
+cachepawl_proposed_reserved_bytes,1679258112
+estimated_savings_bytes,1231523328
+overestimation_ratio,1.7333734577189286
+wasted_fraction,0.4230902777777778
+cache_group_count,7
+cache_tensor_count,9
+layer_count,63
+num_blocks,329

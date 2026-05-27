@@ -48,6 +48,16 @@ uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 
 ## Quickstart
 
+Fresh install and smoke check:
+
+```bash
+uv sync --extra-index-url https://download.pytorch.org/whl/cpu
+uv run cachepawl --help
+uv run cachepawl diagnose-vllm --help
+```
+
+Basic package import:
+
 ```python
 import cachepawl
 
@@ -64,10 +74,12 @@ the design milestone that unblocks them.
 ## vLLM Diagnostic CLI
 
 Use `cachepawl diagnose-vllm` to turn an existing translated vLLM runtime cache
-observation into an advisory report:
+observation into an advisory report. This command consumes artifacts; it does
+not import vLLM, load a model, require CUDA/NVML, modify vLLM, monkeypatch, or
+replace allocators.
 
 ```bash
-cachepawl diagnose-vllm \
+uv run cachepawl diagnose-vllm \
   --translated-cache-config research/avmp/v2/results/vllm-runtime-cache-plan-observation/translated_runtime_cache_config.json \
   --raw-safe-metadata research/avmp/v2/results/vllm-runtime-cache-plan-observation/raw_safe_metadata.json \
   --output-dir research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli
@@ -82,8 +94,20 @@ does not rerun vLLM, load a model, monkeypatch, replace allocators, or change
 vLLM behavior. Output is advisory-only; runtime memory savings require a future
 mutation hook.
 
-The current committed diagnostic example is classified as
-`planner_advisory_available` and reports:
+Expected output for the current committed diagnostic example:
+
+```text
+classification: planner_advisory_available
+advisory_only: true
+observed_reserved_bytes: 2910781440
+observed_useful_bytes: 1679258112
+cachepawl_recommended_bytes: 1679258112
+advisory_savings_bytes: 1231523328
+overestimation_ratio: 1.7333734577189286
+wasted_fraction: 0.4230902777777778
+```
+
+The same values appear in `report.json`:
 
 - `observed_reserved_bytes`: 2,910,781,440
 - `observed_useful_bytes`: 1,679,258,112
