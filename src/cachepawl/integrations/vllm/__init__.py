@@ -47,6 +47,14 @@ from cachepawl.integrations.vllm.planning import (
     plan_vllm_integration,
     translate_hybrid_model_spec,
 )
+from cachepawl.integrations.vllm.runtime_contract import (
+    RUNTIME_CONTRACT_BASE_PATH,
+    VllmRuntimeContractField,
+    VllmRuntimeContractFieldStatus,
+    VllmRuntimeContractObservation,
+    VllmRuntimeContractStatus,
+    observe_vllm_runtime_contracts,
+)
 from cachepawl.integrations.vllm.translator import (
     VllmTranslatedCacheConfig,
     VllmTranslatedCacheGroup,
@@ -61,6 +69,7 @@ from cachepawl.integrations.vllm.translator import (
 
 __all__ = [
     "MISSING_FIELDS_FOR_MUTATION",
+    "RUNTIME_CONTRACT_BASE_PATH",
     "RUNTIME_KV_CACHE_CONFIG_PATH",
     "VllmArtifactDiagnostic",
     "VllmCacheAdvisoryClassification",
@@ -77,6 +86,10 @@ __all__ = [
     "VllmPlannerStageAdvisoryDiff",
     "VllmPlannerStageGroupDiff",
     "VllmRuntimeCacheObservation",
+    "VllmRuntimeContractField",
+    "VllmRuntimeContractFieldStatus",
+    "VllmRuntimeContractObservation",
+    "VllmRuntimeContractStatus",
     "VllmRuntimeObservationStatus",
     "VllmTranslatedCacheConfig",
     "VllmTranslatedCacheGroup",
@@ -91,6 +104,7 @@ __all__ = [
     "get_vllm_version",
     "is_vllm_available",
     "observe_vllm_runtime_cache_plan",
+    "observe_vllm_runtime_contracts",
     "plan_vllm_integration",
     "translate_hybrid_model_spec",
     "translate_kv_cache_config",

@@ -1,0 +1,800 @@
+{
+  "block_usage": {
+    "block_pool_free_blocks": 328,
+    "block_pool_num_gpu_blocks": 329
+  },
+  "classification": "runtime_contract_observation_with_field_blockers",
+  "field_level_blockers": [
+    {
+      "blocker_reason": "get_block_ids exists but needs a live request id; no request was scheduled in this read-only capture",
+      "evidence": {
+        "get_block_ids_callable": true
+      },
+      "name": "request_to_block_assignment",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": "Mamba state-index and attention block-table tensors were not safely reachable",
+      "evidence": {
+        "block_table_attr_count": 0,
+        "metadata_builder_count": 7,
+        "metadata_builder_paths": [
+          "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.attn_groups"
+        ],
+        "state_index_tensor_count": 0
+      },
+      "name": "mamba_state_index_attention_view_contract",
+      "status": "blocked"
+    }
+  ],
+  "fields": [
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "block_pool_type": "BlockPool",
+        "coordinator_type": "KVCacheCoordinatorNoPrefixCache",
+        "kv_cache_manager_methods_observed": [
+          "allocate_slots",
+          "free",
+          "get_block_ids",
+          "take_events",
+          "take_new_block_ids"
+        ],
+        "kv_cache_manager_type": "KVCacheManager",
+        "manager_config_matches_scheduler": true,
+        "scheduler_has_kv_cache_config": true,
+        "scheduler_has_kv_cache_manager": true,
+        "scheduler_type": "AsyncScheduler"
+      },
+      "name": "scheduler_kv_cache_manager_structure",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "block_pool_free_blocks": 328,
+        "block_pool_num_gpu_blocks": 329
+      },
+      "name": "block_usage_metadata",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": null,
+      "evidence": {
+        "tensor_summary_count": 32
+      },
+      "name": "worker_cache_tensor_layout",
+      "status": "observed"
+    },
+    {
+      "blocker_reason": "get_block_ids exists but needs a live request id; no request was scheduled in this read-only capture",
+      "evidence": {
+        "get_block_ids_callable": true
+      },
+      "name": "request_to_block_assignment",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": "Mamba state-index and attention block-table tensors were not safely reachable",
+      "evidence": {
+        "block_table_attr_count": 0,
+        "metadata_builder_count": 7,
+        "metadata_builder_paths": [
+          "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.attn_groups"
+        ],
+        "state_index_tensor_count": 0
+      },
+      "name": "mamba_state_index_attention_view_contract",
+      "status": "blocked"
+    }
+  ],
+  "mamba_attention": {
+    "block_table_attr_count": 0,
+    "metadata_builder_count": 7,
+    "metadata_builder_paths": [
+      "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.attn_groups"
+    ],
+    "state_index_tensor_count": 0
+  },
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "non_mutating": true,
+  "object_access": {
+    "allocator_replacement": false,
+    "controlled_substitution": false,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "runtime_contract_objects_reached": true,
+    "scheduler_mutation": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "returned_to_vllm": false,
+  "runtime_path": "LLM.llm_engine.engine_core.engine_core",
+  "scheduler_manager": {
+    "block_pool_type": "BlockPool",
+    "coordinator_type": "KVCacheCoordinatorNoPrefixCache",
+    "kv_cache_manager_methods_observed": [
+      "allocate_slots",
+      "free",
+      "get_block_ids",
+      "take_events",
+      "take_new_block_ids"
+    ],
+    "kv_cache_manager_type": "KVCacheManager",
+    "manager_config_matches_scheduler": true,
+    "scheduler_has_kv_cache_config": true,
+    "scheduler_has_kv_cache_manager": true,
+    "scheduler_type": "AsyncScheduler"
+  },
+  "status": "runtime_contract_observation_available",
+  "vllm_behavior_changed": false,
+  "worker_tensors": [
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[2]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[3]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[4]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[5]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[6]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[7]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[8]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        2,
+        329,
+        48,
+        32,
+        160
+      ],
+      "stride": [
+        245760,
+        491520,
+        5120,
+        160,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[9][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[9][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[10][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[10][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[11][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[11][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[12][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[12][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[13][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[13][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[14][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[14][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[15][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[15][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[16][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[16][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[17][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[17][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[18][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[18][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[19][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[19][1]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        80,
+        64,
+        64
+      ],
+      "stride": [
+        491520,
+        4096,
+        64,
+        1
+      ],
+      "tensor_type": "Tensor"
+    },
+    {
+      "device": "cuda:0",
+      "dtype": "torch.bfloat16",
+      "layout": "torch.strided",
+      "path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.kv_caches[20][0]",
+      "root_path": "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner",
+      "root_type": "GPUModelRunner",
+      "shape": [
+        329,
+        3,
+        5248
+      ],
+      "stride": [
+        491520,
+        5248,
+        1
+      ],
+      "tensor_type": "Tensor"
+    }
+  ]
+}

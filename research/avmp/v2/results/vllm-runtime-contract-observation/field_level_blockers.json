@@ -1,0 +1,25 @@
+{
+  "field_level_blockers": [
+    {
+      "blocker_reason": "get_block_ids exists but needs a live request id; no request was scheduled in this read-only capture",
+      "evidence": {
+        "get_block_ids_callable": true
+      },
+      "name": "request_to_block_assignment",
+      "status": "blocked"
+    },
+    {
+      "blocker_reason": "Mamba state-index and attention block-table tensors were not safely reachable",
+      "evidence": {
+        "block_table_attr_count": 0,
+        "metadata_builder_count": 7,
+        "metadata_builder_paths": [
+          "LLM.llm_engine.engine_core.engine_core.model_executor.driver_worker.model_runner.attn_groups"
+        ],
+        "state_index_tensor_count": 0
+      },
+      "name": "mamba_state_index_attention_view_contract",
+      "status": "blocked"
+    }
+  ]
+}

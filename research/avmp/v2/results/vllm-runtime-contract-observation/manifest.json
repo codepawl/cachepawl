@@ -1,0 +1,37 @@
+{
+  "artifact": "vllm-runtime-contract-observation",
+  "child_command": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python -c 'import json\nfrom cachepawl.integrations.vllm import observe_vllm_runtime_contracts\nfrom vllm import LLM\nllm = LLM(\n    model='\"'\"'Zyphra/Zamba2-2.7B-instruct'\"'\"',\n    max_model_len=4096,\n    gpu_memory_utilization=0.7,\n    max_num_seqs=1,\n    trust_remote_code=False,\n)\npayload = observe_vllm_runtime_contracts(llm).to_dict()\nprint('\"'\"'CACHEPAWL_RUNTIME_CONTRACT_OBSERVATION='\"'\"' + json.dumps(payload, sort_keys=True))\ndel llm'",
+  "classification": "runtime_contract_observation_with_field_blockers",
+  "field_blocker_count": 2,
+  "gpu_memory_utilization": 0.7,
+  "max_model_len": 4096,
+  "max_num_seqs": 1,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "object_access": {
+    "allocator_replacement": false,
+    "controlled_substitution": false,
+    "long_lived_serve": false,
+    "monkeypatching": false,
+    "returned_to_vllm": false,
+    "runtime_contract_objects_reached": true,
+    "scheduler_mutation": false,
+    "vllm_source_modified": false,
+    "worker_layout_mutation": false
+  },
+  "outputs": {
+    "field_level_blockers": "field_level_blockers.json",
+    "manifest": "manifest.json",
+    "raw_safe_metadata": "raw_safe_metadata.json",
+    "readme": "README.md",
+    "runtime_contract_report": "runtime_contract_report.json",
+    "summary": "summary.md"
+  },
+  "pinned_venv_path": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "python_executable": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python",
+  "status": "runtime_contract_observation_available",
+  "timeout_seconds": 1200,
+  "timestamp": "2026-05-27T00:00:00+00:00",
+  "trust_remote_code": false,
+  "vllm_version": "0.21.0"
+}
