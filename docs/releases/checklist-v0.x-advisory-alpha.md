@@ -10,11 +10,11 @@ savings.
 
 ## Version
 
-- Package version: `0.2.0a1`.
+- Package version: `0.2.0a2`.
 
 Rationale: the diagnostic CLI is a new user-visible advisory surface, but the
 project is still pre-alpha and runtime mutation remains out of scope. The
-release owner confirmed `0.2.0a1` as the advisory CLI alpha target.
+release owner confirmed `0.2.0a2` as the advisory CLI alpha target.
 
 ## Release Scope
 
@@ -48,6 +48,9 @@ uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 uv run cachepawl --help
 uv run python -c "import cachepawl; print(cachepawl.__version__)"
 ```
+
+Use `uv sync`, not `uv sync --extra dev`. Cachepawl currently defines dev
+tooling as a dependency group, not as a `[project.optional-dependencies]` extra.
 
 ### Diagnostic CLI Help
 
@@ -126,10 +129,10 @@ uv run pytest -q
 uv build
 ```
 
-Expected artifacts for `0.2.0a1`:
+Expected artifacts for `0.2.0a2`:
 
-- `dist/cachepawl-0.2.0a1.tar.gz`
-- `dist/cachepawl-0.2.0a1-py3-none-any.whl`
+- `dist/cachepawl-0.2.0a2.tar.gz`
+- `dist/cachepawl-0.2.0a2-py3-none-any.whl`
 
 ### Diff Hygiene
 
@@ -168,14 +171,17 @@ After local release checks pass and the version bump commit is on `main`, create
 and push the release tag:
 
 ```bash
-git tag -a v0.2.0a1 -m "Cachepawl advisory CLI alpha v0.2.0a1"
+git tag -a v0.2.0a2 -m "Cachepawl advisory CLI alpha v0.2.0a2"
 git push origin main
-git push origin v0.2.0a1
+git push origin v0.2.0a2
 ```
+
+Tag `v0.2.0a1` already exists. Prefer `v0.2.0a2` after this workflow fix unless
+the release owner explicitly chooses to delete and recreate `v0.2.0a1`.
 
 The `.github/workflows/publish.yml` workflow runs only for tags matching `v*`.
 It verifies that the tag version matches `pyproject.toml`; for example,
-`v0.2.0a1` must match package version `0.2.0a1`. If the tag and package
+`v0.2.0a2` must match package version `0.2.0a2`. If the tag and package
 version differ, the workflow exits before building or publishing.
 
 After pushing the tag:
@@ -186,7 +192,7 @@ After pushing the tag:
 
 ```bash
 uv venv /tmp/cachepawl-pypi-smoke
-UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv pip install cachepawl==0.2.0a1
+UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv pip install cachepawl==0.2.0a2
 UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv run python -c "import cachepawl; print(cachepawl.__version__)"
 UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv run cachepawl diagnose-vllm --help
 ```
@@ -196,8 +202,8 @@ explicit release-owner decision. Prefer the tag-based GitHub Actions workflow.
 
 ## Release Decision Gates
 
-- Package version target is confirmed by the release owner: `0.2.0a1`.
-- `CHANGELOG.md` is updated for `0.2.0a1`.
+- Package version target is confirmed by the release owner: `0.2.0a2`.
+- `CHANGELOG.md` is updated for `0.2.0a2`.
 - The diagnostic artifact run is advisory-only and does not require vLLM.
 - Verification commands above pass in a fresh local environment.
 - PyPI Trusted Publishing is configured for the `pypi` GitHub environment.
