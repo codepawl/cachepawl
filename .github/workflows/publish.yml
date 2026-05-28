@@ -33,29 +33,7 @@ jobs:
         run: uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 
       - name: Verify tag matches package version
-        run: |
-          python - <<'PY'
-          import os
-          import sys
-          import tomllib
-          from pathlib import Path
-
-          tag = os.environ["GITHUB_REF_NAME"]
-          if not tag.startswith("v"):
-              print(f"release tag must start with 'v', got {tag!r}", file=sys.stderr)
-              raise SystemExit(1)
-
-          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
-          expected = tag.removeprefix("v")
-          if version != expected:
-              print(
-                  f"tag/package version mismatch: tag {tag!r}, pyproject version {version!r}",
-                  file=sys.stderr,
-              )
-              raise SystemExit(1)
-
-          print(f"tag {tag} matches package version {version}")
-          PY
+        run: uv run python scripts/check_version_consistency.py --tag "$GITHUB_REF_NAME"
 
       - name: Diagnose CLI help
         run: uv run cachepawl diagnose-vllm --help
@@ -72,6 +50,7 @@ jobs:
       - name: Mypy
         run: >
           uv run mypy
+          scripts/check_version_consistency.py
           src/cachepawl
           tests
           research/avmp/scripts

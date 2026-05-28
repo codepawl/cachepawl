@@ -10,11 +10,11 @@ savings.
 
 ## Version
 
-- Package version: `0.2.0a2`.
+- Source of truth: `pyproject.toml` `[project].version`.
+- Consistency check: `uv run python scripts/check_version_consistency.py`.
 
 Rationale: the diagnostic CLI is a new user-visible advisory surface, but the
-project is still pre-alpha and runtime mutation remains out of scope. The
-release owner confirmed `0.2.0a2` as the advisory CLI alpha target.
+project is still pre-alpha and runtime mutation remains out of scope.
 
 ## Release Scope
 
@@ -46,6 +46,7 @@ Run from the repository root.
 ```bash
 uv sync --extra-index-url https://download.pytorch.org/whl/cpu
 uv run cachepawl --help
+uv run cachepawl --version
 uv run python -c "import cachepawl; print(cachepawl.__version__)"
 ```
 
@@ -56,6 +57,13 @@ tooling as a dependency group, not as a `[project.optional-dependencies]` extra.
 
 ```bash
 uv run cachepawl diagnose-vllm --help
+```
+
+### Version Consistency
+
+```bash
+uv run python scripts/check_version_consistency.py
+uv run python scripts/check_version_consistency.py --print-version
 ```
 
 ### Existing Artifact Diagnostic Run
@@ -129,10 +137,16 @@ uv run pytest -q
 uv build
 ```
 
-Expected artifacts for `0.2.0a2`:
+Set `VERSION` from the source-of-truth file:
 
-- `dist/cachepawl-0.2.0a2.tar.gz`
-- `dist/cachepawl-0.2.0a2-py3-none-any.whl`
+```bash
+VERSION=$(uv run python scripts/check_version_consistency.py --print-version)
+```
+
+Expected artifacts:
+
+- `dist/cachepawl-${VERSION}.tar.gz`
+- `dist/cachepawl-${VERSION}-py3-none-any.whl`
 
 ### Diff Hygiene
 
@@ -171,18 +185,21 @@ After local release checks pass and the version bump commit is on `main`, create
 and push the release tag:
 
 ```bash
-git tag -a v0.2.0a2 -m "Cachepawl advisory CLI alpha v0.2.0a2"
+VERSION=$(uv run python scripts/check_version_consistency.py --print-version)
+TAG="v${VERSION}"
+uv run python scripts/check_version_consistency.py --tag "${TAG}"
+git tag -a "${TAG}" -m "Cachepawl advisory CLI alpha ${TAG}"
 git push origin main
-git push origin v0.2.0a2
+git push origin "${TAG}"
 ```
 
-Tag `v0.2.0a1` already exists. Prefer `v0.2.0a2` after this workflow fix unless
-the release owner explicitly chooses to delete and recreate `v0.2.0a1`.
+Tag `v0.2.0a1` already exists. Do not reuse it unless the release owner
+explicitly chooses to delete and recreate it. For normal releases, set the next
+version in `pyproject.toml` and derive `TAG` from the consistency script.
 
 The `.github/workflows/publish.yml` workflow runs only for tags matching `v*`.
-It verifies that the tag version matches `pyproject.toml`; for example,
-`v0.2.0a2` must match package version `0.2.0a2`. If the tag and package
-version differ, the workflow exits before building or publishing.
+It verifies that the tag version matches `pyproject.toml`; if the tag and
+package version differ, the workflow exits before building or publishing.
 
 After pushing the tag:
 
@@ -191,8 +208,9 @@ After pushing the tag:
 - Verify install from PyPI in a fresh environment:
 
 ```bash
+VERSION=$(uv run python scripts/check_version_consistency.py --print-version)
 uv venv /tmp/cachepawl-pypi-smoke
-UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv pip install cachepawl==0.2.0a2
+UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv pip install "cachepawl==${VERSION}"
 UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv run python -c "import cachepawl; print(cachepawl.__version__)"
 UV_PROJECT_ENVIRONMENT=/tmp/cachepawl-pypi-smoke uv run cachepawl diagnose-vllm --help
 ```
@@ -202,8 +220,9 @@ explicit release-owner decision. Prefer the tag-based GitHub Actions workflow.
 
 ## Release Decision Gates
 
-- Package version target is confirmed by the release owner: `0.2.0a2`.
-- `CHANGELOG.md` is updated for `0.2.0a2`.
+- Package version in `pyproject.toml` is confirmed by the release owner.
+- `CHANGELOG.md` is updated for the release.
+- `scripts/check_version_consistency.py` passes.
 - The diagnostic artifact run is advisory-only and does not require vLLM.
 - Verification commands above pass in a fresh local environment.
 - PyPI Trusted Publishing is configured for the `pypi` GitHub environment.

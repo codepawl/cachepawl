@@ -7,6 +7,21 @@ import subprocess
 import sys
 from pathlib import Path
 
+import cachepawl
+
+
+def test_cachepawl_version_flag_reports_package_version() -> None:
+    completed = subprocess.run(
+        [sys.executable, "-m", "cachepawl.cli", "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == f"cachepawl {cachepawl.__version__}\n"
+    assert completed.stderr == ""
+
 
 def test_diagnose_vllm_writes_report_summary_and_manifest(tmp_path: Path) -> None:
     translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")

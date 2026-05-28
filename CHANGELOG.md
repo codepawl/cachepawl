@@ -5,7 +5,7 @@ All notable user-facing changes for Cachepawl are tracked here.
 Cachepawl is pre-alpha. Release notes distinguish advisory tooling from future
 runtime mutation work.
 
-## 0.2.0a1 - 2026-05-28
+## Advisory CLI Alpha - 2026-05-28
 
 ### Added
 
@@ -18,7 +18,8 @@ runtime mutation work.
 
 ### Notes
 
-- Package version in `pyproject.toml`: `0.2.0a1`.
+- Package version is defined only in `pyproject.toml`.
 - Advisory CLI alpha release target confirmed.
+- Supersedes the unpublished `v0.2.0a1` tag for a clean trusted-publish run.
 - Runtime mutation remains intentionally disabled.
 - vLLM is not a package dependency for the advisory CLI path.

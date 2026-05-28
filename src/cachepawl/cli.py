@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from cachepawl import __version__
 from cachepawl.integrations.vllm.diagnose import (
     VllmDiagnosticError,
     create_vllm_artifact_diagnostic,
@@ -51,6 +52,7 @@ def main(argv: list[str] | None = None) -> int:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cachepawl", description="Cachepawl command line tools.")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
 
     diagnose = subparsers.add_parser(
