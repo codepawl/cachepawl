@@ -125,6 +125,139 @@ def test_diagnose_vllm_output_is_deterministic(tmp_path: Path) -> None:
     assert manifest_a == manifest_b
 
 
+def test_diagnose_vllm_summary_only_prints_markdown_and_writes_files(tmp_path: Path) -> None:
+    translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")
+    output_dir = tmp_path / "output"
+
+    completed = _run_cli(
+        "--translated-cache-config",
+        str(translated_path),
+        "--raw-safe-metadata",
+        str(raw_metadata_path),
+        "--output-dir",
+        str(output_dir),
+        "--summary-only",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stderr == ""
+    assert completed.stdout.startswith("# vLLM Runtime Cache Diagnostic")
+    assert "`wasted_fraction`: 0.2" in completed.stdout
+    assert (output_dir / "report.json").is_file()
+    assert (output_dir / "summary.md").is_file()
+    assert (output_dir / "manifest.json").is_file()
+
+
+def test_diagnose_vllm_summary_only_json_is_deterministic(tmp_path: Path) -> None:
+    translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")
+    output_a = tmp_path / "output-a"
+    output_b = tmp_path / "output-b"
+    args = [
+        "--translated-cache-config",
+        str(translated_path),
+        "--raw-safe-metadata",
+        str(raw_metadata_path),
+        "--summary-only",
+        "--format",
+        "json",
+        "--timestamp",
+        "2026-05-26T00:00:00+00:00",
+    ]
+
+    completed_a = _run_cli(*args, "--output-dir", str(output_a))
+    completed_b = _run_cli(*args, "--output-dir", str(output_b))
+
+    assert completed_a.returncode == 0, completed_a.stderr
+    assert completed_b.returncode == 0, completed_b.stderr
+    assert completed_a.stdout == completed_b.stdout
+    report = json.loads(completed_a.stdout)
+    assert report["classification"] == "planner_advisory_available"
+    assert report["wasted_fraction"] == 0.2
+
+
+def test_diagnose_vllm_thresholds_pass_when_metric_equals_threshold(
+    tmp_path: Path,
+) -> None:
+    translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")
+
+    completed = _run_cli(
+        "--translated-cache-config",
+        str(translated_path),
+        "--raw-safe-metadata",
+        str(raw_metadata_path),
+        "--output-dir",
+        str(tmp_path / "output"),
+        "--fail-on-waste-fraction",
+        "0.2",
+        "--fail-on-overestimation-ratio",
+        "1.25",
+    )
+
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_diagnose_vllm_waste_threshold_failure_writes_outputs(
+    tmp_path: Path,
+) -> None:
+    translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")
+    output_dir = tmp_path / "output"
+
+    completed = _run_cli(
+        "--translated-cache-config",
+        str(translated_path),
+        "--raw-safe-metadata",
+        str(raw_metadata_path),
+        "--output-dir",
+        str(output_dir),
+        "--fail-on-waste-fraction",
+        "0.19",
+    )
+
+    assert completed.returncode == 1
+    assert "threshold failed: wasted_fraction 0.2 > 0.19" in completed.stderr
+    assert (output_dir / "report.json").is_file()
+    assert (output_dir / "summary.md").is_file()
+    assert (output_dir / "manifest.json").is_file()
+
+
+def test_diagnose_vllm_overestimation_threshold_failure_writes_outputs(
+    tmp_path: Path,
+) -> None:
+    translated_path, raw_metadata_path = _write_fixture_inputs(tmp_path / "input")
+    output_dir = tmp_path / "output"
+
+    completed = _run_cli(
+        "--translated-cache-config",
+        str(translated_path),
+        "--raw-safe-metadata",
+        str(raw_metadata_path),
+        "--output-dir",
+        str(output_dir),
+        "--fail-on-overestimation-ratio",
+        "1.24",
+    )
+
+    assert completed.returncode == 1
+    assert "threshold failed: overestimation_ratio 1.25 > 1.24" in completed.stderr
+    assert (output_dir / "report.json").is_file()
+
+
+def test_diagnose_vllm_negative_threshold_reports_arg_error(tmp_path: Path) -> None:
+    translated_path, _ = _write_fixture_inputs(tmp_path / "input")
+
+    completed = _run_cli(
+        "--translated-cache-config",
+        str(translated_path),
+        "--output-dir",
+        str(tmp_path / "output"),
+        "--fail-on-waste-fraction",
+        "-0.1",
+    )
+
+    assert completed.returncode == 2
+    assert "must be non-negative" in completed.stderr
+
+
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "cachepawl.cli", "diagnose-vllm", *args],

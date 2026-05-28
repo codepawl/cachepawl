@@ -89,6 +89,27 @@ uv run cachepawl diagnose-vllm \
 include it when available so the report can include safe runtime metadata. The
 command writes `report.json`, `summary.md`, and `manifest.json`.
 
+For CI or release checks, the command can also print the generated summary and
+fail when advisory metrics cross local gates:
+
+```bash
+uv run cachepawl diagnose-vllm \
+  --translated-cache-config research/avmp/v2/results/vllm-runtime-cache-plan-observation/translated_runtime_cache_config.json \
+  --raw-safe-metadata research/avmp/v2/results/vllm-runtime-cache-plan-observation/raw_safe_metadata.json \
+  --output-dir /tmp/cachepawl-diagnostic \
+  --summary-only \
+  --format markdown \
+  --fail-on-waste-fraction 0.5 \
+  --fail-on-overestimation-ratio 2.0
+```
+
+`--summary-only` prints the generated summary to stdout after writing the same
+output files. `--format` controls that stdout payload (`markdown` for
+`summary.md`, `json` for `report.json`). Threshold flags return exit code `1`
+only when the reported `wasted_fraction` or `overestimation_ratio` is greater
+than the configured value. Input and schema errors continue to return exit code
+`2`.
+
 This artifact-input mode requires no vLLM dependency, CUDA, GPU, or NVML. It
 does not rerun vLLM, load a model, monkeypatch, replace allocators, or change
 vLLM behavior. Output is advisory-only; runtime memory savings require a future
