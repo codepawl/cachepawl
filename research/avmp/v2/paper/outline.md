@@ -1,104 +1,144 @@
-# Cachepawl vLLM Path C Observe/Advisory Paper Outline
+# Cachepawl vLLM Path C Observe/Advisory Technical Report Plan
 
 ## Working Title
 
 Cachepawl Path C: Advisory Diagnosis of Hybrid Attention/Mamba Cache
 Overestimation in vLLM
 
-## Positioning
+## Report Positioning
 
-This paper presents a diagnostic/advisory systems artifact. It studies a real
-vanilla `vllm==0.21.0` hybrid cache planner-stage replay for
-`Zyphra/Zamba2-2.7B-instruct` and packages the resulting analysis as
+This report is a technical artifact paper for the observe/advisory phase of
+Cachepawl's vLLM Path C work. It describes how Cachepawl observes a vanilla
+`vllm==0.21.0` hybrid cache plan, translates the resulting artifacts, replays
+the planner stage, and emits a user-facing advisory report through
 `cachepawl diagnose-vllm`.
 
-The paper does not claim runtime mutation, allocator replacement, serving-time
-VRAM reduction, throughput improvement, latency improvement, or quality impact.
+The report's central claim is deliberately narrow: a non-invasive
+observe/translate/replay/diagnose workflow can expose planner-level cache
+overestimation in an existing hybrid vLLM cache plan while preserving explicit
+gates against unsafe runtime mutation.
 
-## 1. Introduction
+The report does not claim:
 
-- Hybrid models combine attention layers and Mamba/SSM state layers.
-- Existing inference cache planners can reserve memory according to uniform
-  page/block assumptions that overestimate useful cache bytes for hybrid
-  layouts.
-- Cachepawl Path C asks whether a non-invasive observe/advisory workflow can
-  expose that overestimation in a real vLLM runtime.
-- Main result: across a bounded 4-cell advisory matrix for one model,
-  estimated savings range from `685,011,456` to `1,347,563,520` bytes while
-  `overestimation_ratio=1.7333734577189286` and
-  `wasted_fraction=0.4230902777777778` remain constant.
+- runtime VRAM reduction,
+- throughput improvement,
+- latency improvement,
+- model quality or accuracy improvement,
+- allocator replacement,
+- vLLM modification,
+- controlled substitution readiness.
 
-## 2. Problem Statement
+## Draft Components
 
-- Attention KV cache and Mamba state cache have different shapes, lifetimes,
-  and page economics.
-- A uniform cache-reservation path can hide wasted capacity behind runtime
-  planner abstractions.
-- Direct mutation is unsafe without contracts for scheduler construction,
-  request-to-block assignment, worker layout, attention block tables, and Mamba
-  state-index/state tensor views.
+### 1. Abstract
 
-## 3. Method
+Use `abstract.md`.
 
-- Observe: capture vLLM runtime cache-plan artifacts and safe runtime metadata.
-- Translate: normalize vLLM cache plans into Cachepawl's schema.
-- Replay: call the vLLM planner stage on real planner inputs in a bounded,
-  post-initialization run.
-- Diagnose: compute advisory reserved/useful/savings metrics and emit an
-  artifact-input CLI report.
-- Gate: inspect runtime contracts before approving any controlled substitution.
+The abstract should state the advisory result and the negative scope in the
+same paragraph: this is planner-level diagnosis, not serving-time substitution.
 
-## 4. System Artifact
+### 2. Introduction
 
-- `cachepawl diagnose-vllm` consumes existing translated vLLM cache artifacts.
-- The CLI does not import vLLM, require CUDA/NVML, load a model, modify vLLM,
-  monkeypatch, replace allocators, or return Cachepawl plans to vLLM.
-- Output is an advisory report with planner-level memory metrics and explicit
-  mutation blockers.
+Use `introduction.md`.
 
-## 5. Evaluation
+Purpose:
 
-- Model: `Zyphra/Zamba2-2.7B-instruct`
-- Runtime: vanilla `vllm==0.21.0`
-- Workload bounds: one sequence, `max_model_len` in `{2048, 4096}`,
-  `gpu_memory_utilization` in `{0.6, 0.7}`
-- Matrix result:
-  - `2048 / 0.6`: `801,051,648` bytes advisory savings;
-  - `2048 / 0.7`: `1,347,563,520` bytes advisory savings;
-  - `4096 / 0.6`: `685,011,456` bytes advisory savings;
-  - `4096 / 0.7`: `1,231,523,328` bytes advisory savings.
-- Evidence:
-  - planner-stage replay matched the runtime scheduler config;
-  - `runtime_changed_during_replay=false`;
-  - live request block assignment observed;
-  - worker tensor layout observed;
-  - attention block-table/view metadata observed;
-  - attention metadata builders observed;
-  - Mamba state-index and state tensor contracts remain blocked.
+- explain why hybrid Attention/Mamba models stress uniform cache planning;
+- introduce Path C as an observe/advisory phase rather than a mutation phase;
+- state the exact artifact claim;
+- summarize the bounded 4-cell matrix result:
+  - `overestimation_ratio=1.7333734577189286`;
+  - `wasted_fraction=0.4230902777777778`;
+  - advisory savings range from `685,011,456` to `1,347,563,520` bytes.
 
-## 6. Limitations
+### 3. Method
 
-- No runtime mutation claim.
-- No runtime VRAM, throughput, latency, or quality claim.
-- Single model with four bounded config cells; no cross-model or workload
-  generalization claim.
-- Mamba state contracts are unresolved because `mamba_state_idx` was reachable
-  but empty and no Mamba state tensors were safely reachable.
-- Observed runtime cache config reported `mamba_cache_mode: none`.
+Use `method.md`.
 
-## 7. Future Work
+Structure:
 
-- Find a model/config/run where Mamba state-index and Mamba state tensors are
-  observable through safe runtime paths.
-- Define or use a supported vLLM integration seam for controlled substitution.
-- Expand to multi-model and multi-workload evaluation.
-- Only attempt runtime substitution after stronger contracts and default-off
-  rollback controls are in place.
+1. Capture vanilla vLLM runtime cache-plan artifacts.
+2. Translate the cache plan into Cachepawl's schema.
+3. Replay the vLLM planner stage on observed planner inputs.
+4. Compute advisory reserved/useful/savings metrics.
+5. Package the result through `cachepawl diagnose-vllm`.
+6. Inspect runtime contracts that would be required before mutation.
 
-## 8. Conclusion
+The method section should explicitly say that artifact-input diagnosis does not
+import vLLM, load a model, require GPU/NVML, modify vLLM, replace allocators, or
+return Cachepawl plans to vLLM.
 
-Cachepawl Path C demonstrates that a non-invasive observe/translate/replay/
-diagnose workflow can expose hybrid cache overestimation in real vLLM planner
-artifacts. The result is useful as an advisory diagnostic tool today, while the
-system correctly refuses controlled substitution until Mamba state contracts are
-observable or supported by vLLM.
+Problem framing:
+
+- hybrid Attention/Mamba cache planning can reserve substantially more memory
+  than useful cache payloads;
+- the report evaluates whether this over-reservation can be diagnosed from
+  artifacts before any mutation path is considered.
+
+### 4. Evaluation
+
+Use `evaluation_section.md`.
+
+Evidence to include:
+
+- one model: `Zyphra/Zamba2-2.7B-instruct`;
+- vanilla `vllm==0.21.0`;
+- four cells:
+  - `max_model_len` in `{2048, 4096}`;
+  - `gpu_memory_utilization` in `{0.6, 0.7}`;
+  - `max_num_seqs=1`;
+- planner-stage replay matched the runtime scheduler config;
+- `runtime_changed_during_replay=false`;
+- request-to-block assignment was observed;
+- worker tensor layout was observed;
+- attention block-table/view metadata was observed;
+- Mamba state-index/tensor contracts remained blocked.
+
+### 5. Artifact Appendix
+
+Use `artifact_appendix.md`.
+
+Purpose:
+
+- map claims to committed artifact paths;
+- identify which artifacts support advisory metrics;
+- identify which artifacts support contract observations;
+- list generated CLI outputs: `report.json`, `summary.md`, `manifest.json`.
+
+### 6. Limitations
+
+Use `limitations.md`.
+
+The limitations section is part of the core claim, not an afterthought. It
+should make the blocked contracts and non-claims impossible to miss.
+
+### 7. Conclusion
+
+The conclusion should close on the artifact boundary: Path C produced a useful
+diagnostic surface and evidence package, while correctly refusing runtime
+mutation until Mamba state-index and state tensor contracts are observable or
+vLLM exposes a supported integration path.
+
+## Claim Checklist
+
+Allowed claims:
+
+- 4-cell advisory matrix completed.
+- Stable `overestimation_ratio=1.7333734577189286`.
+- Stable `wasted_fraction=0.4230902777777778`.
+- Advisory savings range from `685,011,456` to `1,347,563,520` bytes.
+- Planner-stage replay matched runtime scheduler config.
+- `runtime_changed_during_replay=false`.
+- Request-to-block assignment was observed.
+- Worker tensor layout was observed.
+- Attention block-table/view metadata was observed.
+- Mamba state-index and tensor contracts were blocked.
+
+Disallowed claims:
+
+- Runtime VRAM reduction.
+- Runtime throughput, latency, or accuracy improvement.
+- Runtime cache substitution.
+- Allocator replacement.
+- vLLM modification.
+- Generalization beyond the bounded model/config evidence.

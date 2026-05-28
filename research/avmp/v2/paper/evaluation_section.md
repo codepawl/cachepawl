@@ -13,9 +13,17 @@ Configuration:
 - Durable vLLM environment:
   `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv`
 - Observed tensor device: `cuda:0`
+- Reference local platform for the vLLM Path C work: RTX 3060 12 GiB under
+  WSL2, as recorded by the surrounding baseline and setup artifacts.
 
-The artifacts do not record a GPU model name. We therefore report only the
-device identifier captured in safe tensor metadata.
+The matrix artifacts themselves are interpreted as planner-level advisory
+artifacts. The local hardware and WSL2 context are reported as an environment
+limit, not as a basis for throughput, latency, or runtime memory claims.
+
+The artifacts are used only for planner-level advisory analysis and runtime
+contract observation. They are not used to claim runtime VRAM reduction,
+throughput improvement, latency improvement, model quality impact, or allocator
+replacement.
 
 ## Method
 
@@ -43,7 +51,8 @@ translated planner output matched the runtime scheduler cache config:
 
 This establishes that the advisory comparison is grounded in the same cache
 configuration used by the runtime scheduler for each observed planner-stage
-matrix cell.
+matrix cell. It does not establish that Cachepawl can safely substitute that
+configuration at runtime.
 
 ## Advisory Metrics
 
@@ -59,12 +68,13 @@ Across all four completed cells, `overestimation_ratio` stayed
 Estimated advisory savings ranged from `685,011,456` to `1,347,563,520` bytes.
 
 The estimated savings are planner-level advisory savings. They are not measured
-runtime VRAM reductions, and they do not support latency, throughput, or quality
-claims.
+runtime VRAM reductions, and they do not support latency, throughput, accuracy,
+or quality claims.
 
 ## Runtime Contract Observations
 
-The runtime contract observations resolved several mutation-readiness questions:
+The runtime contract observations resolved several mutation-readiness questions
+on the observation side:
 
 - Scheduler/KVCacheManager structure was observed.
 - Block usage metadata was observed.
@@ -83,6 +93,9 @@ The Mamba side remains gated:
 - `mamba_state_tensor_contract` is blocked because no Mamba state tensors were
   safely reachable by stable runtime attributes.
 - Runtime cache config reported `mamba_cache_mode: none`.
+
+These blockers are decisive for this phase. Without Mamba state-index and state
+tensor contracts, the evidence supports observe/advisory reporting only.
 
 ## Product Artifact
 

@@ -1,7 +1,7 @@
-# Paper Limitations
+# Limitations
 
-This paper skeleton is intentionally scoped to a diagnostic/advisory systems
-artifact.
+This report is scoped to a diagnostic/advisory systems artifact. The limitations
+below are part of the claim boundary.
 
 ## No Runtime Mutation Claim
 
@@ -20,6 +20,8 @@ The evidence does not include:
 - serving experiments,
 - model quality or accuracy evaluation.
 
+The 4-cell matrix supports only planner-level advisory interpretation.
+
 ## Single Observed Model
 
 The current evidence is from one model and four bounded config cells:
@@ -31,9 +33,16 @@ The current evidence is from one model and four bounded config cells:
 - `gpu_memory_utilization` in `{0.6, 0.7}`
 
 The result should not be generalized to all vLLM versions, models, backends,
-cache modes, or workloads without further evaluation. The matrix supports only
-planner-stage advisory claims; it does not include serving throughput, latency,
-quality, or actual runtime memory measurements.
+cache modes, or workloads without further evaluation.
+
+## Local Hardware And Platform
+
+The Path C work was developed and observed on the local RTX 3060 12 GiB / WSL2
+environment recorded by the surrounding baseline and setup artifacts. This
+environment is sufficient for the bounded observe/advisory evidence, but it is
+not a broad hardware study. The report does not claim behavior on other GPUs,
+other operating environments, non-WSL2 Linux deployments, or production serving
+clusters.
 
 ## Mamba State Contract Blocker
 
@@ -49,6 +58,9 @@ metadata builders, but did not resolve:
 The observed runtime cache config reported `mamba_cache_mode: none`, so this run
 did not populate the Mamba state-index/state-tensor paths needed for a rewrite
 contract.
+
+Because these contracts are blocked, the report cannot claim controlled
+substitution readiness.
 
 ## Future Work
 
