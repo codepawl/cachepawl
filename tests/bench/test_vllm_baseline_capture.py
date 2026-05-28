@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 from cachepawl.bench.result_schema import CacheProbeResult
 
 
@@ -66,6 +68,8 @@ def test_vllm_baseline_capture_writes_structured_not_runnable_result(
     assert result.metadata["editable_install_used"] is False
     assert result.metadata["allocator_replacement"] is False
     assert result.metadata["monkeypatching"] is False
+    assert "nvidia_smi_stdout" not in result.metadata
+    assert "nvidia_smi_stderr" not in result.metadata
 
     manifest = json.loads((output_dir / "manifest.json").read_text())
     assert manifest["artifact_name"] == "vllm-runtime-baseline"
@@ -80,6 +84,7 @@ def test_vllm_baseline_capture_writes_structured_not_runnable_result(
     assert "pythonpath" in manifest
     assert manifest["editable_install_used"] is False
     assert "capture_vllm_baseline.py" in manifest["generation_command"]
+    assert "runtime_gpu_snapshot" in manifest
 
 
 def test_vllm_baseline_capture_is_deterministic_with_fixed_timestamp(
@@ -101,6 +106,43 @@ def test_vllm_baseline_capture_is_deterministic_with_fixed_timestamp(
     subprocess.run([*base_cmd, "--output-dir", str(second)], check=True)
 
     assert (first / "baseline.jsonl").read_text() == (second / "baseline.jsonl").read_text()
+
+
+def test_vllm_baseline_capture_preserves_runtime_gpu_snapshot_in_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_capture_module()
+    fake_snapshot = {
+        "status": "ok",
+        "returncode": 0,
+        "stdout": "NVIDIA GeForce RTX 3060, 11162 MiB, 12288 MiB",
+        "stderr": "",
+    }
+    monkeypatch.setattr(module, "_capture_nvidia_smi", lambda: fake_snapshot)
+
+    module.capture_baseline(
+        output_dir=tmp_path / "vllm-baseline",
+        model="Zyphra/Zamba2-2.7B-instruct",
+        fallback_model="tiiuae/Falcon-H1-1.5B-Instruct",
+        timestamp="1970-01-01T00:00:00Z",
+        max_model_len=4096,
+        gpu_memory_utilization=0.9,
+        max_num_seqs=32,
+        gpu_total_bytes=12 * 1024**3,
+        gpu_name="NVIDIA GeForce RTX 3060",
+    )
+
+    result = CacheProbeResult.from_json_line(
+        (tmp_path / "vllm-baseline" / "baseline.jsonl").read_text()
+    )
+    manifest = json.loads((tmp_path / "vllm-baseline" / "manifest.json").read_text())
+    assert result.gpu.name == "NVIDIA GeForce RTX 3060"
+    assert result.gpu.total_memory_bytes == 12 * 1024**3
+    assert result.metadata["nvidia_smi_status"] == "ok"
+    assert result.metadata["nvidia_smi_returncode"] == 0
+    assert "nvidia_smi_stdout" not in result.metadata
+    assert manifest["runtime_gpu_snapshot"] == fake_snapshot
 
 
 def test_vllm_baseline_capture_records_bounded_smoke_result(tmp_path: Path) -> None:
