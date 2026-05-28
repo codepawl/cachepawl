@@ -8,14 +8,13 @@ enable runtime mutation, modify vLLM, monkeypatch vLLM internals, replace vLLM
 allocators, add vLLM as a dependency, require CUDA/NVML, or claim runtime memory
 savings.
 
-## Version Recommendation
+## Version
 
-- Current package version: `0.1.0`.
-- Recommended advisory alpha target: `0.2.0a1`.
+- Package version: `0.2.0a1`.
 
 Rationale: the diagnostic CLI is a new user-visible advisory surface, but the
-project is still pre-alpha and runtime mutation remains out of scope. Do not
-change `pyproject.toml` until the release owner confirms the target version.
+project is still pre-alpha and runtime mutation remains out of scope. The
+release owner confirmed `0.2.0a1` as the advisory CLI alpha target.
 
 ## Release Scope
 
@@ -135,8 +134,8 @@ git diff --check
 
 ## Release Decision Gates
 
-- Package version target is confirmed by the release owner.
-- `CHANGELOG.md` is updated for the selected version.
+- Package version target is confirmed by the release owner: `0.2.0a1`.
+- `CHANGELOG.md` is updated for `0.2.0a1`.
 - The diagnostic artifact run is advisory-only and does not require vLLM.
 - Verification commands above pass in a fresh local environment.
 - Build artifacts are inspected locally but not committed unless explicitly

@@ -1,6 +1,6 @@
 [project]
 name = "cachepawl"
-version = "0.1.0"
+version = "0.2.0a1"
 description = "Hybrid KV and SSM cache allocator for Mamba-Transformer-MoE models"
 readme = "README.md"
 requires-python = ">=3.10"
