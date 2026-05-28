@@ -1,26 +1,19 @@
-name: CI
+name: Publish
 
 on:
   push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    tags:
+      - "v*"
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
-  test:
-    name: Python ${{ matrix.python-version }}
+  pypi:
+    name: Build and publish to PyPI
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.10", "3.12"]
+    environment: pypi
 
     steps:
       - name: Check out repository
@@ -29,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
@@ -38,6 +31,31 @@ jobs:
 
       - name: Install project and dev tools
         run: uv sync --extra-index-url https://download.pytorch.org/whl/cpu
+
+      - name: Verify tag matches package version
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          tag = os.environ["GITHUB_REF_NAME"]
+          if not tag.startswith("v"):
+              print(f"release tag must start with 'v', got {tag!r}", file=sys.stderr)
+              raise SystemExit(1)
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          expected = tag.removeprefix("v")
+          if version != expected:
+              print(
+                  f"tag/package version mismatch: tag {tag!r}, pyproject version {version!r}",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          print(f"tag {tag} matches package version {version}")
+          PY
 
       - name: Diagnose CLI help
         run: uv run cachepawl diagnose-vllm --help
@@ -78,3 +96,6 @@ jobs:
 
       - name: Build package
         run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
