@@ -20,7 +20,7 @@
   ],
   "num_requests": 128,
   "runtime": {
-    "cachepawl_version": "0.1.0",
+    "cachepawl_version": "0.2.0a2",
     "cuda_version": "13.0",
     "numpy_version": "2.2.6",
     "platform": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39",

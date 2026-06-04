@@ -26,6 +26,7 @@ but controlled substitution is not approved for this cycle.
 - `matrix_table.csv` - deterministic machine-readable matrix table.
 - `config_matrix.json` - bounded matrix definition.
 - `artifact_index.md` - source artifact index and what each artifact supports.
+- `claim_summary.md` - paper-facing claim, evidence, and limitation summary.
 - `methodology.md` - bounded observation and advisory methodology.
 - `limitations.md` - limitations and mutation blockers.
 

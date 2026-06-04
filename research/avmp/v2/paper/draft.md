@@ -456,6 +456,7 @@ Blocked contracts:
 | `research/avmp/v2/PATH_C_OBSERVE_ADVISORY_PHASE_REPORT.md` | Cycle-close interpretation and advisory-only recommendation. |
 | `research/avmp/v2/evaluation/README.md` | Consolidated scope, matrix result, and limitation summary. |
 | `research/avmp/v2/evaluation/artifact_index.md` | Cross-artifact claim map for the evidence pack. |
+| `research/avmp/v2/evaluation/claim_summary.md` | Paper-facing claim boundary, result statement, and unsupported claims. |
 | `research/avmp/v2/results/vllm-baseline/manifest.json` | Local RTX 3060 12 GiB and WSL2 environment context for the bounded Path C work. |
 
 The artifact set supports observe/advisory diagnosis only. It does not support
