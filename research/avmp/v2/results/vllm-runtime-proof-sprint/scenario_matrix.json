@@ -1,0 +1,236 @@
+{
+  "artifact": "vllm-runtime-proof-sprint-scenario-matrix",
+  "timestamp": "2026-06-05T01:10:00Z",
+  "best_success_tier": "partial_success",
+  "local_runtime_gate": {
+    "status": "environment_blocked",
+    "python_executable": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python",
+    "vllm_version": "0.21.0",
+    "torch_cuda_available": false,
+    "torch_cuda_device_count": 0,
+    "nvidia_smi_status": "failed",
+    "nvidia_smi_error": "GPU access blocked by the operating system"
+  },
+  "version_matrix": [
+    {
+      "scenario_id": "vllm-0.21.0-current",
+      "version": "0.21.0",
+      "status": "installed_and_importable",
+      "notes": "Installed pinned version is also the latest stable release observed on PyPI on 2026-06-05."
+    },
+    {
+      "scenario_id": "vllm-latest-stable-isolated",
+      "version": "0.21.0",
+      "status": "not_reinstalled",
+      "notes": "No separate latest-stable venv was created because latest stable matched the installed isolated vLLM version and local CUDA was unavailable."
+    },
+    {
+      "scenario_id": "vllm-nightly-source",
+      "version": "source_or_nightly",
+      "status": "not_attempted",
+      "notes": "Deferred as unsafe and low value while current stable cannot reach CUDA. GPU-machine commands document how to rerun stable first."
+    }
+  ],
+  "model_matrix": [
+    {
+      "scenario_id": "model-zamba2-current",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "local_cache_status": "cached",
+      "hybrid_status": "hybrid_attention_mamba",
+      "config_evidence": {
+        "architecture": "Zamba2ForCausalLM",
+        "model_type": "zamba2",
+        "num_hidden_layers": 54,
+        "mamba_d_state": 64,
+        "mamba_expand": 2
+      },
+      "runtime_status": "committed_live_run_available_current_local_rerun_environment_blocked"
+    },
+    {
+      "scenario_id": "model-qwen-local-negative-control",
+      "model": "Qwen/Qwen2.5-1.5B-Instruct",
+      "local_cache_status": "cached",
+      "hybrid_status": "transformer_only_not_hybrid",
+      "config_evidence": {
+        "architecture": "Qwen2ForCausalLM",
+        "model_type": "qwen2"
+      },
+      "runtime_status": "not_selected_for_positive_hybrid_evidence"
+    },
+    {
+      "scenario_id": "model-falcon-h1-fallback",
+      "model": "tiiuae/Falcon-H1-1.5B-Instruct",
+      "local_cache_status": "not_cached",
+      "hybrid_status": "candidate_hybrid_or_ssm",
+      "runtime_status": "not_run_locally_cuda_unavailable_download_not_attempted"
+    },
+    {
+      "scenario_id": "model-jamba-family",
+      "model": "AI21Labs/Jamba family",
+      "local_cache_status": "not_cached",
+      "hybrid_status": "candidate_hybrid_attention_mamba",
+      "runtime_status": "not_run_locally_cuda_unavailable_download_not_attempted"
+    },
+    {
+      "scenario_id": "model-hymba-recurrentgemma-samba",
+      "model": "Hymba/RecurrentGemma/Samba candidates",
+      "local_cache_status": "not_cached",
+      "hybrid_status": "candidate_hybrid_or_ssm",
+      "runtime_status": "not_run_locally_cuda_unavailable_download_not_attempted"
+    }
+  ],
+  "config_matrix": [
+    {
+      "scenario_id": "baseline-current-4096-seq1-short",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 4096,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short",
+      "prefix_caching": "default",
+      "mamba_cache_mode": "none",
+      "status": "committed_live_run_available_current_local_rerun_environment_blocked",
+      "evidence": "research/avmp/v2/results/vllm-baseline/manifest.json"
+    },
+    {
+      "scenario_id": "local-len1024-seq1-short",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 1024,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short",
+      "prefix_caching": "default",
+      "mamba_cache_mode": "none",
+      "status": "environment_blocked",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/local-blocked-runs/current-len1024-seq1/manifest.json"
+    },
+    {
+      "scenario_id": "local-len2048-seq2-long",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 2048,
+      "max_num_seqs": 2,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "long",
+      "prefix_caching": "default",
+      "mamba_cache_mode": "none",
+      "status": "environment_blocked",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/local-blocked-runs/current-len2048-seq2/manifest.json"
+    },
+    {
+      "scenario_id": "gpu-prefix-off-mamba-none",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 2048,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short_and_long",
+      "prefix_caching": false,
+      "mamba_cache_mode": "none",
+      "status": "gpu_machine_command_prepared",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    },
+    {
+      "scenario_id": "gpu-prefix-on-mamba-none",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 2048,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short_and_long",
+      "prefix_caching": true,
+      "mamba_cache_mode": "none",
+      "status": "gpu_machine_command_prepared",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    },
+    {
+      "scenario_id": "gpu-prefix-on-mamba-align",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 2048,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short_and_long",
+      "prefix_caching": true,
+      "mamba_cache_mode": "align",
+      "status": "gpu_machine_command_prepared",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    },
+    {
+      "scenario_id": "gpu-prefix-on-mamba-all",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 2048,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short_and_long",
+      "prefix_caching": true,
+      "mamba_cache_mode": "all",
+      "status": "gpu_machine_command_prepared",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    },
+    {
+      "scenario_id": "gpu-seq4-mamba-all",
+      "model": "Zyphra/Zamba2-2.7B-instruct",
+      "max_model_len": 1024,
+      "max_num_seqs": 4,
+      "gpu_memory_utilization": 0.7,
+      "prompt_class": "short_batch",
+      "prefix_caching": true,
+      "mamba_cache_mode": "all",
+      "status": "gpu_machine_command_prepared",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    }
+  ],
+  "runtime_probe_matrix": [
+    {
+      "probe": "scheduler_kv_manager",
+      "status": "observed",
+      "evidence": "research/avmp/v2/results/vllm-runtime-contract-observation/runtime_contract_report.json"
+    },
+    {
+      "probe": "worker_cache_tensor_layout",
+      "status": "observed",
+      "evidence": "research/avmp/v2/results/vllm-runtime-contract-observation/runtime_contract_report.json"
+    },
+    {
+      "probe": "attention_block_tables",
+      "status": "observed",
+      "evidence": "research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json"
+    },
+    {
+      "probe": "request_to_block_mapping",
+      "status": "observed",
+      "evidence": "research/avmp/v2/results/vllm-live-request-contract-observation/live_request_contract_report.json"
+    },
+    {
+      "probe": "mamba_state_index",
+      "status": "blocked_in_committed_run_environment_blocked_locally",
+      "evidence": "research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json"
+    },
+    {
+      "probe": "mamba_state_tensors",
+      "status": "blocked_in_committed_run_environment_blocked_locally",
+      "evidence": "research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json"
+    },
+    {
+      "probe": "state_lifecycle_before_during_after_decode",
+      "status": "attention_lifecycle_observed_mamba_lifecycle_missing",
+      "evidence": "research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json"
+    },
+    {
+      "probe": "state_paths_by_cache_mode_or_prefix_caching",
+      "status": "gpu_machine_command_prepared_not_locally_runnable",
+      "evidence": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh"
+    }
+  ],
+  "substitution_path": {
+    "read_only_probe_status": "available_for_current_mode",
+    "default_off_micro_substitution_status": "not_attempted",
+    "reason": "Mamba state-index and Mamba state tensor contracts are not observable in the committed run, and local CUDA is unavailable for cache-mode variants.",
+    "proposal": "research/avmp/v2/results/vllm-runtime-proof-sprint/vllm_mamba_state_contract_proposal.md"
+  },
+  "positive_runtime_evidence": {
+    "stock_vllm_generation_smoke_completed": true,
+    "live_request_admission_observed": true,
+    "planner_gap_measured": true,
+    "attention_block_tables_observed": true,
+    "mamba_state_contract_observed": false,
+    "avmp_substitution_ran": false
+  }
+}

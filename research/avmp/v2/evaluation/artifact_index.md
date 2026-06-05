@@ -12,6 +12,12 @@ All paths are relative to the repository root.
 | `research/avmp/v2/results/vllm-runtime-contract-observation/runtime_contract_report.json` | Scheduler/KV manager, block usage, worker tensor layout, and initial contract blockers. |
 | `research/avmp/v2/results/vllm-live-request-contract-observation/live_request_contract_report.json` | Live request id, request-to-block assignment, scheduler request metadata, and block-pool before/after snapshots. |
 | `research/avmp/v2/results/vllm-mamba-attention-contract-observation/mamba_attention_contract_report.json` | Attention block-table/view metadata, attention group metadata, and remaining Mamba state blockers. |
+| `research/avmp/v2/results/vllm-runtime-validation-sprint/README.md` | Runtime validation sprint outcome, stock vLLM baseline summary, current rerun blocker, planner replay, live admission evidence, and substitution blocker interpretation. |
+| `research/avmp/v2/results/vllm-runtime-validation-sprint/outcome.json` | Machine-readable sprint outcome and claim boundary. |
+| `research/avmp/v2/results/vllm-runtime-validation-sprint/current_baseline_blocker_manifest.json` | Current 2026-06-05 rerun blocker showing pinned vLLM is present but CUDA/NVML is unavailable. |
+| `research/avmp/v2/results/vllm-runtime-proof-sprint/scenario_matrix.json` | Expanded config/model/version/probe matrix, local environment blockers, and prepared GPU-machine scenarios. |
+| `research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh` | Exact GPU-host commands for prefix-caching and `mamba_cache_mode` variants. |
+| `research/avmp/v2/results/vllm-runtime-proof-sprint/vllm_mamba_state_contract_proposal.md` | Minimal upstream/local-fork contract proposal for exposing Mamba state-index and state tensor summaries. |
 | `research/avmp/v2/results/vllm-path-c-matrix/` | Four bounded planner-stage advisory matrix cells for `max_model_len` in `{2048, 4096}` and `gpu_memory_utilization` in `{0.6, 0.7}`. |
 | `research/avmp/v2/evaluation/matrix_table.csv` | Deterministic consolidated matrix metrics table. |
 | `research/avmp/v2/evaluation/matrix_table.md` | Paper-readable consolidated matrix metrics table. |
@@ -32,3 +38,10 @@ All paths are relative to the repository root.
 - Live runtime observations are read-only and bounded. They do not modify vLLM,
   monkeypatch private methods, replace allocators, alter scheduler behavior, or
   return Cachepawl plans to vLLM.
+- The runtime validation sprint outcome is `blocker`: stock vLLM runtime
+  evidence exists, planner/admission replay exists, and controlled substitution
+  remains blocked by missing stable Mamba state-index/state tensor contracts.
+- The runtime proof sprint outcome is `partial_success`: positive stock vLLM
+  runtime evidence is connected to planner/admission replay, but new local
+  cache-mode scenarios are CUDA/NVML-blocked and substitution still requires
+  observable Mamba state contracts.

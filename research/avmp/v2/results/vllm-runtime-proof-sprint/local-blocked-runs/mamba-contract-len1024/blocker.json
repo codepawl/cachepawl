@@ -1,0 +1,25 @@
+{
+  "manifest": {
+    "artifact": "vllm-mamba-attention-contract-observation",
+    "gpu_memory_utilization": 0.7,
+    "max_model_len": 1024,
+    "max_new_tokens": 1,
+    "max_num_seqs": 1,
+    "metadata": {
+      "cuda_available": false,
+      "device_count": 0,
+      "device_name": null
+    },
+    "model": "Zyphra/Zamba2-2.7B-instruct",
+    "pinned_venv_path": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv",
+    "pinned_vllm_version": "0.21.0",
+    "prompt": "Short prompt.",
+    "python_executable": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python",
+    "reason": "torch reports CUDA unavailable in the pinned vLLM environment",
+    "status": "blocked",
+    "timeout_seconds": 60,
+    "timestamp": "2026-06-05T01:03:00Z",
+    "trust_remote_code": false,
+    "vllm_version": "0.21.0"
+  }
+}

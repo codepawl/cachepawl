@@ -7,6 +7,18 @@ Conclusion: this is advisory/diagnostic evidence, not runtime mutation
 evidence. The `cachepawl diagnose-vllm` artifact-input path is valid and useful,
 but controlled substitution is not approved for this cycle.
 
+Runtime validation update: the sprint outcome is `blocker`. Stock vLLM runtime
+evidence exists for the bounded hybrid-model baseline, planner/admission replay
+exists, and controlled substitution remains blocked by missing stable Mamba
+state-index/state tensor contracts. The 2026-06-05 rerun could not refresh the
+live baseline because CUDA/NVML access is currently unavailable.
+
+Runtime proof sprint update: the strongest achievable tier is now
+`partial_success`. The new proof pack exhausts local CUDA-gated scenarios,
+prepares exact GPU-machine commands for prefix-caching and Mamba cache modes,
+and records a minimal Mamba state contract proposal. It still does not claim
+runtime AVMP substitution or runtime savings.
+
 ## Scope
 
 - Model: `Zyphra/Zamba2-2.7B-instruct`
@@ -29,6 +41,10 @@ but controlled substitution is not approved for this cycle.
 - `claim_summary.md` - paper-facing claim, evidence, and limitation summary.
 - `methodology.md` - bounded observation and advisory methodology.
 - `limitations.md` - limitations and mutation blockers.
+- `../results/vllm-runtime-validation-sprint/` - runtime validation sprint
+  outcome, current rerun blocker, and substitution blocker report.
+- `../results/vllm-runtime-proof-sprint/` - expanded scenario matrix,
+  GPU-machine commands, local blocked runs, and Mamba state contract proposal.
 
 ## Headline Result
 

@@ -1,0 +1,70 @@
+{
+  "artifact": "vllm-runtime-proof-sprint",
+  "timestamp": "2026-06-05T01:15:00Z",
+  "best_success_tier": "partial_success",
+  "strong_success": false,
+  "medium_success": false,
+  "partial_success": true,
+  "local_environment_blocked": true,
+  "positive_runtime_evidence_found": {
+    "stock_vllm_generation_smoke_completed": true,
+    "live_request_admission_observed": true,
+    "request_to_block_assignment_observed": true,
+    "block_pool_lifecycle_observed": true,
+    "planner_gap_measured": true,
+    "attention_block_tables_observed": true,
+    "attention_metadata_builders_observed": true
+  },
+  "substitution": {
+    "attempted": false,
+    "ran": false,
+    "parity_checked": false,
+    "reason_not_attempted": "Mamba state-index and Mamba state tensor contracts are not observable in the committed live run; current CUDA/NVML access is blocked for cache-mode variants."
+  },
+  "measured_stock_vllm_baseline": {
+    "model": "Zyphra/Zamba2-2.7B-instruct",
+    "vllm_version": "0.21.0",
+    "max_model_len": 4096,
+    "gpu_memory_utilization": 0.7,
+    "max_num_seqs": 1,
+    "prompt_token_count": 13,
+    "generated_token_count": 8,
+    "generation_elapsed_seconds": 43.399474211997585,
+    "tokens_per_second": 0.18433403042906996,
+    "available_gpu_memory_bytes_after_generation": 10905399296,
+    "vllm_log_available_kv_cache_memory": "2.12 GiB",
+    "vllm_log_gpu_kv_cache_tokens": 11442,
+    "vllm_log_max_concurrency_4096_tokens": 2.79
+  },
+  "planner_gap": {
+    "vanilla_observed_reserved_bytes": 2910781440,
+    "vanilla_observed_useful_bytes": 1679258112,
+    "cachepawl_proposed_reserved_bytes": 1679258112,
+    "advisory_estimated_savings_bytes": 1231523328,
+    "overestimation_ratio": 1.7333734577189286,
+    "wasted_fraction": 0.4230902777777778,
+    "runtime_savings_claimed": false
+  },
+  "remaining_blockers": [
+    {
+      "kind": "environment",
+      "description": "Fresh local runtime scenarios cannot run because torch reports CUDA unavailable and nvidia-smi cannot initialize NVML."
+    },
+    {
+      "kind": "runtime_contract",
+      "description": "Committed live run did not expose Mamba state-index or Mamba state tensors through stable runtime attributes."
+    }
+  ],
+  "next_artifacts": {
+    "scenario_matrix": "research/avmp/v2/results/vllm-runtime-proof-sprint/scenario_matrix.json",
+    "gpu_machine_commands": "research/avmp/v2/results/vllm-runtime-proof-sprint/gpu_machine_commands.sh",
+    "mamba_contract_proposal": "research/avmp/v2/results/vllm-runtime-proof-sprint/vllm_mamba_state_contract_proposal.md"
+  },
+  "claim_boundary": {
+    "avmp_runtime_memory_reduction_measured": false,
+    "request_admission_improvement_measured": false,
+    "latency_improvement_measured": false,
+    "throughput_improvement_measured": false,
+    "quality_or_accuracy_improvement_measured": false
+  }
+}

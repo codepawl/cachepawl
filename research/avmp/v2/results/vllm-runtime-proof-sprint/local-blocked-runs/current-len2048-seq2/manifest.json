@@ -1,0 +1,63 @@
+{
+  "artifact_name": "vllm-runtime-baseline",
+  "blocker_chain": [
+    "torch reports CUDA unavailable",
+    "nvidia-smi cannot initialize NVML successfully"
+  ],
+  "bounded_generation_smoke": null,
+  "cuda_available": false,
+  "editable_install_used": false,
+  "fallback_model": "tiiuae/Falcon-H1-1.5B-Instruct",
+  "generated_at": "2026-06-05T01:01:00Z",
+  "generation_command": "PYTHONPATH=src /home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python benchmarks/scripts/capture_vllm_baseline.py --output-dir /tmp/cachepawl-proof-current-len2048-seq2 --model \"Zyphra/Zamba2-2.7B-instruct\" --fallback-model \"tiiuae/Falcon-H1-1.5B-Instruct\" --timestamp \"2026-06-05T01:01:00Z\" --max-model-len 2048 --gpu-memory-utilization 0.7 --max-num-seqs 2 --gpu-total-bytes 12884901888 --gpu-name \"NVIDIA GeForce RTX 3060\" --runtime-timeout-seconds 1200 --generation-smoke --generation-timeout-seconds 60 --generation-prompt \"Cachepawl long-ish bounded prompt for admission replay setup. Repeat context once for a longer prefill path.\" --max-new-tokens 1",
+  "generation_prompt": "Cachepawl long-ish bounded prompt for admission replay setup. Repeat context once for a longer prefill path.",
+  "generation_smoke": null,
+  "generation_smoke_enabled": true,
+  "generation_timeout_seconds": 60,
+  "gpu": {
+    "compute_capability": null,
+    "cuda_available": false,
+    "device_count": 0,
+    "name": "NVIDIA GeForce RTX 3060",
+    "total_memory_bytes": 12884901888
+  },
+  "gpu_memory_utilization": 0.7,
+  "infrastructure_decision": "fix-local-wsl2-gpu-nvml-first",
+  "max_model_len": 2048,
+  "max_new_tokens": 1,
+  "max_num_seqs": 2,
+  "model": "Zyphra/Zamba2-2.7B-instruct",
+  "model_load_smoke": null,
+  "pinned_venv_path": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv",
+  "pinned_vllm_version": "0.21.0",
+  "python_executable": "/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv/bin/python",
+  "pythonpath": "src",
+  "reason": "torch reports CUDA unavailable",
+  "runtime": {
+    "cachepawl_version": "0.2.0a2",
+    "cuda_version": "13.0",
+    "numpy_version": "2.2.6",
+    "platform": "Linux-5.15.167.4-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python_version": "3.10.19",
+    "torch_version": "2.11.0+cu130",
+    "vllm_version": "0.21.0"
+  },
+  "runtime_gate": {
+    "nvidia_smi": "must exit 0 and report the target GPU",
+    "torch_cuda": "torch.cuda.is_available() must be true with at least one device"
+  },
+  "runtime_gpu_snapshot": {
+    "returncode": 255,
+    "status": "failed",
+    "stderr": "",
+    "stdout": "Failed to initialize NVML: GPU access blocked by the operating system\nFailed to properly shut down NVML: GPU access blocked by the operating system"
+  },
+  "runtime_smoke": null,
+  "runtime_smoke_enabled": false,
+  "runtime_timeout_seconds": 1200,
+  "schema_version": "0.1.0",
+  "status": "not_runnable",
+  "trust_remote_code": false,
+  "vllm_installed": true,
+  "vllm_version": "0.21.0"
+}
