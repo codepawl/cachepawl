@@ -1,0 +1,119 @@
+\documentclass[10pt]{article}
+
+\usepackage[margin=0.8in]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{url}
+
+\title{Supplement: Diagnosing Hybrid Attention/Mamba Cache Over-Reservation}
+\author{Anonymous Workshop Submission}
+\date{}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\maketitle
+
+\section{Artifact Map}
+
+All paths are relative to the repository root. The supplement preserves the
+path-heavy reproducibility material omitted from the main workshop paper.
+
+\begin{longtable}{L{0.25\linewidth}L{0.62\linewidth}}
+\toprule
+Artifact & Repository path \\
+\midrule
+Diagnostic report &
+\path{research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli/report.json} \\
+Diagnostic summary &
+\path{research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli/summary.md} \\
+Diagnostic manifest &
+\path{research/avmp/v2/results/vllm-runtime-cache-diagnostic-cli/manifest.json} \\
+Planner replay output &
+\path{research/avmp/v2/results/vllm-planner-stage-observation/translated_planner_stage_config.json} \\
+Planner-stage advisory diff &
+\path{research/avmp/v2/results/vllm-planner-stage-advisory-diff/diff_report.json} \\
+Group-level advisory diff &
+\path{research/avmp/v2/results/vllm-planner-stage-advisory-diff/group_level_diff.json} \\
+Path C matrix &
+\path{research/avmp/v2/evaluation/matrix_table.md} and
+\path{research/avmp/v2/evaluation/matrix_table.csv} \\
+Planner-only pack &
+\path{benchmarks/results/rtx3060/planner-comparison/} \\
+Claim boundary &
+\path{research/avmp/v2/evaluation/claim_summary.md} \\
+\bottomrule
+\end{longtable}
+
+\section{Exact Byte Tables}
+
+The main paper reports GiB-rounded values for readability. Tables below retain
+the exact byte values used to construct the main-paper tables and ratio figure.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{ccrrr}
+\toprule
+Len & Util. & Reserved & Useful & Savings \\
+\midrule
+2048 & 0.6 & 1,893,335,040 & 1,092,283,392 & 801,051,648 \\
+2048 & 0.7 & 3,185,049,600 & 1,837,486,080 & 1,347,563,520 \\
+4096 & 0.6 & 1,619,066,880 & 934,055,424 & 685,011,456 \\
+4096 & 0.7 & 2,910,781,440 & 1,679,258,112 & 1,231,523,328 \\
+\bottomrule
+\end{tabular}
+\caption{Exact Path C advisory matrix byte values.}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{l l r r r r c}
+\toprule
+Workload & Planner & Useful & Estimated & Ratio & Waste & OOM \\
+\midrule
+short-heavy & padded & 2,435,055,616 & 6,985,613,312 & 2.868770 & 0.651418 & no \\
+short-heavy & AVMP & 2,435,055,616 & 2,451,046,400 & 1.006567 & 0.006524 & no \\
+long-heavy & padded & 41,967,550,464 & 165,116,116,992 & 3.934376 & 0.745830 & yes \\
+long-heavy & AVMP & 41,967,550,464 & 41,983,672,320 & 1.000384 & 0.000384 & yes \\
+mixed & padded & 13,517,422,592 & 51,311,017,984 & 3.795917 & 0.736559 & yes \\
+mixed & AVMP & 13,517,422,592 & 13,532,397,568 & 1.001108 & 0.001107 & yes \\
+\bottomrule
+\end{tabular}
+\caption{Exact RTX 3060 planner-only comparison byte values.}
+\end{table}
+
+\section{Reproduction Commands}
+
+\subsection{Focused Tests}
+
+\begin{verbatim}
+UV_CACHE_DIR=/tmp/uv-cache uv run pytest \
+  tests/bench/test_planner_comparison.py \
+  tests/bench/test_vllm_path_c_advisory_matrix.py \
+  tests/cli/test_diagnose_vllm.py -q
+\end{verbatim}
+
+\subsection{Planner Pack Regeneration}
+
+\begin{verbatim}
+UV_CACHE_DIR=/tmp/uv-cache uv run python \
+  benchmarks/scripts/create_planner_comparison_pack.py \
+  --output-dir /tmp/cachepawl-planner-comparison-workshop-check \
+  --seed 1 --num-requests 128 \
+  --gpu-name "NVIDIA GeForce RTX 3060" \
+  --gpu-total-bytes 12884901888
+\end{verbatim}
+
+\section{Runtime Contract Boundary}
+
+The current evidence resolves planner-stage replay, scheduler and KV-manager
+structure, request-to-block assignment, worker tensor layout, and attention
+block-table metadata. Mamba state-index and Mamba state tensor contracts remain
+blocked. Consequently, controlled substitution remains future work.
+
+\end{document}

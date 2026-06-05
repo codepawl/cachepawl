@@ -1,0 +1,34 @@
+\begin{thebibliography}{1}
+
+\bibitem{glorioso2024zamba2}
+Paolo Glorioso, Quentin Anthony, Yury Tokpanov, Anna Golubeva, Vasudev Shyam,
+  James Whittington, Jonathan Pilault, and Beren Millidge.
+\newblock The {Zamba2} suite: Technical report.
+\newblock {\em arXiv preprint arXiv:2411.15242}, 2024.
+
+\bibitem{kwon2023pagedattention}
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng, Cody~Hao Yu,
+  Joseph Gonzalez, Hao Zhang, and Ion Stoica.
+\newblock Efficient memory management for large language model serving with
+  pagedattention.
+\newblock In {\em Proceedings of the 29th Symposium on Operating Systems
+  Principles (SOSP '23)}. ACM, 2023.
+
+\bibitem{lieber2024jamba}
+Opher Lieber, Barak Lenz, Hofit Bata, Gal Cohen, Jhonathan Osin, Itay
+  Dalmedigos, Erez Safahi, Shaked Meirom, Yonatan Belinkov, Shai
+  Shalev-Shwartz, Omri Abend, Raz Alon, Tomer Asida, Amir Bergman, Roman
+  Glozman, Michael Gokhman, Avshalom Manevich, Nir Ratner, Noam Rozen, Erez
+  Shwartz, Mor Zusman, and Yoav Shoham.
+\newblock Jamba: A hybrid transformer-mamba language model.
+\newblock {\em arXiv preprint arXiv:2403.19887}, 2024.
+
+\bibitem{zheng2024sglang}
+Lianmin Zheng, Liangsheng Yin, Zhiqiang Xie, Chuyue Sun, Jeff Huang, Cody~Hao
+  Yu, Shiyi Cao, Christos Kozyrakis, Ion Stoica, Joseph~E. Gonzalez, Clark
+  Barrett, and Ying Sheng.
+\newblock {SGLang}: Efficient execution of structured language model programs.
+\newblock In {\em Advances in Neural Information Processing Systems (NeurIPS)},
+  2024.
+
+\end{thebibliography}
