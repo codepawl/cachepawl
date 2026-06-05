@@ -51,11 +51,10 @@ state payload for hybrid layouts.
 
 Cachepawl Path C studies this gap as an observe/advisory problem. The goal of
 this phase is not to replace vLLM's allocator, rewrite live runtime state, or
-claim measured serving improvements. Instead, the goal is to answer a narrower
-systems question: can Cachepawl observe a vanilla vLLM hybrid cache plan,
-translate it into a stable schema, replay the planner stage on the observed
-inputs, and emit a practical diagnostic report that quantifies planner-level
-overestimation?
+report serving results. Instead, the goal is to answer a narrower systems
+question: can Cachepawl observe a vanilla vLLM hybrid cache plan, translate it
+into a stable schema, replay the planner stage on the observed inputs, and emit
+a practical diagnostic report that quantifies planner-level overestimation?
 
 ### 1.1 Scope of This Version
 
@@ -205,60 +204,27 @@ replacement claims.
 
 ## 3. Evaluation
 
-The evaluation has two evidence tracks. First, the vLLM Path C artifacts measure
-planner-level over-reservation in a real observed `vllm==0.21.0` hybrid cache
-plan. Second, the RTX 3060 planner-comparison pack measures the same cache
-planning question in a deterministic synthetic planner harness with two
-backends: a uniform padded planner baseline and Cachepawl's AVMP planner model.
-Neither track measures serving-time runtime mutation.
+The evaluation has two evidence tracks. The Path C track measures
+planner-level over-reservation in observed `vllm==0.21.0` cache-plan artifacts
+for `Zyphra/Zamba2-2.7B-instruct`. The RTX 3060 planner-comparison track uses a
+deterministic synthetic planner harness for `jamba-1.5-mini` workloads. Both
+tracks are advisory/planner-level only.
 
-### 3.1 Setup
+### 3.1 Procedure and Non-Mutation Controls
 
-The vLLM Path C evaluation uses existing observe/advisory artifacts from a
-vanilla `vllm==0.21.0` run of `Zyphra/Zamba2-2.7B-instruct`.
+The Path C workflow observes a vanilla vLLM cache plan, translates it into the
+Cachepawl schema, replays `vllm.v1.core.kv_cache_utils.get_kv_cache_configs`
+on captured planner inputs, runs `cachepawl diagnose-vllm`, and repeats the
+advisory diff over the bounded 4-cell matrix. Planner-stage replay succeeded:
 
-Configuration:
+- `planner_matches_runtime_scheduler=true`
+- `runtime_changed_during_replay=false`
 
-- Max model lengths: `2048`, `4096`
-- Max number of sequences: `1`
-- GPU memory utilization values: `0.6`, `0.7`
-- Durable vLLM environment:
-  `/home/nxank4/.cache/cachepawl/vllm-cachepawl-venv`
-- Observed tensor device: `cuda:0`
-- Reference local platform for the vLLM Path C work: RTX 3060 12 GiB under
-  WSL2, as recorded by the surrounding baseline and setup artifacts.
-
-The matrix artifacts themselves are interpreted as planner-level advisory
-artifacts. The local hardware and WSL2 context are reported as an environment
-limit, not as a basis for throughput, latency, or runtime memory claims.
-
-The artifacts are used only for planner-level advisory analysis and runtime
-contract observation. They are not used to claim runtime VRAM reduction,
-throughput improvement, latency improvement, model quality impact, or allocator
-replacement.
-
-The RTX 3060 planner-comparison pack is a separate deterministic planner-only
-artifact at `benchmarks/results/rtx3060/planner-comparison/`. It uses the
-`jamba-1.5-mini` model spec, synthetic workloads, `128` requests per workload,
-seed `1`, target GPU profile `NVIDIA GeForce RTX 3060`, target GPU bytes
-`12,884,901,888`, and timestamp `1970-01-01T00:00:00Z`. Runtime measurement is
-disabled, so `planner_runtime_us` is intentionally deterministic `0.000`.
-
-### 3.2 Evaluation Procedure
-
-The vLLM Path C evaluation has five stages:
-
-1. Observe the vanilla vLLM runtime cache plan and safe runtime metadata.
-2. Translate the vLLM cache plan into Cachepawl's schema.
-3. Replay `vllm.v1.core.kv_cache_utils.get_kv_cache_configs` on real planner
-   inputs in a bounded post-initialization run.
-4. Run `cachepawl diagnose-vllm` on artifact inputs to produce advisory metrics.
-5. Repeat the planner-stage observation and advisory diff over the bounded
-   4-cell advisory matrix.
-
-All runtime observations were read-only. The workflow did not modify vLLM,
-monkeypatch private methods, replace allocators, return Cachepawl plans to vLLM,
-alter scheduler behavior, or alter worker tensor layout.
+All observations were read-only. The workflow did not modify vLLM, monkeypatch
+private methods, replace allocators, return Cachepawl plans to vLLM, alter
+scheduler behavior, or alter worker tensor layout. This validates the advisory
+comparison against the observed planner/runtime config, but it does not
+establish runtime substitution safety.
 
 The planner-comparison pack is reproduced with:
 
@@ -266,44 +232,39 @@ The planner-comparison pack is reproduced with:
 UV_CACHE_DIR=/tmp/uv-cache uv run python benchmarks/scripts/create_planner_comparison_pack.py --output-dir benchmarks/results/rtx3060/planner-comparison --seed 1 --num-requests 128 --gpu-name "NVIDIA GeForce RTX 3060" --gpu-total-bytes 12884901888
 ```
 
-It does not install vLLM, run serving, monkeypatch vLLM, replace allocators,
-load a real model, run Triton kernels, run copy kernels, or measure latency and
-throughput.
+The pack does not install vLLM, run serving, monkeypatch vLLM, replace
+allocators, load a real model, run kernels, or measure latency and throughput.
 
-### 3.3 Planner Replay Result
+### 3.2 Metric Definitions
 
-Planner-stage replay succeeded and produced `planner_stage_translation`. The
-translated planner output matched the runtime scheduler cache config:
+- `reserved_bytes`: bytes reserved by the observed or modeled planner.
+- `useful_bytes`: cache payload bytes before planner padding.
+- `estimated_savings_bytes = reserved_bytes - useful_bytes` for Path C.
+- `overestimation_ratio = reserved_bytes / useful_bytes`.
+- `wasted_fraction = (reserved_bytes - useful_bytes) / reserved_bytes`.
+- `virtual_oom`: whether a planner estimate exceeds the 12 GiB target profile
+  in the synthetic planner pack. It is not an observed runtime OOM.
 
-- `planner_matches_runtime_scheduler=true`
-- `runtime_changed_during_replay=false`
-
-This establishes that the advisory comparison is grounded in the same cache
-configuration used by the runtime scheduler for each observed planner-stage
-matrix cell. It does not establish that Cachepawl can safely substitute that
-configuration at runtime.
-
-### 3.4 Advisory Matrix
+### 3.3 Path C Advisory Matrix
 
 This table is advisory/diagnostic evidence only. It does not report runtime
 mutation, throughput, serving, or VRAM improvement measurements.
 
-| model | max_model_len | gpu_memory_utilization | max_num_seqs | vanilla_reserved_bytes | vanilla_useful_bytes | cachepawl_proposed_reserved_bytes | estimated_savings_bytes | overestimation_ratio | wasted_fraction | num_blocks | cache_group_count | cache_tensor_count | layer_count | status | blocker |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Zyphra/Zamba2-2.7B-instruct | 2048 | 0.6 | 1 | 1893335040 | 1092283392 | 1092283392 | 801051648 | 1.7333734577189286 | 0.4230902777777778 | 214 | 7 | 9 | 63 | completed |  |
-| Zyphra/Zamba2-2.7B-instruct | 2048 | 0.7 | 1 | 3185049600 | 1837486080 | 1837486080 | 1347563520 | 1.7333734577189286 | 0.4230902777777778 | 360 | 7 | 9 | 63 | completed |  |
-| Zyphra/Zamba2-2.7B-instruct | 4096 | 0.6 | 1 | 1619066880 | 934055424 | 934055424 | 685011456 | 1.7333734577189286 | 0.4230902777777778 | 183 | 7 | 9 | 63 | completed |  |
-| Zyphra/Zamba2-2.7B-instruct | 4096 | 0.7 | 1 | 2910781440 | 1679258112 | 1679258112 | 1231523328 | 1.7333734577189286 | 0.4230902777777778 | 329 | 7 | 9 | 63 | completed_existing_baseline |  |
+| max_model_len | gpu_memory_utilization | reserved bytes | useful bytes | estimated advisory savings bytes |
+| ---: | ---: | ---: | ---: | ---: |
+| `2048` | `0.6` | `1,893,335,040` | `1,092,283,392` | `801,051,648` |
+| `2048` | `0.7` | `3,185,049,600` | `1,837,486,080` | `1,347,563,520` |
+| `4096` | `0.6` | `1,619,066,880` | `934,055,424` | `685,011,456` |
+| `4096` | `0.7` | `2,910,781,440` | `1,679,258,112` | `1,231,523,328` |
 
 Across all four completed cells, `overestimation_ratio` stayed
 `1.7333734577189286` and `wasted_fraction` stayed `0.4230902777777778`.
 Estimated advisory savings ranged from `685,011,456` to `1,347,563,520` bytes.
+The full matrix, including `num_blocks`, cache group count, cache tensor count,
+layer count, and status, is recorded in
+`research/avmp/v2/evaluation/matrix_table.md`.
 
-The estimated savings are planner-level advisory savings. They are not measured
-runtime VRAM reductions, and they do not support latency, throughput, accuracy,
-or quality claims.
-
-### 3.5 RTX 3060 Planner-Only Comparison
+### 3.4 RTX 3060 Planner-Only Comparison
 
 The planner-comparison pack reports deterministic planner estimates for three
 synthetic hybrid KV/State workloads. The `vllm-style-padded` backend models a
@@ -313,16 +274,6 @@ copied from
 `benchmarks/results/rtx3060/planner-comparison/summary.md`. This is planner
 evidence for the cache-shape claim, not runtime evidence for vLLM serving
 behavior.
-
-Metric definitions:
-
-- `useful_bytes`: workload cache payload bytes before planner padding.
-- `estimated_bytes`: bytes reserved by the planner model.
-- `overestimation_ratio = estimated_bytes / useful_bytes`.
-- `wasted_fraction = (estimated_bytes - useful_bytes) / estimated_bytes`.
-- `virtual_oom`: whether the planner estimate exceeds the 12 GiB target
-  profile. A true value means the planner profile would reject the workload; it
-  does not indicate an observed runtime OOM.
 
 | workload | backend | useful bytes | estimated bytes | overestimation | wasted fraction | virtual OOM |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
@@ -336,31 +287,12 @@ Metric definitions:
 This supports a narrow planner claim: when the synthetic workload contains
 heterogeneous KV and state-cache shapes, AVMP's planner model keeps estimated
 bytes close to useful bytes, while the uniform padded planner model reserves
-substantially more bytes. The result does not prove that a vLLM runtime
-integration reduces live VRAM use or improves request admission. The pack does
-not run vLLM serving, and `long-heavy` plus `mixed` remain virtual-OOM even
-under AVMP because useful demand itself exceeds the 12 GiB target profile.
+substantially more bytes. The result does not prove live serving memory
+reduction or request-admission improvement. The pack does not run vLLM serving,
+and `long-heavy` plus `mixed` remain virtual-OOM even under AVMP because useful
+demand itself exceeds the 12 GiB target profile.
 
-### 3.6 Claim Boundary
-
-The supported claims are deliberately narrow:
-
-- Cachepawl can turn observed vLLM cache-plan artifacts into an advisory report
-  without importing vLLM in the package environment.
-- Planner-stage replay matched the runtime scheduler cache config for the
-  observed Path C cells.
-- The Path C matrix reports planner-level advisory over-reservation for one
-  observed `Zyphra/Zamba2-2.7B-instruct` setup.
-- The RTX 3060 planner-comparison pack shows that the AVMP planner model
-  reduces synthetic planner overestimation relative to a uniform padded planner
-  baseline.
-
-The unsupported claims remain explicit: the evidence does not show runtime
-allocator replacement, runtime cache substitution, measured runtime VRAM
-reduction, throughput improvement, latency improvement, quality improvement, or
-accuracy improvement.
-
-### 3.7 Runtime Contract Observations
+### 3.5 Runtime Contracts and Claim Boundary
 
 The runtime contract observations resolved several mutation-readiness questions
 on the observation side:
@@ -386,97 +318,34 @@ The Mamba side remains gated:
 These blockers are decisive for this phase. Without Mamba state-index and state
 tensor contracts, the evidence supports observe/advisory reporting only.
 
-### 3.8 Product Artifact
-
-`cachepawl diagnose-vllm` is the productized output of this phase. It consumes
-translated cache-plan artifacts and emits `report.json`, `summary.md`, and
-`manifest.json`. It is designed for advisory use in environments that do not
-have vLLM, CUDA, GPU access, or NVML installed.
-
-### 3.9 Limitations And Remaining Experiments
-
-The current evaluation is sufficient for a systems artifact paper only if the
-claim remains diagnostic and planner-level. The Path C matrix covers one model,
-one vLLM version, one sequence setting, and four bounded planner cells. The RTX
-3060 pack uses synthetic workloads and a deterministic target GPU profile
-rather than live serving. Both tracks avoid mutation, so neither can establish
-runtime savings.
-
-Before submission can make stronger runtime claims, the remaining experiments
-are:
-
-- multi-model and multi-workload advisory evaluation beyond
-  `Zyphra/Zamba2-2.7B-instruct` and `jamba-1.5-mini`;
-- a live vLLM serving experiment that measures actual VRAM, request admission,
-  latency, and throughput;
-- Mamba state-index and state tensor contract observation, or a supported vLLM
-  integration seam;
-- a default-off controlled substitution probe with rollback controls and parity
-  checks.
-
-Until those experiments exist, stronger runtime claims should stay in future
-work.
-
-### 3.10 Interpretation
-
-The evaluation supports a diagnostic claim: Cachepawl can expose and report
-planner-level cache overestimation for a real hybrid vLLM cache plan across a
-small bounded config matrix. It remains a single-model advisory result. It does
-not support a mutation claim. Controlled substitution requires stronger Mamba
-state-index and state tensor contracts, or a supported upstream integration
-path.
+The supported claims are the advisory CLI, planner-stage replay match, bounded
+Path C over-reservation matrix, read-only observation, and synthetic
+planner-only AVMP comparison. The evidence does not show runtime allocator
+replacement, runtime cache substitution, measured runtime VRAM reduction,
+throughput improvement, latency improvement, quality improvement, or accuracy
+improvement.
 
 ## 4. Limitations
 
-This report is scoped to a diagnostic/advisory systems artifact. The limitations
-below are part of the claim boundary.
+This report is scoped to a diagnostic/advisory systems artifact. Its main
+limitations are:
 
-### 4.1 No Runtime Mutation Claim
+- no runtime mutation: the evaluation does not replace vLLM allocators, rewrite
+  cache views, alter scheduler behavior, alter worker tensor layout, or return
+  Cachepawl plans to vLLM;
+- no serving performance or quality measurement: the evidence does not include
+  runtime VRAM reduction, throughput, latency, serving, quality, or accuracy
+  experiments;
+- narrow Path C scope: one observed model, vanilla `vllm==0.21.0`,
+  `max_model_len` in `{2048, 4096}`, `gpu_memory_utilization` in `{0.6, 0.7}`,
+  and `max_num_seqs=1`;
+- narrow planner-comparison scope: synthetic `jamba-1.5-mini` workloads and a
+  deterministic RTX 3060 target profile, not real model inference;
+- local platform scope: the Path C artifacts are bounded to the recorded local
+  RTX 3060 12 GiB / WSL2 context and should not be generalized to production
+  serving clusters.
 
-The evaluation does not replace vLLM allocators, rewrite cache views, alter
-scheduler behavior, alter worker tensor layout, or return Cachepawl plans to
-vLLM. The reported savings are estimated advisory savings from planner
-artifacts, not measured serving-time memory savings.
-
-### 4.2 No Performance Or Quality Claim
-
-The evidence does not include:
-
-- runtime VRAM reduction measurements,
-- throughput measurements,
-- latency measurements,
-- serving experiments,
-- model quality or accuracy evaluation.
-
-The 4-cell matrix supports only planner-level advisory interpretation.
-
-### 4.3 Single Observed Model
-
-The current evidence is from one model and four bounded config cells:
-
-- `Zyphra/Zamba2-2.7B-instruct`
-- vanilla `vllm==0.21.0`
-- `max_model_len` in `{2048, 4096}`
-- `max_num_seqs=1`
-- `gpu_memory_utilization` in `{0.6, 0.7}`
-
-The result should not be generalized to all vLLM versions, models, backends,
-cache modes, or workloads without further evaluation.
-
-### 4.4 Local Hardware And Platform
-
-The Path C work was developed and observed on the local RTX 3060 12 GiB / WSL2
-environment recorded by the surrounding baseline and setup artifacts. This
-environment is sufficient for the bounded observe/advisory evidence, but it is
-not a broad hardware study. The report does not claim behavior on other GPUs,
-other operating environments, non-WSL2 Linux deployments, or production serving
-clusters.
-
-### 4.5 Mamba State Contract Blocker
-
-The remaining blocker is Mamba state observability. The Mamba/attention
-contract observation resolved attention block-table/view metadata and attention
-metadata builders, but did not resolve:
+The Mamba-side mutation contracts remain blocked:
 
 - `mamba_state_index_contract`, because `mamba_state_idx` was reachable but
   empty for the live request;
@@ -484,13 +353,9 @@ metadata builders, but did not resolve:
   reachable by stable runtime attributes.
 
 The observed runtime cache config reported `mamba_cache_mode: none`, so this
-run did not populate the Mamba state-index/state-tensor paths needed for a
-rewrite contract.
-
-Because these contracts are blocked, the report cannot claim controlled
-substitution readiness.
-
-### 4.6 Future Work
+run did not populate the Mamba state-index/state-tensor paths needed for a view
+rewrite contract. Because these contracts are blocked, the report cannot claim
+controlled substitution readiness.
 
 Future work must first improve Mamba state-index observability. A controlled
 substitution experiment should only be considered after one of the following is
@@ -521,10 +386,11 @@ reduction, throughput, latency, quality, accuracy, or allocator replacement, it
 needs Mamba state-index and state tensor contracts, a default-off substitution
 probe, and live serving measurements with rollback and parity controls.
 
-## 6. Artifact Appendix
+## 6. Artifact and Reproducibility Checklist
 
-All paths are relative to the repository root. The appendix maps each report
-claim to committed evidence.
+All paths are relative to the repository root. This checklist maps each report
+claim to committed evidence and records the commands needed to verify the
+venue-neutral Markdown package.
 
 ### 6.1 Diagnostic CLI Outputs
 
@@ -629,3 +495,38 @@ Blocked contracts:
 The artifact set supports observe/advisory diagnosis only. It does not support
 claims about runtime allocator replacement, runtime VRAM reduction, latency,
 throughput, accuracy, or model quality.
+
+### 6.7 Reproducibility Checklist
+
+| Item | Status | Evidence or Command |
+| --- | --- | --- |
+| Path C claim boundary documented | Ready | `research/avmp/v2/evaluation/claim_summary.md` |
+| Path C matrix table committed | Ready | `research/avmp/v2/evaluation/matrix_table.md`, `matrix_table.csv` |
+| Planner-comparison pack committed | Ready | `benchmarks/results/rtx3060/planner-comparison/` |
+| Planner-comparison pack regeneration | Ready | `UV_CACHE_DIR=/tmp/uv-cache uv run python benchmarks/scripts/create_planner_comparison_pack.py --output-dir benchmarks/results/rtx3060/planner-comparison --seed 1 --num-requests 128 --gpu-name "NVIDIA GeForce RTX 3060" --gpu-total-bytes 12884901888` |
+| Diagnostic CLI tests | Ready | `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/cli/test_diagnose_vllm.py -q` |
+| Planner evidence tests | Ready | `UV_CACHE_DIR=/tmp/uv-cache uv run pytest tests/bench/test_planner_comparison.py tests/bench/test_vllm_path_c_advisory_matrix.py -q` |
+| Artifact path check | Ready | Confirm every path listed in this section exists in the repository. |
+| Venue-specific formatting | TODO | Select target template, convert Markdown to venue format, add required author metadata and bibliography style. |
+
+### 6.8 Submission Readiness
+
+Ready:
+
+- venue-neutral Markdown draft with title, abstract, introduction, method,
+  evaluation, limitations, conclusion, artifact map, and reproducibility
+  checklist;
+- compact evaluation tables for the Path C matrix and RTX 3060 planner-only
+  comparison;
+- explicit advisory/planner-level claim boundary throughout the paper;
+- committed evidence paths for numeric claims and product artifacts.
+
+Remaining before venue submission:
+
+- choose the target venue format and page limit;
+- convert Markdown sections into the target template;
+- add venue-required author, anonymization, ethics, artifact, and bibliography
+  metadata;
+- decide whether to keep the full artifact checklist in the main paper,
+  appendix, or supplemental material;
+- run the venue-specific build once the target template exists.
